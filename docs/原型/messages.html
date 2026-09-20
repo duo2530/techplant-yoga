@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>消息 · 一水瑜伽普拉提</title>
+<!-- ① 三件套固定顺序：tailwind → tokens → app.css -->
+<script src="assets/tailwind.js"></script>
+<script src="assets/tokens.js"></script>
+<link rel="stylesheet" href="assets/app.css">
+<style>
+  /* 空态块：与源截图归一 390 宽后实测对齐
+     插图 y 107..159（高约 52，宽约 66），水平居中；
+     「暂无数据」文字基线约 y 193..205
+     注意：.phone 内含状态栏44 + 导航栏44，再叠加与源图一致的 90px 顶部空白，
+     所以 .empty-wrap 的 padding-top 需要扣掉这 90 */
+  .empty-wrap {
+    display: flex; flex-direction: column; align-items: center;
+    padding-top: 17px;
+  }
+  .empty-tip {
+    margin-top: 26px; font-size: 15px; line-height: 21px; color: #999999;
+  }
+</style>
+</head>
+<body>
+<div class="phone">
+
+  <!-- ============ 固定区 1：状态栏（与 _骨架示例.html 完全一致） ============ -->
+  <div class="statusbar">
+    <span>9:41</span>
+    <span class="sb-right">
+      <svg width="18" height="12" viewBox="0 0 18 12" fill="#000"><rect x="0" y="7.5" width="3" height="4.5" rx="1"/><rect x="4.5" y="5" width="3" height="7" rx="1"/><rect x="9" y="2.5" width="3" height="9.5" rx="1"/><rect x="13.5" y="0" width="3" height="12" rx="1"/></svg>
+      <svg width="16" height="12" viewBox="0 0 16 12" fill="#000"><path d="M8 10.6 5.9 8.3a3.1 3.1 0 0 1 4.2 0L8 10.6Zm0-5.1c-1.5 0-2.9.5-4 1.5L2.6 5.6A7.9 7.9 0 0 1 8 3.4c2 0 3.9.8 5.4 2.2L12 7c-1.1-1-2.5-1.5-4-1.5Z"/></svg>
+      <svg width="25" height="12" viewBox="0 0 25 12"><rect x="0.5" y="0.5" width="21" height="11" rx="3" fill="none" stroke="#000" stroke-opacity=".35"/><rect x="2" y="2" width="15" height="8" rx="1.8" fill="#000"/><path d="M23 4.2v3.6c1-.3 1.4-.9 1.4-1.8s-.4-1.5-1.4-1.8Z" fill="#000" fill-opacity=".4"/></svg>
+    </span>
+  </div>
+
+  <!-- ============ 固定区 2：导航栏（二级页：返回箭头 + 标题） ============ -->
+  <div class="navbar">
+    <!-- 消息页真机上只有箭头，没有「返回」二字（与 coaches.html 不同） -->
+    <a class="nav-back press cursor-pointer" href="home.html" aria-label="返回">
+      <svg width="12" height="20" viewBox="0 0 12 20" fill="none" stroke="#333" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2 2 10l8 8"/></svg>
+    </a>
+    <span class="nav-title">消息</span>
+    <div class="capsule">
+      <span class="cap-btn"><svg width="17" height="5" viewBox="0 0 17 5" fill="#333"><circle cx="2.5" cy="2.5" r="1.6"/><circle cx="8.5" cy="2.5" r="1.6"/><circle cx="14.5" cy="2.5" r="1.6"/></svg></span>
+      <span class="cap-div"></span>
+      <span class="cap-btn"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="#333" stroke-width="1.4"><circle cx="8" cy="8" r="6.6"/><circle cx="8" cy="8" r="1.6" fill="#333" stroke="none"/></svg></span>
+    </div>
+  </div>
+
+  <!-- ============ 可滚动内容区 ============ -->
+  <div class="screen">
+
+    <!-- 整页空态：截图里没有任何消息列表，照抄空态，不发明消息数据。
+         空态插图用 SVG 近似复刻（源图该块只有约 250x120 源图px、又很淡，无法逐像素还原）：
+         浅灰山丘底座 + 中灰飞碟（腰部以上） + 浅灰云朵（绘于山丘之上，白会与白底重合故用浅灰）
+         + 图片占位图标（含山峰与太阳）。整幅 88x44，1:1 绘制，容器不裁切。 -->
+    <div class="empty-wrap">
+      <svg width="66" height="52" viewBox="0 0 66 52" fill="none" aria-hidden="true">
+        <!-- 山丘/底座 -->
+        <path d="M0 52 C4 30 14 17 26 13 C39 9 52 13 59 21 C63 26 65 38 66 52 Z" fill="#E9E9E9"/>
+        <!-- 飞碟/卫星：中灰，压在山丘之上 -->
+        <ellipse cx="31" cy="14" rx="9" ry="3.4" fill="#8E8E8E"/>
+        <!-- 云朵：浅灰（纯白在白底上不可见），绘于山丘之上 -->
+        <ellipse cx="15" cy="24" rx="9" ry="5" fill="#DCDCDC"/>
+        <ellipse cx="25" cy="21" rx="6.5" ry="4.2" fill="#DCDCDC"/>
+        <ellipse cx="7" cy="23" rx="5.5" ry="3.8" fill="#DCDCDC"/>
+        <!-- 图片占位图标：圆角方框 + 山峰 + 太阳 -->
+        <rect x="36" y="24" width="22" height="17" rx="3" fill="#BDBDBD"/>
+        <path d="M39 39 L45 31 L48 35 L52 32 L56 39 Z" fill="#F5F5F5"/>
+        <circle cx="52" cy="29" r="2" fill="#F5F5F5"/>
+      </svg>
+      <div class="empty-tip">暂无数据</div>
+    </div>
+
+  </div>
+
+  <!-- 二级页：无 TabBar -->
+</div>
+</body>
+</html>

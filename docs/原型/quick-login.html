@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>快速登录 · 一水瑜伽普拉提</title>
+<!-- ============================================================================
+  页面：快速登录页（二级页，无 TabBar）
+  截图：docs/需求文档/小程序截图/登录页.png（主状态）＋ 快速登录.png（同一页的另一状态）
+
+  【两态差异 —— 按规范只在这里用注释说明，主状态按信息更完整的「登录页.png」还原】
+  1) 登录页.png ＝ 主状态（本文件还原的就是它）：
+     白底整页；状态栏（12:52 / 59）；导航栏左侧是**灰色胶囊「‹ ｜ ⌂」**（不是常规二级页的「‹ 返回」，
+     实测胶囊 85×32、底色 rgba(0,0,0,.15)、内部图标纯白、右侧仍是微信胶囊）；
+     居中墨色瑜伽人 Logo（源图 y420-930 的图形区）；品牌字「一水·瑜伽普拉提」（纯黑 #000）；
+     Slogan「练瑜伽普拉提就来一水」（#AAAAAA）；蓝色胶囊按钮「快速登录」（#87C7F6，白字，312×46，圆角 20）；
+     灰色链接「输入手机号登录/注册」（#AAAAAA，14px，居中）；
+     未勾选圆形勾选框 + 协议「已阅读并同意“用户协议”和“隐私政策”各条款」（#080808，14px）。
+  2) 快速登录.png ＝ 同一页点「快速登录」之后的状态：页面本体完全一样，但整页被 **rgba(0,0,0,.3) 半透明黑遮罩**
+     压暗（实测纯白被压成 #B2B2B2 ＝ 0.7×255），底部升起一张浅灰 #F7F7F7 圆角弹层（源图 y≈1176 起，逻辑 y≈392）：
+     蓝色圆形图标 +「一水瑜伽」+ 右侧 ⓘ 图标 / 标题「申请获取并验证你的手机号」/ 小字「关联你的账户信息」/
+     白卡里的手机号（下方小字「微信绑定号码」）/「不允许」按钮 / 底部蓝字链接「使用其它号码」。
+     该弹层是**微信原生「手机号快捷验证」组件**（弹层结构、文案均为微信侧渲染，非本产品页面），
+     参照路由表里 native-map.html / native-location.html 的处理方式，本文件不渲染它，只在此说明。
+     两态页面本体已用像素比对确认一致（Logo y424-806、品牌字 y850-926、Slogan y1002-1045 位置完全相同）。
+
+  【不确定 / 已做的取舍】
+  - 品牌区（瑜伽人 Logo + 「一水·瑜伽普拉提」书法美术字）在源图里是**一张合成 Logo 图**（色带分析把它判为 PHOTO 区），
+    普通字体无法还原书法字形，因此整块品牌区用**雪碧图**从原截图切出（源图 x130-1040, y420-930），
+    并加 role="img" + aria-label 保留文字内容。若评审要求文字必须可选中，可改成真实文本（字形会不一致）。
+  - 「快速登录」按钮在真机上拉起微信原生手机号授权弹层（即上面的第 2 态），没有对应的 HTML 路由，
+    因此本按钮只做可按压样式（press），不做跳转。
+  - 协议文字里的「用户协议」「隐私政策」在截图中与其余文字同为 #080808（无蓝色高亮），
+    这里保持同色，仅额外挂上 terms.html / privacy.html 链接。
+============================================================================ -->
+<script src="assets/tailwind.js"></script>
+<script src="assets/tokens.js"></script>
+<link rel="stylesheet" href="assets/app.css">
+<style>
+  /* 本页专用：导航栏左侧的微信「返回｜主页」灰色胶囊（截图实测，非共享样式） */
+  .pill-nav {
+    position: absolute;
+    left: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 85px;
+    height: 32px;
+    border-radius: 16px;
+    background: rgba(0, 0, 0, .15);      /* 白底上实测 #D9D9D9；蓝底上实测 #799DC8 → 同一层 15% 黑 */
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 14px 0 17px;
+  }
+  .pill-nav .pill-div { width: .5px; height: 17px; background: rgba(255, 255, 255, .9); }
+  /* 主按钮：实测 #87C7F6，312×46，圆角 20，白字 17px */
+  .btn-primary {
+    margin: 30px auto 0;
+    width: 312px;
+    height: 46px;
+    border: 0;
+    border-radius: 20px;
+    background: #87C7F6;
+    color: #fff;
+    font-size: 17px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .agree-box {
+    width: 17px;
+    height: 17px;
+    border: 1px solid #AAAAAA;
+    border-radius: 50%;
+    display: inline-block;
+    flex: none;
+  }
+</style>
+</head>
+<body>
+<div class="phone">
+
+  <!-- ============ 固定区 1：状态栏 ============ -->
+  <div class="statusbar">
+    <span>9:41</span>
+    <span class="sb-right">
+      <svg width="18" height="12" viewBox="0 0 18 12" fill="#000"><rect x="0" y="7.5" width="3" height="4.5" rx="1"/><rect x="4.5" y="5" width="3" height="7" rx="1"/><rect x="9" y="2.5" width="3" height="9.5" rx="1"/><rect x="13.5" y="0" width="3" height="12" rx="1"/></svg>
+      <svg width="16" height="12" viewBox="0 0 16 12" fill="#000"><path d="M8 10.6 5.9 8.3a3.1 3.1 0 0 1 4.2 0L8 10.6Zm0-5.1c-1.5 0-2.9.5-4 1.5L2.6 5.6A7.9 7.9 0 0 1 8 3.4c2 0 3.9.8 5.4 2.2L12 7c-1.1-1-2.5-1.5-4-1.5Z"/></svg>
+      <svg width="25" height="12" viewBox="0 0 25 12"><rect x="0.5" y="0.5" width="21" height="11" rx="3" fill="none" stroke="#000" stroke-opacity=".35"/><rect x="2" y="2" width="15" height="8" rx="1.8" fill="#000"/><path d="M23 4.2v3.6c1-.3 1.4-.9 1.4-1.8s-.4-1.5-1.4-1.8Z" fill="#000" fill-opacity=".4"/></svg>
+    </span>
+  </div>
+
+  <!-- ============ 固定区 2：导航栏（按截图：左侧灰色「‹ ｜ ⌂」胶囊，中间无标题） ============ -->
+  <div class="navbar">
+    <div class="pill-nav">
+      <svg width="8" height="14" viewBox="0 0 8 14" fill="none" stroke="#FFFFFF" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 1 1 7l6 6"/></svg>
+      <span class="pill-div"></span>
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="#FFFFFF" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2.4 6.6 8 2.1l5.6 4.5v6.3a.9.9 0 0 1-.9.9H3.3a.9.9 0 0 1-.9-.9V6.6Z"/><path d="M6.3 13.8v-3.5h3.4v3.5"/></svg>
+    </div>
+    <div class="capsule">
+      <span class="cap-btn"><svg width="17" height="5" viewBox="0 0 17 5" fill="#333"><circle cx="2.5" cy="2.5" r="1.6"/><circle cx="8.5" cy="2.5" r="1.6"/><circle cx="14.5" cy="2.5" r="1.6"/></svg></span>
+      <span class="cap-div"></span>
+      <span class="cap-btn"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="#333" stroke-width="1.4"><circle cx="8" cy="8" r="6.6"/><circle cx="8" cy="8" r="1.6" fill="#333" stroke="none"/></svg></span>
+    </div>
+  </div>
+
+  <!-- ============ 内容区 ============ -->
+  <div class="screen">
+
+    <!-- 品牌区（Logo + 书法品牌字）：雪碧图，源图 x130-1040 / y420-930 → 逻辑 43.3,140 起 303.3×170 -->
+    <div role="img" aria-label="一水·瑜伽普拉提" class="mx-auto"
+         style="margin-top:52px;width:303.3px;height:170px;background-image:url('../需求文档/小程序截图/登录页.png');background-size:390px auto;background-position:-43.3px -140px;background-repeat:no-repeat"></div>
+
+    <!-- Slogan：实测 #AAAAAA / 约 15px，居中 -->
+    <div class="text-center" style="margin-top:24px;font-size:15px;line-height:15px;color:#AAAAAA">练瑜伽普拉提就来一水</div>
+
+    <!-- 主按钮「快速登录」：拉起微信原生手机号授权弹层（见文件顶部注释第 2 态），无 HTML 路由 -->
+    <button type="button" class="btn-primary press cursor-pointer">快速登录</button>
+
+    <!-- 「输入手机号登录/注册」→ 手机号登录/注册页 -->
+    <div class="text-center" style="margin-top:19px;font-size:14px;line-height:14px">
+      <a href="phone-auth.html" class="press cursor-pointer" style="font-size:14px;line-height:14px;color:#AAAAAA">输入手机号登录/注册</a>
+    </div>
+
+    <!-- 协议行：未勾选圆框 + 协议文案（截图整行同为 #080808） -->
+    <div style="margin-top:81px;display:flex;align-items:center;justify-content:center;gap:6px">
+      <span class="agree-box press cursor-pointer"></span>
+      <span style="font-size:14px;line-height:17px;color:#080808">已阅读并同意“<a href="terms.html" class="press" style="color:inherit">用户协议</a>”和“<a href="privacy.html" class="press" style="color:inherit">隐私政策</a>”各条款</span>
+    </div>
+
+  </div>
+</div>
+</body>
+</html>

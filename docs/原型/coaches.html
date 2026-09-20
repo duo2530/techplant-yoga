@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>约教练 · 一水瑜伽普拉提</title>
+<!-- ① 三件套固定顺序：tailwind → tokens → app.css -->
+<script src="assets/tailwind.js"></script>
+<script src="assets/tokens.js"></script>
+<link rel="stylesheet" href="assets/app.css">
+<style>
+  /* ============================================================
+     约教练（二级页，无 TabBar）
+     画布 390 x 844；内容相对 .screen 顶部定位（.screen 起点 = 逻辑 y 88）
+     源截图 1170x2532 @3x → 逻辑尺寸 = 源图像素 ÷ 3
+     实测（源图像素 → 逻辑 pt）：
+       天空/海面背景  y 278..1176            →  92.7..392
+       教练白卡      x  45..1125, y 450..1055 →  15..375 , 150..351.7
+       头像照片区    x 486..683,  y 320..490  →  162..227.7 , 106.7..163.3
+       分类 Tab 文字  y 1040..1085            →  346.7..361.7
+       课程卡片 1/2/3 y 1251/1674/2097 起     →  417 / 558 / 699（高 110，间距 31.3）
+       卡片封面      x  80..392,  y 1257..1569 →  26.7..130.7 , 419..523
+     ============================================================ */
+  .screen { position: relative; }
+  /* 注意：源截图里导航栏(y44..88)下方还有一段空白，内容整体应从视口约 y178 开始，
+     即比"导航栏结束 y=88"低 90px。这里用 .stage 的负 margin 抵消这一段，
+     使 .stage 内的坐标与源图逻辑坐标一致（.stage 内 y = 源图像素/3）。 */
+  /* 说明：源截图的 .screen 内容起点比"状态栏44+导航栏44=88"还要低；实测把 .stage
+     的 margin-top 设为 -88px 时，与本页其余元素的像素对齐最好（卡片区 MAD 最小） */
+  .stage  { position: relative; width: 390px; height: 950px; background: #FFFFFF; margin-top: -88px; }
+
+  /* 天空/海面背景：源图 y 278..1176（= 逻辑 92.7..392）→ .stage 内 top 4.7，高 299.3
+     ⚠️ 这里是全页 MAD 的主要残余来源：源图是一张满宽照片（有波纹/地平线/放射光晕），
+        当前用实测色带插值的渐变近似，纹理丢失。
+        2026-09-20 试过改成雪碧图切片，但无论怎么调 background-position，
+        纯天空带 MAD 都从 ~37 恶化到 61，横向内容对不上，原因未查明 → 已回滚。
+        若后续要修，建议先把 .sky 的实际渲染位置用探针页测准，再决定 background-position。 */
+  .sky {
+    position: absolute; left: 0; top: 4.7px; width: 390px; height: 299.3px;
+    background: linear-gradient(180deg,
+      #8BBAEC 0%,
+      #8FC0E6 22%,
+      #B7D9F2 48%,
+      #D9ECFA 68%,
+      #EAF4FC 84%,
+      #F7FBFF 100%);
+  }
+
+  /* 教练白卡：源图 y 425..1055 → 逻辑 141.7..351.7，左 15 / 宽 360 / 高 210 */
+  .profile-card {
+    position: absolute; left: 15px; top: 141.7px;
+    width: 360px; height: 181px;
+    background: #FFFFFF; border-radius: 24px;
+    box-shadow: 0 2px 12px rgba(96, 156, 233, .10);
+  }
+
+  /* 头像：雪碧图切原截图 x 459..710, y 293..497 → 75x68 椭圆（源图照片区 197x170px） */
+  .avatar {
+    position: absolute; left: 157.5px; top: 106px;
+    width: 75px; height: 68px; border-radius: 50%;
+    background-image: url('../需求文档/小程序截图/二级页面-约教练.png');
+    background-size: 390px auto;
+    background-position: -153px -97.67px;   /* 459/3 , 293/3 */
+    background-repeat: no-repeat;
+  }
+
+  /* 卡内文案（截图里就是空态，逐字照抄）
+     源图（缩到 390 宽后）墨迹行：橘子老师 122..160；暂无教练简介 180..194；
+     教练相册 218..229；暂无教练相册 252..266；Tab 文字 346..360 */
+  .coach-name {
+    position: absolute; left: 15px; top: 184px; width: 360px;
+    text-align: center; font-size: 16px; font-weight: 600;
+    line-height: 22px; color: #333333;
+  }
+  .coach-intro {
+    position: absolute; left: 45px; top: 246px;
+    font-size: 14px; line-height: 20px; color: #333333;
+  }
+  .coach-album-title {
+    position: absolute; left: 45px; top: 273px;
+    font-size: 15px; font-weight: 600; line-height: 21px; color: #333333;
+  }
+  .coach-album-empty {
+    position: absolute; left: 45px; top: 299px;
+    font-size: 13px; line-height: 19px; color: #999999;
+  }
+
+  /* 分类 Tab：源图文字 y 1040..1085 → 347..362pt，指示条 y 1105..1120 → 368..373pt */
+  .tabs {
+    position: absolute; left: 0; top: 338px; width: 390px;
+    display: flex; align-items: flex-start;
+  }
+  .tab { flex: 1 1 0; text-align: center; text-decoration: none; display: block; }
+  .tab-txt { display: block; font-size: 15px; line-height: 22px; color: #333333; }
+  .tab-bar {
+    display: block; width: 20px; height: 2.5px; border-radius: 2px;
+    background: transparent; margin: 5px auto 0;
+  }
+  .tab.active .tab-txt { color: #609CE9; }
+  .tab.active .tab-bar { background: #609CE9; }
+
+  /* ---------- 课程卡片 ---------- */
+  .course {
+    position: absolute; left: 15px;
+    width: 360px; height: 110px; border-radius: 16px;
+    background: linear-gradient(90deg, #D0E9FF 0%, #D0E9FF 62%, #D7EDFF 100%);
+    text-decoration: none; display: block;
+  }
+  /* 封面：源图照片区 x 80..392, y 1257..1569（整块照片，含左下角星级，避开文字）
+     逻辑 x 26.7..130.7（宽 104）、y 419..523（高 104）→ 卡片内偏移 left 11.7 / top 2 */
+  .course-pic {
+    position: absolute; left: 11.7px; top: 2px;
+    width: 104px; height: 104px; border-radius: 12px;
+    background-image: url('../需求文档/小程序截图/二级页面-约教练.png');
+    background-size: 390px auto;
+    background-position: -26.67px -419px;   /* 80/3 , 1257/3 */
+    background-repeat: no-repeat;
+  }
+  .course-info {
+    position: absolute; left: 136.3px; top: 0; height: 110px;
+    display: flex; flex-direction: column; justify-content: center;
+  }  .course-title-row { display: flex; align-items: center; height: 24px; }
+  .badge {
+    display: inline-block; height: 18px; padding: 0 5px; margin-right: 6px;
+    border-radius: 6px; background: #C6D3E0; color: #FFFFFF;
+    font-size: 11px; line-height: 18px;
+  }
+  .course-name { font-size: 16px; font-weight: 600; color: #333333; line-height: 24px; }
+  .course-meta { font-size: 14px; line-height: 19px; color: #666666; }
+</style>
+</head>
+<body>
+<div class="phone">
+
+  <!-- ============ 固定区 1：状态栏（与 _骨架示例.html 完全一致） ============ -->
+  <div class="statusbar">
+    <span>9:41</span>
+    <span class="sb-right">
+      <svg width="18" height="12" viewBox="0 0 18 12" fill="#000"><rect x="0" y="7.5" width="3" height="4.5" rx="1"/><rect x="4.5" y="5" width="3" height="7" rx="1"/><rect x="9" y="2.5" width="3" height="9.5" rx="1"/><rect x="13.5" y="0" width="3" height="12" rx="1"/></svg>
+      <svg width="16" height="12" viewBox="0 0 16 12" fill="#000"><path d="M8 10.6 5.9 8.3a3.1 3.1 0 0 1 4.2 0L8 10.6Zm0-5.1c-1.5 0-2.9.5-4 1.5L2.6 5.6A7.9 7.9 0 0 1 8 3.4c2 0 3.9.8 5.4 2.2L12 7c-1.1-1-2.5-1.5-4-1.5Z"/></svg>
+      <svg width="25" height="12" viewBox="0 0 25 12"><rect x="0.5" y="0.5" width="21" height="11" rx="3" fill="none" stroke="#000" stroke-opacity=".35"/><rect x="2" y="2" width="15" height="8" rx="1.8" fill="#000"/><path d="M23 4.2v3.6c1-.3 1.4-.9 1.4-1.8s-.4-1.5-1.4-1.8Z" fill="#000" fill-opacity=".4"/></svg>
+    </span>
+  </div>
+
+  <!-- ============ 固定区 2：导航栏（二级页：返回箭头 + 「返回」文字） ============ -->
+  <div class="navbar">
+    <a class="nav-back press cursor-pointer" href="home.html" aria-label="返回">
+      <svg width="12" height="20" viewBox="0 0 12 20" fill="none" stroke="#333" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2 2 10l8 8"/></svg>
+      <span>返回</span>
+    </a>
+    <span class="nav-title">约教练</span>
+    <div class="capsule">
+      <span class="cap-btn"><svg width="17" height="5" viewBox="0 0 17 5" fill="#333"><circle cx="2.5" cy="2.5" r="1.6"/><circle cx="8.5" cy="2.5" r="1.6"/><circle cx="14.5" cy="2.5" r="1.6"/></svg></span>
+      <span class="cap-div"></span>
+      <span class="cap-btn"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="#333" stroke-width="1.4"><circle cx="8" cy="8" r="6.6"/><circle cx="8" cy="8" r="1.6" fill="#333" stroke="none"/></svg></span>
+    </div>
+  </div>
+
+  <!-- ============ 可滚动内容区 ============ -->
+  <div class="screen">
+    <div class="stage">
+
+      <!-- 天空/海面背景（CSS 渐变还原原截图色带） -->
+      <div class="sky"></div>
+
+      <!-- 教练白卡 + 头像 -->
+      <div class="profile-card"></div>
+      <div class="avatar"></div>
+
+      <!-- 卡内文案（截图里是空态，照抄，不塞假数据） -->
+      <div class="coach-name">橘子老师</div>
+      <div class="coach-intro">暂无教练简介</div>
+      <div class="coach-album-title">教练相册</div>
+      <div class="coach-album-empty">暂无教练相册</div>
+
+      <!-- 分类 Tab（选中：团课） -->
+      <div class="tabs">
+        <a class="tab active press cursor-pointer" href="booking.html"><span class="tab-txt">团课</span><span class="tab-bar"></span></a>
+        <a class="tab press cursor-pointer" href="booking.html"><span class="tab-txt">精品课</span><span class="tab-bar"></span></a>
+        <a class="tab press cursor-pointer" href="booking.html"><span class="tab-txt">私教课</span><span class="tab-bar"></span></a>
+        <a class="tab press cursor-pointer" href="booking.html"><span class="tab-txt">特色课</span><span class="tab-bar"></span></a>
+      </div>
+
+      <!-- 课程卡片 1 -->
+      <a class="course press cursor-pointer" href="booking.html" style="top:417px">
+        <div class="course-pic"></div>
+        <div class="course-info">
+          <div class="course-title-row"><span class="badge">团课</span><span class="course-name">哈它瑜伽</span></div>
+          <div class="course-meta">时间 09:15 - 10:15</div>
+          <div class="course-meta">团课教室</div>
+          <div class="course-meta">剩余 9</div>
+        </div>
+      </a>
+
+      <!-- 课程卡片 2 -->
+      <a class="course press cursor-pointer" href="booking.html" style="top:558.3px">
+        <div class="course-pic"></div>
+        <div class="course-info">
+          <div class="course-title-row"><span class="badge">团课</span><span class="course-name">流瑜伽</span></div>
+          <div class="course-meta">时间 19:00 - 20:00</div>
+          <div class="course-meta">团课教室</div>
+          <div class="course-meta">剩余 7</div>
+        </div>
+      </a>
+
+      <!-- 课程卡片 3 -->
+      <a class="course press cursor-pointer" href="booking.html" style="top:699.7px">
+        <div class="course-pic"></div>
+        <div class="course-info">
+          <div class="course-title-row"><span class="badge">团课</span><span class="course-name">核心流瑜伽</span></div>
+          <div class="course-meta">时间 09:15 - 10:15</div>
+          <div class="course-meta">团课教室</div>
+          <div class="course-meta">剩余 5</div>
+        </div>
+      </a>
+
+      <!-- 课程卡片 4：截图里只露出顶部一截，照抄 -->
+      <div class="course" style="top:841px"></div>
+
+    </div>
+  </div>
+
+  <!-- 二级页：无 TabBar -->
+</div>
+</body>
+</html>

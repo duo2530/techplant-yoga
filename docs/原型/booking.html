@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>约课 · 一水瑜伽普拉提</title>
+<!-- ① 三件套固定顺序：tailwind → tokens → app.css -->
+<script src="assets/tailwind.js"></script>
+<script src="assets/tokens.js"></script>
+<link rel="stylesheet" href="assets/app.css">
+<style>
+  /* ============================================================
+     约课页专属样式（色值取自 约课.png 真实像素采样）
+     ============================================================ */
+
+  /* 顶部浅蓝竖向渐变：源图 y=0 #BAE6FC → y≈444 #D2EEFD → 148pt 起纯白
+     overflow:hidden 建立 BFC，防止下面日期条的 margin-top 向上塌陷 */
+  .booking-top {
+    overflow: hidden;
+    background: linear-gradient(
+      180deg,
+      #BAE6FC 0px,
+      #BAE6FC 30px,
+      #C2E9FD 72px,
+      #CFEDFD 108px,
+      #D2EEFD 146px,
+      #FFFFFF 148px,
+      #FFFFFF 100%
+    );
+  }
+  /* 导航栏标题在源图里是左对齐的（离屏幕左约 70pt） */
+  .navbar.nav-left { justify-content: flex-start; padding: 0 96px 0 58px; }
+
+  /* 可滚动内容区背景：顶部 y=226..256.7pt 是一条通栏浅蓝灰渐变带
+     （源图 x=0 与 x=389 颜色完全一致 → 通栏背景，不是卡片），再过渡到页面灰 */
+  .booking-body {
+    background: linear-gradient(
+      180deg,
+      #FFFFFF 0px,
+      #ECF6FB 0px,
+      #EDF6FA 8px,
+      #EFF6FA 14px,
+      #F1F6F9 24px,
+      #F2F6F9 30px,
+      #F7F7F7 34px,
+      #F7F7F7 100%
+    );
+  }
+
+  /* 日期条：横向滚动，隐藏滚动条。
+     实测：7 个可见列中心 x ≈ 52.85 / 98.5 / 144.7 / 190.7 / 236.7 / 282.7 / 328.55pt
+     列宽 45.95 + gap 1.85 → 首列左边缘 ≈ x=29.9pt（容器 padding-left 15.9pt） */
+  /* 日期条容器（白色圆角卡）：实测源图逻辑 y=148.7..232，高约 85pt
+     其下方 y=226..256.7 是【通栏浅蓝灰渐变带】（x=0 与 x=389 颜色一致，说明是通栏背景
+     而非卡片），故把它做进 .screen 的竖向渐变里，而不是算进卡片高度 */
+  .date-card { height: 85px; padding-top: 2.5px; }
+  .day-strip {
+    display: flex;
+    gap: 1.85px;
+    padding-left: 15.9px;
+    padding-right: 15.9px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .day-strip::-webkit-scrollbar { width: 0; height: 0; display: none; }
+
+  /* 每列固定 46pt：星期 / 日期 用固定行高，对勾与小圆点绝对定位到同一 y，
+     这样选中态（对勾）和未选中态（圆点）的基线完全一致——与截图实测吻合 */
+  .day-col {
+    flex: 0 0 45.95px;
+    width: 45.95px;
+    position: relative;
+    height: 80px;
+    text-align: center;
+    cursor: pointer;
+  }
+  .day-pill {
+    position: absolute;
+    left: 0; top: 0;
+    width: 45.95px; height: 76px;
+    border-radius: 14px;
+  }
+  .day-pill .d-week { display: block; height: 16.5px; line-height: 16.5px; font-size: 16px; margin-top: 12.5px; }
+  .day-pill .d-date { display: block; height: 16.5px; line-height: 16.5px; font-size: 16px; margin-top: 8pt; }
+
+  /* 选中日期：蓝色胶囊（#609CE9）+ 白色文字 + 白底圆内蓝色对勾 */
+  .day-pill.on { background: #609CE9; }
+  .day-pill.on .d-week,
+  .day-pill.on .d-date { color: #FFFFFF; }
+  .day-col .d-check {
+    position: absolute; left: 50%; top: 59.5px; transform: translateX(-50%);
+    width: 15px; height: 15px; border-radius: 50%;
+    background: #FFFFFF;
+    display: flex; align-items: center; justify-content: center;
+  }
+  /* 未选中日期：深灰文字 + 下方蓝色小圆点 */
+  .day-pill.off .d-week,
+  .day-pill.off .d-date { color: #303339; }
+  .day-col .d-dot {
+    position: absolute; left: 50%; top: 64px; transform: translateX(-50%);
+    width: 4px; height: 4px; border-radius: 50%;
+    background: #609CE9;
+  }
+
+  /* 课程/教练卡片：内部各块用绝对定位，严格对齐截图实测的 y 偏移
+     （卡片高 115，封面 top 14，标题 top 26，描述 top 50，按钮 top 71） */
+  .ccard {
+    position: relative;
+    height: 115px;
+    background: #fff;
+    border-radius: 13px;
+    box-shadow: 0 1px 2px 0 rgb(0 0 0 / .05);
+  }
+  .ccard .c-photo {
+    position: absolute; left: 15px; top: 14px;
+    width: 85px; height: 85px; border-radius: 10px;
+    background-repeat: no-repeat;
+    background-size: 390px auto;
+    background-image: url('../需求文档/小程序截图/约课.png');
+  }
+  .ccard .c-title { position: absolute; left: 135px; top: 24px; font-size: 15px; font-weight: 600; color: #303339; line-height: 1; }
+  .ccard .c-desc  { position: absolute; left: 135px; top: 50px; font-size: 15px; color: #9A9A9A; line-height: 1; }
+  .ccard .c-btn {
+    position: absolute; right: 15px; top: 71px;
+    width: 76px; height: 29px; border-radius: 999px;
+    background: #609CE9; color: #fff; font-size: 15px; line-height: 29px;
+    text-align: center;
+  }
+
+  /* 品类 Tab 行：源图文字 y=110..123.3pt，故整行占 88..128（44pt）
+     选中态实测是一块饱和蓝 #609AE9 的长圆角块（高 8pt，压在文字中下部） */
+  .tab-row { position: relative; height: 40px; padding-top: 22px; }
+  .tab-item { position: absolute; top: 0; transform: translateX(-50%); }
+  .tab-hit {
+    position: relative;
+    display: inline-block;
+    height: 22px;
+    line-height: 22px;
+  }
+  .tab-hi {
+    position: absolute; left: 50%; bottom: 3px; transform: translateX(-50%);
+    width: 47px; height: 8px; border-radius: 999px;
+    background: #609AE9;
+  }
+</style>
+</head>
+<body>
+<div class="phone">
+
+  <!-- ============ 固定区 1：状态栏（原样复制骨架示例） ============ -->
+  <div class="statusbar">
+    <span>9:41</span>
+    <span class="sb-right">
+      <svg width="18" height="12" viewBox="0 0 18 12" fill="#000"><rect x="0" y="7.5" width="3" height="4.5" rx="1"/><rect x="4.5" y="5" width="3" height="7" rx="1"/><rect x="9" y="2.5" width="3" height="9.5" rx="1"/><rect x="13.5" y="0" width="3" height="12" rx="1"/></svg>
+      <svg width="16" height="12" viewBox="0 0 16 12" fill="#000"><path d="M8 10.6 5.9 8.3a3.1 3.1 0 0 1 4.2 0L8 10.6Zm0-5.1c-1.5 0-2.9.5-4 1.5L2.6 5.6A7.9 7.9 0 0 1 8 3.4c2 0 3.9.8 5.4 2.2L12 7c-1.1-1-2.5-1.5-4-1.5Z"/></svg>
+      <svg width="25" height="12" viewBox="0 0 25 12"><rect x="0.5" y="0.5" width="21" height="11" rx="3" fill="none" stroke="#000" stroke-opacity=".35"/><rect x="2" y="2" width="15" height="8" rx="1.8" fill="#000"/><path d="M23 4.2v3.6c1-.3 1.4-.9 1.4-1.8s-.4-1.5-1.4-1.8Z" fill="#000" fill-opacity=".4"/></svg>
+    </span>
+  </div>
+
+  <!-- ============ 固定区 2：导航栏 ============ -->
+  <!-- 约课.png 里导航栏是【左对齐标题 + 返回箭头】，不是首页的品牌字样式 -->
+  <div class="booking-top">
+    <div class="navbar nav-left">
+      <div class="nav-back"><svg width="12" height="20" viewBox="0 0 12 20" fill="none" stroke="#333" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2 2 10l8 8"/></svg></div>
+      <span class="nav-title">一水瑜伽</span>
+      <div class="capsule">
+        <span class="cap-btn"><svg width="17" height="5" viewBox="0 0 17 5" fill="#333"><circle cx="2.5" cy="2.5" r="1.6"/><circle cx="8.5" cy="2.5" r="1.6"/><circle cx="14.5" cy="2.5" r="1.6"/></svg></span>
+        <span class="cap-div"></span>
+        <span class="cap-btn"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="#333" stroke-width="1.4"><circle cx="8" cy="8" r="6.6"/><circle cx="8" cy="8" r="1.6" fill="#333" stroke="none"/></svg></span>
+      </div>
+    </div>
+
+    <!-- 品类 Tab：团课 / 精品课 / 私教课 / 特色课
+         实测：文字逻辑 y=110..123pt；4 个标签中心 x ≈ 67.5 / 141.3 / 230.7 / 329.9pt
+         选中「私教课」：文字 #303337，其下压一条饱和蓝 #609AE9 长圆角块（逻辑 x=214..264.7, y=115..123） -->
+    <div class="tab-row">
+      <div class="tab-item press cursor-pointer" style="left:67.5px">
+        <span class="text-[17px] text-[#71777E] leading-none">团课</span>
+      </div>
+      <div class="tab-item press cursor-pointer" style="left:141.3px">
+        <span class="text-[17px] text-[#71777E] leading-none">精品课</span>
+      </div>
+      <div class="tab-item press cursor-pointer" style="left:230.7px">
+        <span class="tab-hit">
+          <span class="relative z-10 text-[17px] font-semibold text-[#303337] leading-none">私教课</span>
+          <span class="tab-hi"></span>
+        </span>
+      </div>
+      <div class="tab-item press cursor-pointer" style="left:329.9px">
+        <span class="text-[17px] text-[#71777E] leading-none">特色课</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 可滚动内容区 ============ -->
+  <div class="screen booking-body">
+
+    <!-- 日期条：白色圆角容器 + 横向可滑动（真机仅 7 列：9.20 星期日 到 9.26 星期六，选中 9.20） -->
+    <div class="mx-[15px] mt-[20px] bg-white rounded-[10px] shadow-sm date-card">
+      <div class="day-strip" id="dayStrip">
+        <!-- 选中：日 9.20 + 白底圆内蓝色对勾 -->
+        <div class="day-col press">
+          <div class="day-pill on">
+            <span class="d-week">日</span>
+            <span class="d-date">9.20</span>
+          </div>
+          <span class="d-check"><svg width="9" height="9" viewBox="0 0 12 12" fill="none" stroke="#609CE9" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M1.8 6.4 4.6 9.2 10.2 3"/></svg></span>
+        </div>
+        <!-- 未选中：深灰文字 + 蓝色小圆点 -->
+        <div class="day-col press"><div class="day-pill off"><span class="d-week">一</span><span class="d-date">9.21</span></div><span class="d-dot"></span></div>
+        <div class="day-col press"><div class="day-pill off"><span class="d-week">二</span><span class="d-date">9.22</span></div><span class="d-dot"></span></div>
+        <div class="day-col press"><div class="day-pill off"><span class="d-week">三</span><span class="d-date">9.23</span></div><span class="d-dot"></span></div>
+        <div class="day-col press"><div class="day-pill off"><span class="d-week">四</span><span class="d-date">9.24</span></div><span class="d-dot"></span></div>
+        <div class="day-col press"><div class="day-pill off"><span class="d-week">五</span><span class="d-date">9.25</span></div><span class="d-dot"></span></div>
+        <div class="day-col press"><div class="day-pill off"><span class="d-week">六</span><span class="d-date">9.26</span></div><span class="d-dot"></span></div>
+      </div>
+    </div>
+
+    <!-- 课程/教练卡片列表（截图共 3 张，均「暂无描述」；第 3 张下半被底部 TabBar 遮住）
+         实测：日期条卡底 232pt → 第一张卡顶 256.7pt（中间 24.7pt 是通栏浅蓝灰渐变带）；
+         卡片高 115，卡间距 16（3 张卡顶实测 ≈ 256.7 / 388.7 / 520.7，源图逻辑值） -->
+    <div class="px-[15px] pt-[23px] pb-[20px] flex flex-col gap-[16px]">
+
+      <!-- 卡片 1 -->
+      <div class="ccard press cursor-pointer">
+        <!-- 封面图：雪碧图法从 约课.png 切出（源图 x=90..345, y=798..1053 → 逻辑 30..115, 266..351） -->
+        <div class="c-photo" style="background-position:-30px -266px"></div>
+        <div class="c-title">胡萝卜</div>
+        <div class="c-desc">暂无描述</div>
+        <div class="c-btn">立即预约</div>
+      </div>
+
+      <!-- 卡片 2 -->
+      <div class="ccard press cursor-pointer">
+        <!-- 封面图：源图 x=90..345, y=1596..1851 → 逻辑 30..115, 532..617 -->
+        <div class="c-photo" style="background-position:-30px -532px"></div>
+        <div class="c-title">万嘉广场店客服</div>
+        <div class="c-desc">暂无描述</div>
+        <div class="c-btn">立即预约</div>
+      </div>
+
+      <!-- 卡片 3 -->
+      <div class="ccard press cursor-pointer">
+        <!-- 封面图：源图 x=90..345, y=1602..1857 → 逻辑 30..115, 534..619
+             （与卡片 2 是同一张照片，卡片下半被底部 TabBar 遮住，与截图一致） -->
+        <div class="c-photo" style="background-position:-30px -534px"></div>
+        <div class="c-title">一水双桥店</div>
+        <div class="c-desc">暂无描述</div>
+        <div class="c-btn">立即预约</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ============ 固定区 3：TabBar（一级页） ============ -->
+  <div id="tabbar"></div>
+</div>
+
+<script src="assets/tabbar.js"></script>
+<script>
+  renderTabBar('booking');
+  // 日期条初始滚动位置：选中项（9.20）在最左且完整可见
+  document.getElementById('dayStrip').scrollLeft = 0;
+</script>
+</body>
+</html>

@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>分享海报 · 一水瑜伽普拉提</title>
+<!-- ① 三件套固定顺序：tailwind → tokens → app.css -->
+<script src="assets/tailwind.js"></script>
+<script src="assets/tokens.js"></script>
+<link rel="stylesheet" href="assets/app.css">
+<style>
+  /* ============================================================
+     本页复刻说明（二级页，无 TabBar）
+     ------------------------------------------------------------
+     截图「二级页面-分享.png」本身就是**整张分享海报的大图**（1170×2532 @3x，
+     满屏 390×844）。状态栏、导航栏（‹ ⌂ 描边胶囊 + 微信胶囊）、
+     品牌字「【一水·瑜伽普拉提】/ 练瑜伽普拉提就来一水」、正文三行文案、
+     右下角小程序码、底部「下载 / 分享」操作栏——全部烘焙在这张图里。
+
+     因此本页用**整张原图**当海报底图（雪碧图法：不裁图、不生成新图片文件），
+     保证像素级还原；DOM 层只负责三件事：
+       ① 横向 overflow-x-auto + snap 的轮播结构
+       ② 页码指示器（真实 DOM，与图中烘焙的指示器完全重合，滑动时切换）
+       ③ 返回 / 首页 / 下载 / 分享 的点击热区（视觉由海报图提供）
+     ============================================================ */
+  .poster-slide {
+    background-image: url('../需求文档/小程序截图/二级页面-分享.png');
+    /* 源图 1170×2532 → 逻辑 390×844，等比 1/3 */
+    background-size: 390px 844px;
+    background-position: 0 0;
+    background-repeat: no-repeat;
+  }
+  #posterTrack { scroll-behavior: smooth; }
+  [data-page-dot] { transition: width .25s ease, opacity .25s ease; }
+</style>
+</head>
+<body>
+<div class="phone">
+
+  <!-- 整屏海报轮播区（本页没有独立的 statusbar / navbar DOM：
+       它们已经烘焙在海报图里，另画一层会出现重影） -->
+  <div id="posterWrap" class="relative flex-1 overflow-hidden bg-black">
+
+    <!-- ============ 海报轮播：横向 overflow-x-auto + snap ============ -->
+    <!-- 截图里的页码指示器是「1 段长条 + 1 个圆点」= 共 2 页。
+         目前只拿到第 1 页的海报大图，故第 2 页复用同一张图（不编造第 2 张设计稿）。 -->
+    <div id="posterTrack"
+         class="no-scrollbar flex h-full w-full snap-x snap-mandatory overflow-x-auto overflow-y-hidden">
+      <div class="poster-slide h-full w-[390px] shrink-0 snap-center"></div>
+      <div class="poster-slide h-full w-[390px] shrink-0 snap-center"></div>
+    </div>
+
+    <!-- ============ 页码指示器（真实 DOM） ============
+         实测：长条 x 543..587 / y 2065..2079（源图px）→ 逻辑 15×5，纯白 #FFFFFF
+               圆点 x 612..626 / 同样高 15px      → 逻辑 5×5，约 60% 白（估计值）
+               整组居中：源图 543..626，中心 584.5 ≈ 画面中心 585 -->
+    <div class="pointer-events-none absolute inset-x-0 top-[688px] flex items-center justify-center gap-[8px]">
+      <span data-page-dot class="h-[5px] flex-none rounded-full bg-white" style="width:15px;opacity:1"></span>
+      <span data-page-dot class="h-[5px] flex-none rounded-full bg-white" style="width:5px;opacity:.6"></span>
+    </div>
+
+    <!-- ============ 导航热区（视觉＝海报图里烘焙的 ‹ 与 ⌂） ============
+         实测描边胶囊 x 15..235 / y 155..235（源图px）→ 逻辑 x 5..78.3、y 51.7..78.3 -->
+    <a href="home.html" aria-label="返回" title="返回"
+       class="press absolute left-[12px] top-[52px] h-[27px] w-[32px] cursor-pointer"></a>
+    <a href="home.html" aria-label="首页" title="首页"
+       class="press absolute left-[50px] top-[52px] h-[27px] w-[34px] cursor-pointer"></a>
+
+    <!-- ============ 底部操作栏热区（视觉＝海报图里烘焙的圆角深色栏） ============
+         实测：栏体 逻辑 x≈19..339、y≈730..796；两个按钮文字分别为「下载」「分享」
+         按钮中心 逻辑 (107, 768.5) 与 (282, 768.5) -->
+    <button type="button" aria-label="下载" title="下载"
+            class="press absolute left-[77px] top-[743px] h-[50px] w-[60px] cursor-pointer">
+      <span class="absolute h-px w-px overflow-hidden whitespace-nowrap" style="clip:rect(0 0 0 0)">下载</span>
+    </button>
+    <button type="button" aria-label="分享" title="分享"
+            class="press absolute left-[252px] top-[743px] h-[50px] w-[60px] cursor-pointer">
+      <span class="absolute h-px w-px overflow-hidden whitespace-nowrap" style="clip:rect(0 0 0 0)">分享</span>
+    </button>
+
+  </div>
+</div>
+
+<script>
+(function () {
+  var wrap  = document.getElementById('posterWrap');
+  var track = document.getElementById('posterTrack');
+  var dots  = Array.prototype.slice.call(document.querySelectorAll('[data-page-dot]'));
+
+  /* 页码指示器跟随滑动位置切换：当前页＝长条，其它＝圆点 */
+  function sync() {
+    var i = Math.round(track.scrollLeft / Math.max(1, track.clientWidth));
+    if (i < 0) { i = 0; }
+    if (i > dots.length - 1) { i = dots.length - 1; }
+    for (var n = 0; n < dots.length; n++) {
+      var on = (n === i);
+      dots[n].style.width = on ? '15px' : '5px';
+      dots[n].style.opacity = on ? '1' : '.6';
+    }
+  }
+  track.addEventListener('scroll', sync, { passive: true });
+  window.addEventListener('resize', sync);
+  sync();
+
+  /* 桌面端也能用鼠标拖动轮播（触摸端走原生滚动）；拖动后抑制误触点击 */
+  var dragging = false, startX = 0, startLeft = 0, moved = false;
+  wrap.addEventListener('pointerdown', function (e) {
+    if (typeof e.button === 'number' && e.button !== 0) { return; }
+    dragging = true; moved = false;
+    startX = e.clientX; startLeft = track.scrollLeft;
+  });
+  window.addEventListener('pointermove', function (e) {
+    if (!dragging) { return; }
+    var dx = e.clientX - startX;
+    if (!moved && Math.abs(dx) > 4) { moved = true; track.style.scrollBehavior = 'auto'; }
+    if (moved) { track.scrollLeft = startLeft - dx; e.preventDefault(); }
+  });
+  window.addEventListener('pointerup', function () {
+    dragging = false;
+    track.style.scrollBehavior = '';
+  });
+  wrap.addEventListener('click', function (e) {
+    if (moved) { e.preventDefault(); e.stopPropagation(); moved = false; }
+  }, true);
+})();
+</script>
+</body>
+</html>

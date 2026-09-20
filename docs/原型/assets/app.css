@@ -1,0 +1,202 @@
+/* ============================================================
+   小程序复刻 · 外壳样式
+   画布 390 x 844（源截图 1170x2532 @3x）
+   ============================================================ */
+
+:root {
+  --brand: #609CE9;
+  --brand-light: #87C7F6;
+  --brand-soft: #EAF4F6;
+  --page: #F7F9FC;
+  --line: #EDEFF2;
+}
+
+* { box-sizing: border-box; }
+
+html, body { margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", "Microsoft YaHei", sans-serif;
+  background: #E9EBEF;
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  color: #333;
+}
+
+/* 手机外壳：正好 390x844，被 390x844 的 iframe 引用时会无缝铺满 */
+.phone {
+  position: relative;
+  width: 390px;
+  height: 844px;
+  background: #fff;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 可滚动内容区 */
+.screen {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+.screen::-webkit-scrollbar { width: 0; height: 0; }
+
+/* ---------- 状态栏 ---------- */
+.statusbar {
+  flex: none;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 20px 0;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: .2px;
+  color: #000;
+}
+.statusbar .sb-right { display: flex; align-items: center; gap: 4px; }
+
+/* ---------- 导航栏 ---------- */
+.navbar {
+  flex: none;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  font-size: 17px;
+  font-weight: 500;
+  color: #333;
+  padding: 0 100px;
+}
+.navbar .nav-title {
+  font-size: 17px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* 首页导航栏是品牌字，字距更宽、字重更轻 */
+.navbar.brand .nav-title {
+  font-weight: 500;
+  letter-spacing: 1.5px;
+  font-size: 17px;
+}
+/* 首页：书法「一」Logo + 品牌字，整体【左对齐】
+   实测 logo 13.0..26.7pt、标题 34.0..133.7pt（页面中心是 195pt，明显不是居中） */
+.navbar.left {
+  justify-content: flex-start;
+  gap: 7px;
+  padding-left: 13px;
+  padding-right: 104px;
+}
+/* Logo 用雪碧图从原截图切（背景图在页面里内联，因为 url 相对路径要按 HTML 位置解析） */
+.nav-logo {
+  flex: none;
+  width: 14px;
+  height: 21px;
+  background-repeat: no-repeat;
+}
+/* 返回：真机上是「‹ 返回」（箭头 + 文字），不是只有箭头 */
+.nav-back {
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 36px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0 4px;
+  font-size: 17px;
+  font-weight: 400;
+  color: #333;
+}
+
+/* 微信胶囊按钮 */
+.capsule {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 87px;
+  height: 32px;
+  border: .5px solid rgba(0, 0, 0, .09);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, .72);
+  display: flex;
+  align-items: center;
+  backdrop-filter: blur(4px);
+}
+.capsule .cap-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.capsule .cap-div {
+  width: .5px;
+  height: 18px;
+  background: rgba(0, 0, 0, .09);
+}
+
+/* ---------- 底部 TabBar ----------
+   实测：内容底经一层柔和阴影在 y=758pt 转纯白（即 TabBar 高 86pt）
+        图标 768..785pt、文字 793..803pt，往下到 844pt 是 Home Indicator 区 */
+.tabbar {
+  flex: none;
+  height: 86px;
+  display: flex;
+  align-items: flex-start;
+  padding-top: 10px;
+  border-top: .5px solid #F0F2F5;
+  background: #fff;
+}
+.tabbar .tab { 
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  line-height: 1;
+  color: #8A8F99;
+  text-decoration: none;
+}
+/* 实测：选中项只有「图标」变蓝（#4799EF），文字始终是灰色 #717579 */
+.tabbar .tab.active { color: #4799EF; }
+.tabbar .tab .tab-label { color: #717579; }
+
+/* ---------- 通用小工具 ---------- */
+/* ---- 雪碧图兜底：内联设了 background-image 的元素默认不平铺 ----
+   Tailwind 的 bg-no-repeat 在 headless 渲染时被观察到有过未生效的情况；
+   一旦平铺，background-position 出界后会把整张 844px 原截图重复带进容器，
+   "凭空多出一个元素"，且因为切进去的是浅色区，肉眼极难发现。 */
+[style*="background-image"] { background-repeat: no-repeat; }
+
+/* 截图模式：headless 渲染校验用。加 ?shot=1 后手机壳贴左上角，保证 1:1 无偏移。 */
+   headless 浏览器的布局视口宽度不受 --window-size 精确控制，
+   body 的居中会让 390px 的手机壳偏移、导致截图右半边被裁掉。
+   渲染校验时在 URL 后面加 ?shot=1，把手机壳固定到左上角，保证 1:1。 */
+html.shot body { display: block !important; }
+html.shot .phone {
+  position: fixed !important;
+  left: 0 !important;
+  top: 0 !important;
+  margin: 0 !important;
+}
+
+.no-scrollbar::-webkit-scrollbar { width: 0; height: 0; }
+.divider { height: .5px; background: var(--line); }
+.ellipsis { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.press:active { opacity: .6; }
