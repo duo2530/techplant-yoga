@@ -35,6 +35,12 @@
             <artifactId>druid-spring-boot-starter</artifactId>
         </dependency>
 
+        <!-- MyBatis-Plus：SqlSessionFactory 需要用它接管（业务模块用 BaseMapper/逻辑删除/雪花ID） -->
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-boot-starter</artifactId>
+        </dependency>
+
         <!-- 验证码 -->
         <dependency>
             <groupId>pro.fessional</groupId>

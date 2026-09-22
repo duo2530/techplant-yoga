@@ -8,8 +8,8 @@ import java.util.List;
 import javax.sql.DataSource;
 import org.apache.ibatis.io.VFS;
 import org.apache.ibatis.session.SqlSessionFactory;
-import org.mybatis.spring.SqlSessionFactoryBean;
 import org.mybatis.spring.boot.autoconfigure.SpringBootVFS;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -22,11 +22,23 @@ import org.springframework.core.type.classreading.CachingMetadataReaderFactory;
 import org.springframework.core.type.classreading.MetadataReader;
 import org.springframework.core.type.classreading.MetadataReaderFactory;
 import org.springframework.util.ClassUtils;
+import com.baomidou.mybatisplus.core.config.GlobalConfig;
+import com.baomidou.mybatisplus.core.handlers.MetaObjectHandler;
+import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
+import com.baomidou.mybatisplus.extension.spring.MybatisSqlSessionFactoryBean;
 import com.ruoyi.common.utils.StringUtils;
 
 /**
  * Mybatis支持*匹配扫描包
- * 
+ *
+ * <p>说明：SqlSessionFactory 使用 MyBatis-Plus 的 {@link MybatisSqlSessionFactoryBean} 构建。
+ * 业务模块（com.techplant.yoga）需要 MyBatis-Plus 的能力（BaseMapper、IdType.ASSIGN_ID、
+ * &#64;TableLogic、MetaObjectHandler，见详细设计 §1.1.1）；同一个工厂同时承载 RuoYi 原有的
+ * 原生 XML Mapper，因此不需要第二个 SqlSessionFactory。</p>
+ *
+ * <p>因为工程自己声明了 SqlSessionFactory，MyBatis-Plus 的自动配置会整体退出，
+ * 所以分页插件与审计字段填充器由本方法从容器里取出来手动装配。</p>
+ *
  * @author ruoyi
  */
 @Configuration
@@ -114,7 +126,9 @@ public class MyBatisConfig
     }
 
     @Bean
-    public SqlSessionFactory sqlSessionFactory(DataSource dataSource) throws Exception
+    public SqlSessionFactory sqlSessionFactory(DataSource dataSource,
+            ObjectProvider<MybatisPlusInterceptor> mybatisPlusInterceptorProvider,
+            ObjectProvider<MetaObjectHandler> metaObjectHandlerProvider) throws Exception
     {
         String typeAliasesPackage = env.getProperty("mybatis.typeAliasesPackage");
         String mapperLocations = env.getProperty("mybatis.mapperLocations");
@@ -122,11 +136,28 @@ public class MyBatisConfig
         typeAliasesPackage = setTypeAliasesPackage(typeAliasesPackage);
         VFS.addImplClass(SpringBootVFS.class);
 
-        final SqlSessionFactoryBean sessionFactory = new SqlSessionFactoryBean();
+        final MybatisSqlSessionFactoryBean sessionFactory = new MybatisSqlSessionFactoryBean();
         sessionFactory.setDataSource(dataSource);
         sessionFactory.setTypeAliasesPackage(typeAliasesPackage);
         sessionFactory.setMapperLocations(resolveMapperLocations(StringUtils.split(mapperLocations, ",")));
         sessionFactory.setConfigLocation(new DefaultResourceLoader().getResource(configLocation));
+
+        // MyBatis-Plus 分页等插件（容器里没有则跳过，保持与上游框架兼容）
+        MybatisPlusInterceptor mybatisPlusInterceptor = mybatisPlusInterceptorProvider.getIfAvailable();
+        if (mybatisPlusInterceptor != null)
+        {
+            sessionFactory.setPlugins(mybatisPlusInterceptor);
+        }
+
+        // MyBatis-Plus 全局配置：审计字段自动填充（create_by/create_time/update_by/update_time）
+        MetaObjectHandler metaObjectHandler = metaObjectHandlerProvider.getIfAvailable();
+        if (metaObjectHandler != null)
+        {
+            GlobalConfig globalConfig = new GlobalConfig();
+            globalConfig.setMetaObjectHandler(metaObjectHandler);
+            sessionFactory.setGlobalConfig(globalConfig);
+        }
+
         return sessionFactory.getObject();
     }
 }

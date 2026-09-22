@@ -49,6 +49,12 @@
             <artifactId>ruoyi-framework</artifactId>
         </dependency>
 
+        <!-- 瑜伽业务模块（课程管理，包名 com.techplant.yoga）-->
+        <dependency>
+            <groupId>com.ruoyi</groupId>
+            <artifactId>ruoyi-yoga</artifactId>
+        </dependency>
+
         <!-- 定时任务-->
         <dependency>
             <groupId>com.ruoyi</groupId>

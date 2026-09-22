@@ -24,6 +24,11 @@
         <swagger.version>3.0.0</swagger.version>
         <kaptcha.version>2.3.3</kaptcha.version>
         <pagehelper.boot.version>1.4.7</pagehelper.boot.version>
+        <!-- MyBatis-Plus 与 PageHelper 共用 jsqlparser，两者必须选到同一个版本：
+             PageHelper 5.3.3 需要 jsqlparser 的 SelectBody（4.7 起被删除），
+             MyBatis-Plus 3.5.6 起改用 jsqlparser 4.9，因此 MP 取最后一个用 4.6 的版本 3.5.5 -->
+        <mybatis-plus.version>3.5.5</mybatis-plus.version>
+        <jsqlparser.version>4.6</jsqlparser.version>
         <fastjson.version>2.0.64</fastjson.version>
         <oshi.version>7.4.4</oshi.version>
         <commons.io.version>2.22.0</commons.io.version>
@@ -119,6 +124,28 @@
                 <groupId>com.github.pagehelper</groupId>
                 <artifactId>pagehelper-spring-boot-starter</artifactId>
                 <version>${pagehelper.boot.version}</version>
+            </dependency>
+
+            <!-- MyBatis-Plus（业务模块 ORM，详细设计 §1.1.1 已确认口径） -->
+            <dependency>
+                <groupId>com.baomidou</groupId>
+                <artifactId>mybatis-plus-boot-starter</artifactId>
+                <version>${mybatis-plus.version}</version>
+            </dependency>
+
+            <!-- 显式锁定 jsqlparser：PageHelper 与 MyBatis-Plus 的解析依赖，
+                 不定死会随传递依赖漂移到 4.7+ 导致 PageHelper 启动即报 SelectBody 缺失 -->
+            <dependency>
+                <groupId>com.github.jsqlparser</groupId>
+                <artifactId>jsqlparser</artifactId>
+                <version>${jsqlparser.version}</version>
+            </dependency>
+
+            <!-- 瑜伽业务模块（课程等业务代码，包名 com.techplant.yoga） -->
+            <dependency>
+                <groupId>com.ruoyi</groupId>
+                <artifactId>ruoyi-yoga</artifactId>
+                <version>${ruoyi.version}</version>
             </dependency>
 
             <!-- 获取系统信息 -->
@@ -228,6 +255,7 @@
         <module>ruoyi-quartz</module>
         <module>ruoyi-generator</module>
         <module>ruoyi-common</module>
+        <module>ruoyi-yoga</module>
     </modules>
     <packaging>pom</packaging>
 

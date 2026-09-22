@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <parent>
+        <artifactId>ruoyi</artifactId>
+        <groupId>com.ruoyi</groupId>
+        <version>3.9.2</version>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+
+    <artifactId>ruoyi-yoga</artifactId>
+
+    <description>
+        瑜伽业务模块：业务包名 com.techplant.yoga，ORM 使用 MyBatis-Plus
+        （详细设计 docs/详细设计/详细设计.md §1.1.1、§3.2 已确认口径）
+    </description>
+
+    <dependencies>
+
+        <!-- 通用工具（SecurityUtils / StringUtils 等） -->
+        <dependency>
+            <groupId>com.ruoyi</groupId>
+            <artifactId>ruoyi-common</artifactId>
+        </dependency>
+
+        <!-- SpringBoot Web（控制器注解、参数校验、MockMvc 测试） -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+
+        <!-- MyBatis-Plus：BaseMapper / IdType.ASSIGN_ID / @TableLogic / MetaObjectHandler -->
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-boot-starter</artifactId>
+        </dependency>
+
+        <!-- 接口文档注解（@Api/@ApiOperation/@ApiModelProperty）：springfox 的注解在 io.swagger 包下，
+             版本与 ruoyi-admin 显式引入的 swagger-models 1.6.2 对齐 -->
+        <dependency>
+            <groupId>io.swagger</groupId>
+            <artifactId>swagger-annotations</artifactId>
+            <version>1.6.2</version>
+        </dependency>
+
+        <!-- 单元测试：JUnit 5 + Mockito（详细设计 §5.1，不连数据库） -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- 集成测试用的内存库：验证 MyBatis-Plus 装配（雪花ID / 逻辑删除 / 审计填充） -->
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- 仅测试范围：装配自检要跑真实的 MyBatisConfig（SqlSessionFactory 由它在 ruoyi-framework 里构建），
+             业务代码本身不依赖框架模块 -->
+        <dependency>
+            <groupId>com.ruoyi</groupId>
+            <artifactId>ruoyi-framework</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+    </dependencies>
+
+    <build>
+        <plugins>
+            <!-- 单元测试跑 JUnit 5（详细设计 §5.1）：本机 Maven 3.3.9 默认绑定的
+                 surefire 2.12.4 不认识 JUnit 5，必须显式指定支持 Jupiter 的版本 -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>2.22.2</version>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>

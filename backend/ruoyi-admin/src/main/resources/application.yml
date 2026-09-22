@@ -68,13 +68,13 @@ spring:
   # redis 配置
   redis:
     # 地址
-    host: localhost
+    host: dbconn.sealosbja.site
     # 端口，默认为6379
-    port: 6379
+    port: 35397
     # 数据库索引
     database: 0
     # 密码
-    password:
+    password: uwN861E51P
     # 连接超时时间
     timeout: 10s
     lettuce:
@@ -99,8 +99,8 @@ token:
 
 # MyBatis配置
 mybatis:
-  # 搜索指定包别名
-  typeAliasesPackage: com.ruoyi.**.domain
+  # 搜索指定包别名（业务模块的 domain 包也要进来，MyBatis-Plus 实体同样注册别名）
+  typeAliasesPackage: com.ruoyi.**.domain,com.techplant.yoga.**.domain
   # 配置mapper的扫描，找到所有的mapper.xml映射文件
   mapperLocations: classpath*:mapper/**/*Mapper.xml
   # 加载全局的配置文件
