@@ -56,12 +56,12 @@ docs/原型/
 用像素采样从截图里取出真实色值：主色 `#609CE9`、登录按钮蓝 `#87C7F6`、页面灰底 `#F7F9FC`、门店卡片 `#E2E0DB`、微信绿 `#07C160`。
 
 **2. 照片用「雪碧图法」，不裁图、不改动原文件。**
-直接把 `docs/需求文档/小程序截图/` 里的原图当雪碧图，用 `background-size: 390px auto` + `background-position` 切出需要的区域：
+直接把 `docs/需求文档/用户端/用户端小程序截图/` 里的原图当雪碧图，用 `background-size: 390px auto` + `background-position` 切出需要的区域：
 
 ```css
 /* 显示源图 y=276..770px 这一段 */
 width:390px; height:165px;
-background-image:url('../需求文档/小程序截图/首页1.png');
+background-image:url('../需求文档/用户端/用户端小程序截图/首页1.png');
 background-size:390px auto;
 background-position:0 -92px;   /* -276/3 */
 ```
@@ -72,7 +72,7 @@ background-position:0 -92px;   /* -276/3 */
 ## 重新生成对比图
 
 ```powershell
-pwsh -NoProfile -File .\docs\原型\_工具\渲染并对比.ps1
+pwsh -NoProfile -File .\docs\原型\_工具\渲染对比.ps1
 ```
 
 会用 headless Chrome 把每个页面渲染出来，和原始截图拼成**左右对比图**（左=真机原截图，右=HTML 渲染），输出到 `_工具/对比/`。

@@ -6,7 +6,7 @@ Add-Type -AssemblyName System.Drawing
 
 $Root   = Resolve-Path (Join-Path $PSScriptRoot "..\..\..")
 $Proto  = Join-Path $Root "docs\原型"
-$Shots  = Join-Path $Root "docs\需求文档\小程序截图"
+$Shots  = Join-Path $Root "docs\需求文档\用户端\用户端小程序截图"
 $OutDir = Join-Path $PSScriptRoot "对比"
 $TmpDir = Join-Path $PSScriptRoot "渲染"
 New-Item -ItemType Directory -Force -Path $OutDir, $TmpDir | Out-Null

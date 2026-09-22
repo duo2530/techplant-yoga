@@ -1,5 +1,5 @@
 Add-Type -AssemblyName System.Drawing
-$dir = Join-Path $PSScriptRoot "..\..\需求文档\小程序截图"
+$dir = Join-Path $PSScriptRoot "..\..\需求文档\用户端\用户端小程序截图"
 $out = Join-Path $PSScriptRoot "..\规格\色带分析.txt"
 $lines = @()
 $lines += "# 截图横向色带分析（源图 1170x2532 @3x，逻辑 390x844）"
