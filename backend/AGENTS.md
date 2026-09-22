@@ -118,13 +118,13 @@ java -jar backend/ruoyi-admin/target/ruoyi-admin.jar
 - 反例：controller 直接 `return page.getList()`、或把 `IPage` 返回出去、或为了「好看」包一层 `{success, result}`。
 - 范例：`ruoyi-yoga/.../course/controller/CourseController.java`（列表装配 `TableDataInfo`，单条用 `AjaxResult.success`）。
 
-### 8.2 统一异常处理（**最容易写错的一节**）
+### 8.2 统一异常处理
 
 一句话口径：**业务失败就抛 `ServiceException("提示语", 业务码)`，剩下的交给框架唯一的全局异常处理器**；不要 `catch` 之后自己拼响应，也不要吞异常返回 null。
 
 | 环节 | 落点 | 说明 |
 |---|---|---|
-| **唯一的处理器** | `ruoyi-framework/.../web/exception/GlobalExceptionHandler.java` | `@RestControllerAdvice`，把所有异常统一转成 `AjaxResult`；**业务模块不要再写第二个 `@RestControllerAdvice`**（R11 已经删过一次同名的类） |
+| **唯一的处理器** | `ruoyi-framework/.../web/exception/GlobalExceptionHandler.java` | `@RestControllerAdvice`，把所有异常统一转成 `AjaxResult`； |
 | 抛业务异常 | `com.ruoyi.common.exception.ServiceException` | `throw new ServiceException("课程不存在或已被删除", 404)`；不带码时默认 500 |
 | 401 未登录 / 登录态失效 | `framework/security/handle/AuthenticationEntryPointImpl` | 用 `ServletUtils.renderString` 手工写 `AjaxResult.error(401, ...)`，**HTTP 仍是 200** |
 | 403 无权限 | `GlobalExceptionHandler#handleAccessDeniedException` | 固定文案「没有权限，请联系管理员授权」；本版 RBAC 未启用，暂不返回 |
@@ -167,7 +167,7 @@ java -jar backend/ruoyi-admin/target/ruoyi-admin.jar
 | 取当前登录人 | `com.techplant.yoga.common.util.CurrentUserUtils` | `getUserIdOrNull()` / `getUserIdText()`；**直接用 `SecurityUtils.getUserId()` 未登录会抛异常**，所以才包了这一层 |
 | 逻辑删除 | DO 上的 `@TableLogic` | 标注 `deleted` 后，MP 自动给查询追加 `deleted = 0`、删除变 `UPDATE`；**不要手写 `deleted = 0` 条件** |
 
-### 8.5 链路标识与业务日志（自研那套，写操作必用）
+### 8.5 链路标识与业务日志
 
 - `com.techplant.yoga.common.log.TraceIdFilter`：生成/透传 `traceId` 写入 MDC，并回写响应头 **`X-Trace-Id`**（前端与运维按它排查）。
 - `com.techplant.yoga.common.log.BusinessLog`：专用 logger `com.techplant.yoga.business`，输出固定字段行 `traceId= operator= source= target= action= result= detail= cost=`。
@@ -197,7 +197,7 @@ java -jar backend/ruoyi-admin/target/ruoyi-admin.jar
 - 分页必须有**稳定排序**，否则翻页会重复/漏项（课程列表是 `sort_no ASC, id DESC`）。
 - 兜底：MP 分页插件设了 `maxLimit = 100`。
 
-### 8.9 MyBatis-Plus 的装配方式（**不是自动配置，动之前必须读**）
+### 8.9 MyBatis-Plus 的装配方式
 
 工程在 `ruoyi-framework` 里自己声明了 `SqlSessionFactory`，**MyBatis-Plus 的自动配置因此整体退出**，于是：
 
@@ -234,13 +234,9 @@ java -jar backend/ruoyi-admin/target/ruoyi-admin.jar
 ## 9. 不要做的事
 
 - 不要为了"顺手"改 `sys_*` 表结构或历史 SQL 内容。
-- **不要另造统一响应体 / 统一异常 / 统一异常处理器**：业务失败一律抛 `ServiceException`，返回体只用 `AjaxResult` / `TableDataInfo`（§8.1、§8.2）。历史上已经因为「两套响应体 + 两个全局异常处理器」返工过一次（R11）。
 - **不要为了「让参数校验返回 400」或「隐藏异常 message」去改框架的 `GlobalExceptionHandler`**：它同时服务 `sys_*` 接口，属于全局改动，要先提出来单独评估（§8.11）。
-- 不要顺手升级 MyBatis-Plus / jsqlparser / PageHelper（三者版本是锁死的，见 §8.9）。
-- **不要把真实密码提交进仓库**：当前工作区的 `application-druid.yml`（MySQL）和 `application.yml`（Redis）已填入真实云实例地址与密码，只是还没提交。提交前请改成占位符，例如 `password: ${MYSQL_PASSWORD:}` / `${REDIS_PASSWORD:}`，运行和部署时用环境变量或 `--spring.datasource.druid.master.password=xxx` 注入。
 - `token.secret` 仍是默认串，`/druid/*` 监控台仍是 `ruoyi/123456` 且白名单为空（任何人可访问）；`ruoyi.profile` 上传目录仍是 `D:/ruoyi/uploadPath`（Windows 硬编码）。上线前必须改/关。
 - 云 MySQL 常见连接坑：`useSSL=true` 且没有配证书时可能连不上（自建或普通云库建议 `useSSL=false`）；MySQL 8 默认认证插件是 `caching_sha2_password`，关掉 SSL 后需要追加 `allowPublicKeyRetrieval=true`。
-- 不要擅自升级 Spring Boot / JDK 大版本，也不要引入与 SB 2.5.15 不兼容的依赖。
 
 ## 10. 改完怎么验证
 
