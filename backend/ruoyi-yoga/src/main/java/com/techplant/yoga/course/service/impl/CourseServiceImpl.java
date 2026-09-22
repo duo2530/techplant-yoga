@@ -3,8 +3,8 @@ package com.techplant.yoga.course.service.impl;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.ruoyi.common.exception.ServiceException;
 import com.techplant.yoga.booking.service.BookingQueryService;
-import com.techplant.yoga.common.exception.BusinessException;
 import com.techplant.yoga.common.log.BusinessLog;
 import com.techplant.yoga.common.response.PageResult;
 import com.techplant.yoga.common.util.CurrentUserUtils;
@@ -13,7 +13,6 @@ import com.techplant.yoga.course.dao.CourseDao;
 import com.techplant.yoga.course.domain.CourseDO;
 import com.techplant.yoga.course.dto.CourseCreateDTO;
 import com.techplant.yoga.course.dto.CourseUpdateDTO;
-import com.techplant.yoga.course.exception.CourseReferencedException;
 import com.techplant.yoga.course.query.CourseQuery;
 import com.techplant.yoga.course.service.CourseService;
 import com.techplant.yoga.course.vo.CourseCreatedVO;
@@ -25,6 +24,10 @@ import com.techplant.yoga.schedule.service.ScheduleQueryService;
  * 课程业务实现（详细设计 §3.1.1、§3.1.4、§4.1）。
  *
  * <p>职责：存在性校验、跨模块引用检查、事务边界、业务日志；对象转换交给 {@code CourseConverter}。</p>
+ *
+ * <p><b>异常口径：</b>业务失败统一抛若依的 {@link ServiceException}（带业务码），由框架自带的
+ * {@code GlobalExceptionHandler} 转成 {@code AjaxResult}（2026-09-22 决策：全项目统一若依响应体系）：
+ * 课程不存在 → 404、停用被引用 → 409。</p>
  */
 @Service
 public class CourseServiceImpl implements CourseService
@@ -34,6 +37,9 @@ public class CourseServiceImpl implements CourseService
 
     /** 资源不存在 */
     private static final int NOT_FOUND = 404;
+
+    /** 状态冲突：停用被引用 */
+    private static final int CONFLICT = 409;
 
     /** 新增/更新未生效 */
     private static final int INTERNAL_ERROR = 500;
@@ -101,7 +107,7 @@ public class CourseServiceImpl implements CourseService
         int rows = courseDao.insert(course);
         if (rows != 1 || course.getId() == null)
         {
-            throw new BusinessException(INTERNAL_ERROR, "新增课程失败");
+            throw new ServiceException("新增课程失败", INTERNAL_ERROR);
         }
         // §6.1.1 埋点（3）：新增成功（课程编号必须序列化为字符串，见 §2.1.5）
         BusinessLog.success("CREATE", "course:" + course.getId(), CourseConverter.snapshot(course),
@@ -172,7 +178,11 @@ public class CourseServiceImpl implements CourseService
                 // §6.1.3 埋点（2）：本模块最重要的一条日志 —— 运营会问「为什么停不了」
                 BusinessLog.blocked(ACTION_CHANGE_STATUS, "course:" + courseId,
                         String.format("scheduleCount=%d bookingCount=%d", scheduleCount, bookingCount));
-                throw new CourseReferencedException(scheduleCount, bookingCount);
+                // 业务码 409：提示语里带上阻塞明细（若依的 AjaxResult 只能承载 code/msg，
+                // 结构化明细随 2026-09-22 的响应体系决策取消，2026-09-22 详见交付说明）
+                throw new ServiceException(
+                        String.format("该课程下仍有 %d 个未完成排班、%d 条未结束预约，无法停用", scheduleCount, bookingCount),
+                        CONFLICT);
             }
         }
 
@@ -238,9 +248,9 @@ public class CourseServiceImpl implements CourseService
         return status != null && status == STATUS_DISABLED;
     }
 
-    private BusinessException notFound()
+    private ServiceException notFound()
     {
-        return new BusinessException(NOT_FOUND, "课程不存在或已被删除");
+        return new ServiceException("课程不存在或已被删除", NOT_FOUND);
     }
 
     /**

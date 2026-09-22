@@ -6,7 +6,10 @@ import java.util.List;
 /**
  * 分页结果结构（详细设计 §2.3.2）。
  *
- * <p>service 层把 MyBatis-Plus 的 {@code IPage} 转换成该对象，**不把 IPage 暴露给前端**（§2.1.4）。</p>
+ * <p><b>这是 service 层内部结构，不是 HTTP 契约：</b>接口返回给前端的列表数据按若依标准用
+ * {@code com.ruoyi.common.core.page.TableDataInfo}（{@code {total, rows, code, msg}}），
+ * controller 负责把本对象装配成 {@code TableDataInfo}（2026-09-22 响应体系决策）。
+ * service 内部用它承载「总记录数 + 当前页数据」，避免把 MyBatis-Plus 的 {@code IPage} 暴露出去（§2.1.4）。</p>
  *
  * @param <T> 列表元素类型
  */

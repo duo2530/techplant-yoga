@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
@@ -28,14 +29,13 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.context.SecurityContextHolder;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.ruoyi.common.exception.ServiceException;
 import com.techplant.yoga.booking.service.BookingQueryService;
-import com.techplant.yoga.common.exception.BusinessException;
 import com.techplant.yoga.common.response.PageResult;
 import com.techplant.yoga.course.dao.CourseDao;
 import com.techplant.yoga.course.domain.CourseDO;
 import com.techplant.yoga.course.dto.CourseCreateDTO;
 import com.techplant.yoga.course.dto.CourseUpdateDTO;
-import com.techplant.yoga.course.exception.CourseReferencedException;
 import com.techplant.yoga.course.query.CourseQuery;
 import com.techplant.yoga.course.service.impl.CourseServiceImpl;
 import com.techplant.yoga.course.vo.CourseCreatedVO;
@@ -94,35 +94,37 @@ class CourseServiceImplTest
     // ------------------------------------------------------------------
 
     @Test
-    @DisplayName("5.1.1.1 停用课程：课程下有未完成的排班 → 拒绝停用")
+    @DisplayName("5.1.1.1 停用课程：课程下有未完成的排班 → 拒绝停用（业务码 409）")
     void disableCourse_withUnfinishedSchedule_shouldReject()
     {
         when(courseDao.selectById(COURSE_ID)).thenReturn(enabledCourse());
         when(scheduleQueryService.countUnfinishedByCourseId(COURSE_ID)).thenReturn(3L);
         when(bookingQueryService.countUnfinishedByCourseId(COURSE_ID)).thenReturn(0L);
 
-        CourseReferencedException exception = assertThrows(CourseReferencedException.class,
+        ServiceException exception = assertThrows(ServiceException.class,
                 () -> courseService.updateStatus(COURSE_ID, 0));
 
-        assertEquals(3L, exception.getScheduleCount());
-        assertEquals(0L, exception.getBookingCount());
-        assertEquals(409, exception.getCode());
+        // 响应体系统一为若依 AjaxResult 后，阻塞明细放在提示语里（不再有结构化 data）
+        assertEquals(409, exception.getCode().intValue());
+        assertTrue(exception.getMessage().contains("3 个未完成排班"), exception.getMessage());
+        assertTrue(exception.getMessage().contains("0 条未结束预约"), exception.getMessage());
         verify(courseDao, never()).updateStatus(any(), any(), any());
     }
 
     @Test
-    @DisplayName("5.1.1.2 停用课程：课程下有未结束的预约 → 拒绝停用")
+    @DisplayName("5.1.1.2 停用课程：课程下有未结束的预约 → 拒绝停用（业务码 409）")
     void disableCourse_withUnfinishedBooking_shouldReject()
     {
         when(courseDao.selectById(COURSE_ID)).thenReturn(enabledCourse());
         when(scheduleQueryService.countUnfinishedByCourseId(COURSE_ID)).thenReturn(0L);
         when(bookingQueryService.countUnfinishedByCourseId(COURSE_ID)).thenReturn(5L);
 
-        CourseReferencedException exception = assertThrows(CourseReferencedException.class,
+        ServiceException exception = assertThrows(ServiceException.class,
                 () -> courseService.updateStatus(COURSE_ID, 0));
 
-        assertEquals(0L, exception.getScheduleCount());
-        assertEquals(5L, exception.getBookingCount());
+        assertEquals(409, exception.getCode().intValue());
+        assertTrue(exception.getMessage().contains("0 个未完成排班"), exception.getMessage());
+        assertTrue(exception.getMessage().contains("5 条未结束预约"), exception.getMessage());
         verify(courseDao, never()).updateStatus(any(), any(), any());
     }
 
@@ -146,10 +148,10 @@ class CourseServiceImplTest
     {
         when(courseDao.selectById(COURSE_ID)).thenReturn(null);
 
-        BusinessException exception = assertThrows(BusinessException.class,
+        ServiceException exception = assertThrows(ServiceException.class,
                 () -> courseService.updateStatus(COURSE_ID, 0));
 
-        assertEquals(404, exception.getCode());
+        assertEquals(404, exception.getCode().intValue());
         verify(scheduleQueryService, never()).countUnfinishedByCourseId(anyLong());
         verify(bookingQueryService, never()).countUnfinishedByCourseId(anyLong());
         verify(courseDao, never()).updateStatus(any(), any(), any());
@@ -316,9 +318,9 @@ class CourseServiceImplTest
     {
         when(courseDao.selectById(COURSE_ID)).thenReturn(null);
 
-        BusinessException exception = assertThrows(BusinessException.class, () -> courseService.getById(COURSE_ID));
+        ServiceException exception = assertThrows(ServiceException.class, () -> courseService.getById(COURSE_ID));
 
-        assertEquals(404, exception.getCode());
+        assertEquals(404, exception.getCode().intValue());
     }
 
     // ------------------------------------------------------------------
@@ -396,9 +398,9 @@ class CourseServiceImplTest
         dto.setType(1);
         dto.setDifficulty(2);
 
-        BusinessException exception = assertThrows(BusinessException.class, () -> courseService.update(COURSE_ID, dto));
+        ServiceException exception = assertThrows(ServiceException.class, () -> courseService.update(COURSE_ID, dto));
 
-        assertEquals(404, exception.getCode());
+        assertEquals(404, exception.getCode().intValue());
         verify(courseDao, never()).updateById(any(CourseDO.class));
     }
 
@@ -461,3 +463,4 @@ class CourseServiceImplTest
         }
     }
 }
+
