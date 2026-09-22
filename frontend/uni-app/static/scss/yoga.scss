@@ -1,0 +1,110 @@
+/* ============================================================
+   一水·瑜伽普拉提 · 全局公共样式
+   ------------------------------------------------------------
+   页面内容区尺寸换算：原型逻辑画布 390pt → 小程序 750rpx
+                      rpx = pt × 750 / 390 ≈ pt × 1.9231
+   色值见 uni.scss 里的设计 token（实测值，不要改）
+   ============================================================ */
+
+/* uni.scss 会被 uni-app 注入到每个 SFC 的 style 块；
+   本文件是被 index.scss 引入的普通 scss，显式再引入一次，保证单独编译时变量也在 */
+@import "@/uni.scss";
+
+page {
+  background: $ys-page;
+  color: $ys-ink-1;
+  font-size: 27rpx;
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', 'Microsoft YaHei', sans-serif;
+}
+
+/* 页面容器 */
+.ys-page {
+  min-height: 100vh;
+  background: $ys-page;
+}
+
+.ys-page--warm {
+  background: $ys-page-warm;
+}
+
+/* 页面左右边距（原型 13pt） */
+.ys-pad {
+  padding-left: $ys-gap;
+  padding-right: $ys-gap;
+}
+
+/* 白卡 */
+.ys-card {
+  background: #fff;
+  border-radius: $ys-radius-lg;
+  box-shadow: $ys-card-shadow;
+}
+
+/* 分隔线 */
+.ys-divider {
+  height: 1px;
+  background: $ys-line;
+}
+
+/* 单行 / 两行省略 */
+.ys-ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ys-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* 按压反馈（原型里所有可点元素都有 .press） */
+.press:active {
+  opacity: 0.6;
+}
+
+/* 主按钮（登录/注册/提交，原型用 #87C7F6） */
+.ys-btn-primary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 88rpx;
+  font-size: 31rpx;
+  color: #fff;
+  background: $ys-brand-light;
+  border-radius: 44rpx;
+
+  &--disabled {
+    opacity: 0.5;
+  }
+}
+
+/* 表单行（登录/注册/申请体验用） */
+.ys-field {
+  display: flex;
+  align-items: center;
+  height: 96rpx;
+  border-bottom: 1px solid $ys-line-form;
+
+  &__label {
+    width: 150rpx;
+    font-size: 29rpx;
+    color: $ys-ink-1;
+  }
+
+  &__required {
+    color: $ys-star;
+  }
+
+  &__input {
+    flex: 1;
+    font-size: 29rpx;
+    color: $ys-ink-1;
+  }
+
+  &__placeholder {
+    color: $ys-ink-4;
+  }
+}

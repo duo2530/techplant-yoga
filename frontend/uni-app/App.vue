@@ -1,11 +1,7 @@
 <script setup>
   import config from './config'
-  import { getToken } from '@/utils/auth'
   import { useConfigStore } from '@/store'
-  import { getCurrentInstance } from "vue"
   import { onLaunch } from '@dcloudio/uni-app'
-
-  const { proxy } = getCurrentInstance()
 
   onLaunch(() => {
     initApp()
@@ -13,22 +9,15 @@
 
   // 初始化应用
   function initApp() {
-    // 初始化应用配置
+    // 初始化应用配置（品牌名、logo、协议链接）
     initConfig()
-    // 检查用户登录状态
-    //#ifdef H5
-    checkLogin()
-    //#endif
+    // 注意：当前阶段是「原型还原 + mock 数据」，没有真实登录态，
+    // 因此这里不做登录检查（也不跳转登录页），首页即启动页。
+    // 接入真实后端后，需要恢复基于 token 的登录检查（见 permission.js 里的 MOCK_MODE 说明）。
   }
 
   function initConfig() {
     useConfigStore().setConfig(config)
-  }
-
-  function checkLogin() {
-    if (!getToken()) {
-      proxy.$tab.reLaunch('/pages/login') 
-    }
   }
 </script>
 

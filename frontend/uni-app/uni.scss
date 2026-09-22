@@ -62,3 +62,51 @@ $uni-color-subtitle: #555555; // 二级标题颜色
 $uni-font-size-subtitle:26px;
 $uni-color-paragraph: #3F536E; // 文章段落颜色
 $uni-font-size-paragraph:15px;
+
+/* ============================================================
+   一水·瑜伽普拉提 · 设计 token
+   ------------------------------------------------------------
+   色值来自原型实测（docs/原型/_复刻规范.md §4、docs/原型/assets/tokens.js），
+   不是估计值，不要改。
+   尺寸换算：原型逻辑画布 390pt，小程序画布 750rpx
+            → rpx = pt × 750 / 390 ≈ pt × 1.9231
+            （例：13pt → 25rpx，12pt → 23rpx，15pt → 29rpx）
+   ============================================================ */
+
+/* 主色 */
+$ys-brand:        #609CE9; // 主色：品类 Tab 选中块、日期条选中
+$ys-brand-light:  #87C7F6; // 登录/注册按钮蓝
+$ys-brand-soft:   #EAF4F6; // 首页浅青底
+$ys-brand-deep:   #4A8BD8;
+$ys-brand-pale:   #E6F0FA;
+$ys-brand-tab:    #4799EF; // TabBar 选中图标（且变实心，文字不变蓝）
+$ys-brand-trial:  #3165CC; // 我的体验课 Tab 选中蓝
+$ys-brand-link:   #0288D1; // 首页「换店 / 查看课程」链接蓝
+
+/* 背景 */
+$ys-page:         #F7F9FC; // 页面灰底
+$ys-page-warm:    #F8F8F8; // 体验课等内容区底
+
+/* 文字 */
+$ys-ink-1:        #333333;
+$ys-ink-2:        #666666;
+$ys-ink-3:        #999999;
+$ys-ink-4:        #BBBBBB;
+$ys-ink-muted:    #AAAAAA; // 空态文字与图标
+$ys-title:        #2F4754; // 首页区块标题
+$ys-text-sub:     #627984; // 首页次要文字（查看全部、暂无公告）
+$ys-text-card:    #3F5965; // 首页小卡文字
+$ys-tab-text:     #717579; // TabBar 文字（始终灰色）
+
+/* 线与点缀 */
+$ys-line:         #EDEFF2;
+$ys-line-form:    #E5E5E5; // 表单分隔线
+$ys-star:         #E83A30; // 必填星号
+$ys-wechat:       #07C160; // 微信原生绿
+
+/* 圆角与间距（原型为 pt，这里直接给 rpx 值） */
+$ys-radius-lg:    23rpx; // 12pt
+$ys-radius-md:    19rpx; // 10pt
+$ys-radius-sm:    15rpx; // 8pt
+$ys-gap:          25rpx; // 13pt 页面左右边距
+$ys-card-shadow:  0 0 19rpx rgba(0, 0, 0, .06); // 0 0 10px

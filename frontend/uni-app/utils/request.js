@@ -36,7 +36,8 @@ const request = config => {
           showConfirm('登录状态已过期，您可以继续留在该页面，或者重新登录?').then(res => {
             if (res.confirm) {
               useUserStore().logOut().then(res => {
-                uni.reLaunch({ url: '/pages/login' })
+                // 登录页已从 pages/login 换成 pages/auth/quick-login（原型还原后的页面路径）
+                uni.reLaunch({ url: '/pages/auth/quick-login' })
               })
             }
           })

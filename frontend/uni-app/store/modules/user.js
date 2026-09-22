@@ -6,7 +6,8 @@ import constant from '@/utils/constant'
 import { isHttp, isEmpty } from "@/utils/validate"
 import { getInfo, login, logout } from '@/api/login'
 import { getToken, removeToken, setToken } from '@/utils/auth'
-import defAva from '@/static/images/profile.jpg'
+// 默认头像：若依脚手架原来用 /static/images/profile.jpg，本项目换成品牌资产（mock 阶段页面不依赖它）
+import defAva from '@/static/images/mine/avatar.jpg'
 
 const baseUrl = config.baseUrl
 
