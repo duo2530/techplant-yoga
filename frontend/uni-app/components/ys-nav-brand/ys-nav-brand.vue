@@ -23,8 +23,17 @@ defineProps({
 })
 
 const statusBarHeight = ref(0)
-const systemInfo = uni.getSystemInfoSync()
-statusBarHeight.value = systemInfo.statusBarHeight || 0
+
+/**
+ * 取状态栏高度
+ *
+ * 用 `uni.getWindowInfo()`（微信新版 API）而不是已废弃的 `uni.getSystemInfoSync()`：
+ * 后者在较新的微信基础库（lib 3.16.x）里被标记废弃，个别版本上会在内部读取
+ * `errMsg` 时抛 `Cannot read property 'errMsg' of undefined`（真机/开发者工具都出现过）。
+ * 老库或非微信端没有 getWindowInfo 时回退到 getSystemInfoSync，并做空值兜底。
+ */
+const windowInfo = (typeof uni.getWindowInfo === 'function' ? uni.getWindowInfo() : uni.getSystemInfoSync()) || {}
+statusBarHeight.value = windowInfo.statusBarHeight || 0
 </script>
 
 <style lang="scss" scoped>

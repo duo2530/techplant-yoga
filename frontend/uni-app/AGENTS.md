@@ -45,6 +45,7 @@
 | `plugins/**` | `proxy.$tab`、`proxy.$auth`、`proxy.$modal` |
 | `static/**` | 静态资源（`images/` 业务资产 + 清单 `images/README.md`、字体、`scss/index.scss`、`uni.scss` 设计 token、`static/index.html` H5 模板） |
 | `uni_modules/**` | 第三方插件代码，**不要手改** |
+| `scripts/check-static.js` | 本工程静态自检脚本（无 npm 依赖，复用 HBuilderX 自带编译器，见第 9 节第 3 步） |
 
 ## 5. 代码约定
 
@@ -124,13 +125,16 @@
    node node_modules\vite\bin\vite.js build --config vite.config.js
    ```
    产物默认落在工程的 `dist/`（已在 .gitignore 忽略）；mp-weixin 产物里可以直接核对 `app.json` 的页面数、`pages/**/*.wxml` 数量与总包大小（主包上限 2MB）。**本次实现 15 页时两端编译均通过（exit 0，小程序总包 1.54MB）。**
-3. **静态自检（抓语法/资产/跳转类问题）**：本工程没有 package.json，所以把检查工具装在**工程外的临时目录**（不要装进本工程）：
-   ```bash
-   mkdir %TEMP%\uni-check && cd %TEMP%\uni-check && npm i @vue/compiler-sfc sass
+3. **静态自检（抓语法/资产/跳转/模板绑定类问题）**：直接用工程内的 `scripts/check-static.js`，**不需要 npm install**——它复用 HBuilderX 自带的编译器依赖（`@vue/compiler-sfc` 在 `uniapp-cli-vite`、`sass` 在 `compile-dart-sass`），用 `NODE_PATH` 指过去就行：
+   ```powershell
+   $env:NODE_PATH='D:\Develop\HBuilderX\plugins\uniapp-cli-vite\node_modules;D:\Develop\HBuilderX\plugins\compile-dart-sass\node_modules'
+   node frontend\uni-app\scripts\check-static.js <工程绝对路径>
    ```
-   然后写一个 Node 脚本遍历 `frontend/uni-app/{pages,components}/**/*.vue`：
+   它遍历 `frontend/uni-app/{pages,components}/**/*.vue` 做这些检查（**扫之前先去掉注释**，否则注释里的示例代码会误报）：
    - `@vue/compiler-sfc` 的 `parse` + `compileTemplate` + `compileScript` → 抓模板/脚本语法错误；
-   - `sass.compileString(uni.scss + style内容)` → **抓 scss 变量写错**（`$ys-*` 拼错就会在这里报 undefined variable）；
+   - **模板引用了 script setup 未声明的标识符**：本工程没有自动导入，模板里写 `store.name` / `todaySchedules` 就必须先有顶层绑定（`const store = computed(...)`）。漏了**不会编译报错**，而是渲染时对 undefined 取属性抛错 → **整页动态绑定全部变空、只剩静态文字**（首页踩过：门店名/地址/课程/教练列表空白，只有「换店」这类写死的字还在）；
+   - **`<text>` 节点里的 `>` / `<` / HTML 实体必须走绑定或加 `decode`**：uni-app 编译时会把模板里的字面 `>` 转义成 `&gt;` 写进 WXML，而微信 `<text>` **默认不解码实体**、会原样显示成「&gt;」。所以源码写 `>` 和写 `&gt;` 都会中招，正确写法是 `<text decode>{{ '>' }}</text>`（`decode` 是微信 `<text>` 的原生属性；绑定值在 WXML 里不过实体转义，H5 端同样正常）；
+   - `sass` 编译 `uni.scss + style内容` → **抓 scss 变量写错**（`$ys-*` 拼错就会在这里报 undefined variable），并检查产物 CSS 里有没有**通配选择器 `*`**：WXSS 不支持（`& > * + *` 这类写法在 HBuilderX/开发者工具里报 `error at token '*'`），改用 `display:flex + gap`（本项目踩过）；
    - 正则收集所有 `/static/images/**` 引用并检查文件是否真实存在（**要同时扫 .vue、pages.json、config.js、mock/、api/、store/ —— 只扫 .vue 会漏掉 `store/modules/user.js` 里的默认头像引用，本项目已踩过**）；
    - 校验 `pages.json` 里登记的每个页面都有 `.vue`、tabBar 四个图标都在；
    - 校验页面里的跳转目标都已登记，且 tabBar 页必须用 `switchTab`（`navigateTo` 跳 tabBar 页会静默失败）；**扫之前先去掉注释**，否则 TODO 里的示例代码会误报；

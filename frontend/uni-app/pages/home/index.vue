@@ -14,7 +14,7 @@
         <view class="store__line">
           <text class="store__name">{{ store.name || '' }}</text>
           <view class="store__change press" @tap="onChangeStore">
-            <text class="store__change-text">换店 &gt;</text>
+            <text class="store__change-text" decode>换店 {{ '>' }}</text>
           </view>
         </view>
         <view class="store__line store__line--addr press" @tap="onOpenLocation">
@@ -40,7 +40,7 @@
           <text class="entry__title">团课预约</text>
           <text class="entry__sub">GROUP CLASS</text>
         </view>
-        <text class="entry__arrow">&gt;</text>
+        <text class="entry__arrow" decode>{{ '>' }}</text>
       </view>
       <view class="entry__card entry__card--private press" @tap="goBookingTab">
         <image class="entry__icon" src="/static/images/home/icon-private.png" mode="aspectFit" />
@@ -48,7 +48,7 @@
           <text class="entry__title">私教预约</text>
           <text class="entry__sub">PRIVATE CLASS</text>
         </view>
-        <text class="entry__arrow">&gt;</text>
+        <text class="entry__arrow" decode>{{ '>' }}</text>
       </view>
     </view>
 
@@ -57,17 +57,17 @@
       <view class="tools__card press" @tap="goTrialApply">
         <image class="tools__icon" src="/static/images/home/icon-trial.png" mode="aspectFit" />
         <text class="tools__label">体验课</text>
-        <text class="tools__arrow">&gt;</text>
+        <text class="tools__arrow" decode>{{ '>' }}</text>
       </view>
       <view class="tools__card press" @tap="goSharePoster">
         <image class="tools__icon" src="/static/images/home/icon-checkin.png" mode="aspectFit" />
         <text class="tools__label">我要打卡</text>
-        <text class="tools__arrow">&gt;</text>
+        <text class="tools__arrow" decode>{{ '>' }}</text>
       </view>
       <view class="tools__card press" @tap="goActivities">
         <image class="tools__icon" src="/static/images/home/icon-activity.png" mode="aspectFit" />
         <text class="tools__label">活动专区</text>
-        <text class="tools__arrow">&gt;</text>
+        <text class="tools__arrow" decode>{{ '>' }}</text>
       </view>
     </view>
 
@@ -124,7 +124,7 @@
           <view class="coach__text">
             <text class="coach__name">{{ coach.name }}</text>
             <text class="coach__intro">暂无介绍</text>
-            <text class="coach__link">查看课程 &gt;</text>
+            <text class="coach__link" decode>查看课程 {{ '>' }}</text>
           </view>
         </view>
         <image class="coach__photo" :src="coachPhoto(coach)" mode="aspectFill" />
@@ -168,6 +168,15 @@ const home = ref({
 })
 
 const noticeIndex = ref(0)
+
+/**
+ * 模板里直接写 store.name / todaySchedules / hotCourses / coaches（照原型结构，不写 home.xx），
+ * 所以这里必须把它们暴露成顶层绑定；同时给空值兜底，避免数据回来前对 undefined 取属性而中断渲染。
+ */
+const store = computed(() => home.value.store || {})
+const todaySchedules = computed(() => home.value.todaySchedules || [])
+const hotCourses = computed(() => home.value.hotCourses || [])
+const coaches = computed(() => home.value.coaches || [])
 
 /** 公告栏：有多条时每 4 秒轮播；无公告时空文案 → 组件显示「暂无公告」 */
 const noticeText = computed(() => {

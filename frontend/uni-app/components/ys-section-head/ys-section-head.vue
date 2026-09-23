@@ -3,7 +3,9 @@
     <text class="ys-section-head__title">{{ title }}</text>
     <view v-if="moreText" class="ys-section-head__more press" @tap="onMore">
       <text class="ys-section-head__more-text">{{ moreText }}</text>
-      <text class="ys-section-head__arrow">&gt;</text>
+      <!-- 箭头必须走绑定 + decode：uni-app 会把模板里的字面 `>` 转义成 `&gt;` 写进 WXML，
+           而微信 <text> 默认不解码实体，会原样显示成「&gt;」。 -->
+      <text class="ys-section-head__arrow" decode>{{ '>' }}</text>
     </view>
   </view>
 </template>
