@@ -7,12 +7,11 @@
     历史残留，按系统导航栏处理，不自己画。
   -->
   <view class="booking">
-    <!-- 顶部浅蓝竖向渐变头部（#BAE6FC 80pt → #D2EEFD 146pt → 148pt 转白）
-         这一段对应原型里「导航栏以下、日期条以上」的区域，因为在 prototype 里
-         导航栏本身也坐在这一层渐变上，所以这里把渐变起点抬高了一点。 -->
+    <!-- 顶部浅蓝渐隐带画在页面根节点 .booking 上（0 → 356rpx 由 #BAE6FC 渐隐到页面底色 #F7F7F7，
+         原型实测：0..90pt 纯色、90..275pt 渐隐）。这里只负责排 Tab。 -->
     <view class="booking__top">
       <!-- 品类 Tab：团课 / 精品课 / 私教课 / 特色课
-           选中态 = 文字加深加粗 + 其下一条饱和蓝长圆角块（47×8pt，压住文字下部） -->
+           选中态 = 文字加深加粗（z-index 压在蓝条上）+ 其下一条 50.7×8pt 饱和蓝胶囊（衬在文字下部） -->
       <view class="tabs">
         <view
           v-for="type in courseTypes"
@@ -215,31 +214,19 @@ async function onBook(item) {
 <style lang="scss" scoped>
 .booking {
   min-height: 100vh;
-  /* 原型 .screen 的底色：白 → 浅蓝灰渐变带 → 页面灰 */
-  background: linear-gradient(
-    180deg,
-    #ffffff 0rpx,
-    #ecf6fb 0rpx,
-    #edf6fa 15rpx,
-    #eff6fa 27rpx,
-    #f1f6f9 46rpx,
-    #f2f6f9 58rpx,
-    #f7f7f7 65rpx,
-    #f7f7f7 100%
-  );
+  /*
+    顶部浅蓝渐隐带（原型 `.screen` 底色，按截图 x=30 竖向取色实测）：
+      0..90pt   纯 #BAE6FC —— 这 90pt 正好是状态栏 + 导航栏，小程序里由系统外壳盖住
+      90..275pt 线性渐隐 #BAE6FC → #F7F7F7（页面底色），275pt 之后恒为 #F7F7F7
+    小程序的内容从系统导航栏以下开始，所以这里直接从 #BAE6FC 起、渐隐 185pt（=356rpx）落到页面底色。
+    ⚠️ 这块渐变必须画在页面根节点上：只给一行高的 `__top` 加渐变，元素底边会硬切出一条蓝色横线
+       （元素高约 94rpx，远短于渐变的 285rpx，渐变根本没机会渐隐）。
+  */
+  background: linear-gradient(180deg, #bae6fc 0rpx, #f7f7f7 356rpx, #f7f7f7 100%);
 
-  /* 顶部渐变头部：148pt（≈285rpx）处转白 */
+  /* 头部只负责排 Tab，背景由根节点承担 */
   &__top {
-    background: linear-gradient(
-      180deg,
-      #bae6fc 0rpx,
-      #bae6fc 58rpx,
-      #c2e9fd 138rpx,
-      #cfedfd 208rpx,
-      #d2eefd 281rpx,
-      #ffffff 285rpx,
-      #ffffff 100%
-    );
+    background: transparent;
   }
 
   &__empty {
@@ -260,11 +247,24 @@ async function onBook(item) {
     justify-content: center;
   }
 
+  /*
+    逐条对齐原型 booking.html:134-146（原型单位 pt，rpx = pt × 1.9231）：
+      .tab-row  { height:40px; padding-top:22px }                  ← 行的内边距/高度由 .tabs 承担
+      .tab-hit  { position:relative; display:inline-block;
+                  height:22px; line-height:22px }                  → 42rpx 高的 hit 框
+      .tab-hi   { position:absolute; left:50%; bottom:3px;
+                  transform:translateX(-50%); width:47px; height:8px;
+                  border-radius:999px; background:#609AE9 }         → bottom 6rpx / 高 15rpx
+      选中文字  class="relative z-10 ... text-[17px] font-semibold text-[#303337] leading-none"
+                → 文字必须压在蓝条上面（原型靠 z-10），字号 33rpx
+  */
   &__hit {
     position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
+    height: 42rpx; /* 原型 .tab-hit 的 22pt：蓝条按「框内 bottom:3px」定位，框高不对蓝条位置就不对 */
+    line-height: 42rpx;
   }
 
   &__text {
@@ -273,20 +273,22 @@ async function onBook(item) {
     color: #71777e;
 
     &--on {
+      position: relative;
+      z-index: 10; /* 原型 z-10：文字压在蓝条上，蓝条只是衬底（否则蓝条会盖住笔画） */
       font-weight: 600;
       color: #303337;
     }
   }
 
-  /* 选中态下划线：47×8pt 长圆角块，压在文字中下部 */
+  /* 选中态下划线：原型 8pt 高胶囊，位置在 22pt 高 hit 框的下部（bottom 3pt） */
   &__hi {
     position: absolute;
     left: 50%;
-    bottom: -5rpx;
-    width: 90rpx;
+    bottom: 6rpx;
+    width: 98rpx;
     height: 15rpx;
-    margin-left: -45rpx;
-    border-radius: 8rpx;
+    margin-left: -49rpx;
+    border-radius: 999px;
     background: #609ae9;
   }
 }
