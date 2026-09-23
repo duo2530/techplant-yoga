@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>rasterize activity empty-state icon</title>
+<style>
+  html,body{margin:0;padding:0;background:transparent;}
+  #box{width:39px;height:36px;padding:0;}   /* 2pt margin so the 2.25pt outer stroke is not clipped */
+  svg{display:block;}
+</style>
+</head>
+<body>
+  <div id="box">
+    <svg width="39" height="36" viewBox="0 0 39 36"
+         fill="none" stroke="#AAAAAA" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <!-- 圆角方框：右下角留缺口，让位给带减号的圆 -->
+      <path d="M28 31.7H7.8A5.5 5.5 0 0 1 2.3 26.2V7.8A5.5 5.5 0 0 1 7.8 2.3H30.9A5.5 5.5 0 0 1 36.4 7.8V19.5"/>
+      <!-- 三根竖条（中高、左中、右矮，底部对齐） -->
+      <path d="M9.85 12.85V22.45M16.85 9.05V22.45M23.55 14.95V22.45" stroke-width="2.5"/>
+      <!-- 右下角：圆 + 减号 -->
+      <circle cx="32.15" cy="28.65" r="4.95"/>
+      <path d="M29.9 28.65h4.5"/>
+    </svg>
+  </div>
+</body>
+</html>
