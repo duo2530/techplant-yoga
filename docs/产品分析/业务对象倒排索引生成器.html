@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>业务对象倒排索引生成器</title>
+<style>
+:root{font-family:Inter,'Microsoft YaHei','PingFang SC',system-ui,sans-serif;color:#1c2b3a;background:#f4f7fb}*{box-sizing:border-box}body{margin:0}main{max-width:1450px;margin:0 auto;padding:30px 24px 55px}.eyebrow{color:#3c668d;font-size:12px;font-weight:700;letter-spacing:.15em}h1{margin:5px 0 8px;font-size:29px;letter-spacing:-.025em}p{color:#64748b;line-height:1.7;margin:5px 0 18px}.card{background:white;border:1px solid #dbe5f0;border-radius:15px;box-shadow:0 3px 18px #1d3a5610;padding:20px;margin:17px 0}.cols{display:grid;grid-template-columns:minmax(340px,1.1fr) minmax(320px,.9fr);gap:18px}.section-title{font-size:16px;font-weight:740;margin:0 0 12px;display:flex;align-items:center;justify-content:space-between}textarea{width:100%;min-height:365px;padding:15px;border:1px solid #ccdaea;border-radius:10px;font:13px/1.7 Consolas,'Microsoft YaHei',monospace;resize:vertical;background:#fcfdff;color:#23364c;tab-size:2}textarea:focus,input:focus,select:focus{outline:2px solid #9cc8ff;outline-offset:1px}.btns{display:flex;gap:9px;flex-wrap:wrap;align-items:center}.btn{cursor:pointer;border:1px solid #cfdeec;background:white;color:#284963;padding:9px 13px;border-radius:9px;font-weight:650;font-size:13px}.btn:hover{background:#edf5fd}.btn.primary{background:#1769aa;color:white;border-color:#1769aa}.btn.primary:hover{background:#0f578f}.btn.danger{color:#b63c39;border-color:#eacaca}.btn:disabled{opacity:.45;cursor:not-allowed}.hint{font-size:12px;color:#75899d;margin-top:11px}.rules{font-size:13px;line-height:1.9;color:#425972}.rules code{background:#f0f5fa;padding:3px 5px;border-radius:4px}.sample{background:#f5f8fc;border-radius:10px;padding:12px 15px;white-space:pre;font:12px/1.65 Consolas,monospace;overflow-x:auto;color:#3b5670}.stats{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px}.stat{border:1px solid #e0e9f3;border-radius:10px;background:#f8fbfe;padding:11px 15px;min-width:120px}.stat strong{display:block;font-size:24px;color:#173f64}.stat span{font-size:12px;color:#728296}.toolrow{display:flex;gap:9px;flex-wrap:wrap;align-items:center;margin-bottom:14px}.toolrow input,.toolrow select{border:1px solid #d2deea;border-radius:8px;padding:9px 11px;background:white;color:#284058;font-size:13px}.toolrow input{flex:1;min-width:200px}.notice{font-size:12px;color:#457751;margin:5px 0 0;min-height:17px}.scroll{overflow:auto;max-height:580px;border:1px solid #e1eaf1;border-radius:10px}table{border-collapse:separate;border-spacing:0;width:100%;font-size:13px}th{position:sticky;top:0;background:#edf4fa;color:#3a5876;text-align:left;padding:12px 10px;border-bottom:1px solid #d6e2ef;white-space:nowrap}td{padding:10px;border-bottom:1px solid #e9f0f6;vertical-align:top}tr:hover td{background:#f8fbfe}tr.duplicate-row td{background:#fff8e8}tr.duplicate-row:hover td{background:#ffefd0}tr.duplicate-row td.duplicate-attr{background:#ffe3a3;color:#864600;font-weight:750;border-left:3px solid #e5a11d}.duplicate-flag{display:inline-block;margin-left:8px;border-radius:5px;background:#be6b0d;color:white;padding:2px 6px;font-size:11px;font-weight:650;white-space:nowrap}.only-dupes{display:inline-flex;align-items:center;gap:5px;font-size:13px;color:#435b73;white-space:nowrap}td:nth-child(1){text-align:center}td:nth-child(4){min-width:235px}td:nth-child(5){max-width:350px;color:#657b90}.empty{text-align:center;padding:35px;color:#8092a6}small{color:#8394a6}.pill{font-size:11px;background:#e9f3ff;border-radius:5px;padding:3px 7px;color:#286394}.bad{color:#be4a3e}.footer{font-size:12px;color:#8093a6;text-align:center;margin-top:20px}@media(max-width:860px){.cols{grid-template-columns:1fr}main{padding:20px 12px}.card{padding:15px}.scroll{max-height:65vh}}
+</style></head><body><main>
+<div class="eyebrow">LOCAL FIRST · 业务分析工具</div><h1>业务对象倒排索引生成器</h1><p>粘贴「页面 → 业务对象 → 属性 → 属性值」的缩进列表，保留所有原始出现记录，生成可筛选、可删除的索引表。同一业务对象中，后出现的同名属性会高亮，帮助逐项去重。不上传任何数据。</p>
+<div class="cols"><section class="card"><div class="section-title">① 粘贴结构化输入 <span class="pill">兼容 Xmind / Markdown</span></div><textarea id="source" spellcheck="false" placeholder="直接从 Xmind 复制粘贴：\n页面与对象\n    P1-首页\n        课程\n            课程名称\n            课程类型\n                团课\n                私教课\n\n也支持 Markdown 的 - 缩进列表"></textarea><div class="btns" style="margin-top:12px"><button class="btn primary" id="parseBtn">解析并生成表格</button><button class="btn" id="xmindSampleBtn">Xmind 示例</button><button class="btn" id="sampleBtn">Markdown 示例</button><button class="btn" id="clearBtn">清空输入</button></div><div id="parseMsg" class="hint" role="status">按输入的缩进层级解析，不去重、不重命名、不猜测业务对象。</div></section>
+<section class="card"><div class="section-title">解析规则</div><div class="rules"><strong>直接复制 Xmind 节点后粘贴</strong>，不需要加 <code>-</code> 或转换 Markdown。工具会根据每一行开头的 Tab / 空格自动识别层级，也兼容原来的 Markdown 列表。<br><br>· 第 1 层：页面（例如 <code>P1-首页</code>）<br>· 第 2 层：业务对象（例如 <code>课程</code>）<br>· 第 3 层：属性（例如 <code>课程类型</code>）<br>· 第 4 层及以后：属性值（例如 <code>团课</code>）<br><br>可选的“页面与对象”根节点自动跳过。同一属性在不同页面或同一页面重复出现时都保留。<strong>重要：</strong>必须保留粘贴文本的前导缩进；若 Xmind 粘贴时没有缩进，工具会报错提示。</div><div class="sample">页面与对象
+    P1-首页
+        课程
+            课程名称
+            课程类型
+                团课
+                精品课
+    P2-约课
+        课程
+            课程名称</div><p class="hint">上面演示的是缩进层级，Xmind 实际通常使用 Tab。属性值只汇总在第 4 列，不额外生成属性记录。</p></section></div>
+<section class="card"><div class="section-title">② 结果预览 <span class="pill" id="sortLabel">默认：业务对象 → 属性</span></div><div class="stats"><div class="stat"><strong id="objectCount">0</strong><span>不同业务对象</span></div><div class="stat"><strong id="rowCount">0</strong><span>全部属性记录</span></div><div class="stat"><strong id="pageCount">0</strong><span>不同来源页面</span></div><div class="stat"><strong id="visibleCount">0</strong><span>当前可见记录</span></div><div class="stat"><strong id="duplicateCount">0</strong><span>后出现的重复属性</span></div></div>
+<div class="toolrow"><input id="search" placeholder="搜索业务对象、属性、来源页面或枚举值"><select id="objectFilter" aria-label="筛选业务对象"><option value="">全部业务对象</option></select><select id="sort" aria-label="选择排序"><option value="object">业务对象 → 属性</option><option value="attribute">属性 → 业务对象</option><option value="page">来源页面 → 业务对象</option><option value="original">原始输入顺序</option></select><label class="only-dupes"><input type="checkbox" id="duplicatesOnly">仅显示后出现的重复项</label></div>
+<div class="btns" style="margin-bottom:12px"><button class="btn" id="copyTsv">复制可见行 TSV</button><button class="btn" id="copyMd">复制可见行 Markdown</button><button class="btn" id="downloadTsv">下载可见行 TSV</button><button class="btn" id="downloadCsv">下载可见行 CSV</button><button class="btn" id="selectVisible">勾选当前可见行</button><button class="btn" id="unselectAll">取消勾选</button><button class="btn danger" id="deleteSelected">删除勾选行</button><button class="btn" id="restore">恢复解析结果</button></div>
+<div class="scroll"><table><thead><tr><th><input type="checkbox" id="checkAll" title="勾选当前可见行"></th><th>业务对象</th><th>属性 <small>（不去重）</small></th><th>属性来源页面</th><th>属性值 / 枚举</th><th>操作</th></tr></thead><tbody id="tbody"><tr><td colspan="6" class="empty">输入内容并点击「解析并生成表格」</td></tr></tbody></table></div><div class="notice" id="actionMsg" role="status"></div><p class="hint">复制或下载仅包含当前筛选后的行，按当前排序；重复判断按原始输入顺序，只比较「业务对象 + 属性」，不区分来源页面；排序、搜索不会改变谁被高亮。删除后会重新判断，保留的首条不高亮。复制/导出仍保留所有当前可见行，不额外加入高亮标签。删除仅作用于预览数据，原始输入保持不变。</p></section><div class="footer">单文件离线工具 · 所有解析在你的浏览器本地完成</div>
+</main><script>
+'use strict';
+const $=id=>document.getElementById(id), collator=new Intl.Collator('zh-CN',{numeric:true,sensitivity:'base'});
+let rows=[], nextId=1, selected=new Set();
+const demo=`- 页面与对象
+  - P1-首页(1)
+    - 门店
+      - 门店名称
+      - 门店地址
+    - 课程
+      - 开课时间
+      - 课程名称
+      - 教练名称
+      - 已约人数
+  - P1-首页(2)
+    - 课程
+      - 课程类型
+        - 团课
+        - 精品课
+        - 私教课
+      - 课程名称
+      - 课程难度
+        - 1星
+        - 2星
+  - P2-约课-01-团课
+    - 课程
+      - 课程名称
+      - 课程类型
+        - 团课
+        - 精品课
+      - 课程名称
+  - P4-我的-03-会员权益
+    - 权益项
+      - 权益类型
+        - 礼包
+        - 优惠券
+        - 折扣
+      - 权益名称
+    - 优惠券
+      - 优惠金额
+        - 20
+      - 优惠券名称
+        - 满1000减20券
+      - 适用条件
+        - 满1000元可用`;
+function parse(text){
+ const records=[];const lines=text.replace(/\u00a0/g,' ').split(/\r?\n/);
+ for(let i=0;i<lines.length;i++){
+  const raw=lines[i];if(!raw.trim())continue;
+  // Xmind clipboard commonly uses leading tabs; Markdown uses indentation plus list markers.
+  // Expand tabs to consistent 4-space stops, while preserving leading indentation.
+  const leading=(raw.match(/^[ \t]*/)||[''])[0];
+  let indent=0;for(const ch of leading){if(ch==='\t')indent+=4-indent%4;else indent++}
+  const body=raw.slice(leading.length).trim();
+  const md=body.match(/^[-*+]\s+(.+)$/);
+  const content=(md?md[1]:body).trim();
+  if(!content)continue;
+  records.push({indent,text:content,line:i+1});
+ }
+ if(!records.length)throw Error('请输入 Xmind 或 Markdown 缩进列表。');
+ if(records.length>1 && records.every(r=>r.indent===records[0].indent))
+  throw Error('没有检测到缩进层级。请在 Xmind 中复制包含子节点的整棵分支，并确认粘贴后每行开头有 Tab 或空格。');
+ const root={children:[]};const stack=[{indent:-1,node:root}];
+ for(const item of records){
+  while(stack.length>1 && stack[stack.length-1].indent>=item.indent)stack.pop();
+  const parent=stack[stack.length-1].node;
+  const node={...item,children:[],parent};parent.children.push(node);
+  stack.push({indent:item.indent,node});
+ }
+ let pages=root.children;
+ if(pages.length===1 && /^(页面与对象|页面对象|页面及对象|页面和对象|页面)$/.test(pages[0].text))pages=pages[0].children;
+ if(!pages.length)throw Error('未识别到页面节点。请复制包含页面及其子节点的 Xmind 分支。');
+ const data=[],warnings=[];
+ const valuesUnder=node=>{let result=[];for(const ch of node.children){result.push(ch.text);if(ch.children.length)result=result.concat(valuesUnder(ch));}return result};
+ for(const page of pages){
+  if(!page.children.length){warnings.push(`第 ${page.line} 行页面「${page.text}」没有业务对象`);continue}
+  for(const obj of page.children){
+   if(!obj.children.length){warnings.push(`第 ${obj.line} 行业务对象「${obj.text}」没有属性`);continue}
+   for(const attr of obj.children)data.push({id:nextId++,object:obj.text,attribute:attr.text,page:page.text,values:valuesUnder(attr).join('；'),line:attr.line});
+  }
+ }
+ if(!data.length)throw Error('没有解析出属性。检查是否包含「页面 → 业务对象 → 属性」三级节点，并保留缩进。');
+ return {data,warnings};
+}
+// The earliest surviving occurrence in the original text is the reference row.
+// Recompute after deletes: if the first occurrence is removed, the next one becomes the reference.
+function duplicateRanks(){
+ const counts=new Map(), rank=new Map();
+ const keyOf=r=>JSON.stringify([r.object,r.attribute]);
+ for(const r of [...rows].sort((a,b)=>a.line-b.line||a.id-b.id)){
+  const key=keyOf(r), n=(counts.get(key)||0)+1;
+  counts.set(key,n);rank.set(r.id,n);
+ }
+ return rank;
+}
+function shown(){let q=$('search').value.trim().toLowerCase(),obj=$('objectFilter').value;let ranks=duplicateRanks();let out=rows.filter(r=>(!obj||r.object===obj)&&(!$('duplicatesOnly').checked||(ranks.get(r.id)||1)>1)&&(!q||[r.object,r.attribute,r.page,r.values].some(s=>s.toLowerCase().includes(q))));const sort=$('sort').value;return out.sort((a,b)=>sort==='original'?a.line-b.line:sort==='attribute'?(collator.compare(a.attribute,b.attribute)||collator.compare(a.object,b.object)||a.line-b.line):sort==='page'?(collator.compare(a.page,b.page)||collator.compare(a.object,b.object)||a.line-b.line):(collator.compare(a.object,b.object)||collator.compare(a.attribute,b.attribute)||a.line-b.line));}
+function render(){let names=[...new Set(rows.map(r=>r.object))].sort(collator.compare);let prev=$('objectFilter').value;$('objectFilter').replaceChildren(new Option('全部业务对象',''),...names.map(n=>new Option(n,n)));$('objectFilter').value=names.includes(prev)?prev:'';
+ let ranks=duplicateRanks();$('duplicateCount').textContent=[...ranks.values()].filter(n=>n>1).length;$('objectCount').textContent=names.length;$('rowCount').textContent=rows.length;$('pageCount').textContent=new Set(rows.map(r=>r.page)).size;
+ const list=shown();$('visibleCount').textContent=list.length;$('tbody').replaceChildren();if(!list.length){let tr=document.createElement('tr'),td=document.createElement('td');td.colSpan=6;td.className='empty';td.textContent='暂无匹配记录';tr.append(td);$('tbody').append(tr)}
+ for(const r of list){let tr=document.createElement('tr'),rank=ranks.get(r.id)||1;if(rank>1){tr.classList.add('duplicate-row');tr.title=`同一业务对象中第 ${rank} 次出现此属性（按原始输入顺序）`;}let td0=document.createElement('td'),cb=document.createElement('input');cb.type='checkbox';cb.checked=selected.has(r.id);cb.setAttribute('aria-label',`勾选 ${r.object} - ${r.attribute}`);cb.addEventListener('change',()=>{cb.checked?selected.add(r.id):selected.delete(r.id);syncCheckAll()});td0.append(cb);tr.append(td0);for(const [index,value] of [r.object,r.attribute,r.page,r.values||'—'].entries()){let td=document.createElement('td');td.textContent=value;if(index===1&&rank>1){td.classList.add('duplicate-attr');let flag=document.createElement('span');flag.className='duplicate-flag';flag.textContent=`重复 #${rank}`;td.append(flag);}tr.append(td)}let action=document.createElement('td'),button=document.createElement('button');button.className='btn danger';button.textContent='删除';button.addEventListener('click',()=>{rows=rows.filter(x=>x.id!==r.id);selected.delete(r.id);render()});action.append(button);tr.append(action);$('tbody').append(tr)}syncCheckAll();$('sortLabel').textContent=$('sort').selectedOptions[0].textContent;}
+function syncCheckAll(){let list=shown();$('checkAll').checked=!!list.length&&list.every(r=>selected.has(r.id));$('checkAll').indeterminate=list.some(r=>selected.has(r.id))&&!list.every(r=>selected.has(r.id))}
+function createOutput(format){let list=shown();if(!list.length)return '';let header=['业务对象','属性','属性来源页面','属性值 / 枚举'];let data=list.map(r=>[r.object,r.attribute,r.page,r.values]);
+ if(format==='md')return '| '+header.join(' | ')+' |\n| '+header.map(()=>'---').join(' | ')+' |\n'+data.map(a=>'| '+a.map(s=>s.replace(/\|/g,'\\|').replace(/\r?\n/g,' ')).join(' | ')+' |').join('\n');
+ if(format==='csv'){const quote=s=>'"'+String(s).replace(/"/g,'""')+'"';return [header,...data].map(a=>a.map(quote).join(',')).join('\r\n')}
+ return [header,...data].map(a=>a.map(s=>String(s).replace(/[\t\r\n]+/g,' ')).join('\t')).join('\r\n');}
+function note(msg,error=false){$('actionMsg').textContent=msg;$('actionMsg').className=error?'notice bad':'notice'}
+async function copy(text){if(!text){note('当前没有可复制的记录',true);return}try{await navigator.clipboard.writeText(text);note('已复制，可直接粘贴到飞书或 Excel。')}catch(e){let t=document.createElement('textarea');t.value=text;document.body.append(t);t.select();let ok=document.execCommand('copy');t.remove();note(ok?'已复制，可直接粘贴到飞书或 Excel。':'浏览器限制了复制；可改用下载文件。',!ok)}}
+function download(content,filename,mime){if(!content){note('当前没有可导出的记录',true);return}let blob=new Blob(['\ufeff'+content],{type:mime}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=filename;a.click();URL.revokeObjectURL(url);note(`已导出 ${shown().length} 行：${filename}`)}
+$('parseBtn').onclick=()=>{try{nextId=1;let {data,warnings}=parse($('source').value);rows=data;selected.clear();$('search').value='';$('objectFilter').value='';$('duplicatesOnly').checked=false;render();$('parseMsg').textContent=`解析成功：${rows.length} 条属性记录。${warnings.length?` 提示：${warnings.slice(0,3).join('；')}${warnings.length>3?'；另有其他提示':''}`:''}`;$('parseMsg').className='hint';note('已生成结果；不会自动去重。')}catch(e){$('parseMsg').textContent=e.message;$('parseMsg').className='hint bad'}};
+const xmindDemo=demo.split('\n').map(line=>line.replace(/^(  )*/,m=>'\t'.repeat(m.length/2)).replace(/^(- )/, '')).join('\n');$('xmindSampleBtn').onclick=()=>{$('source').value=xmindDemo;$('parseBtn').click()};$('sampleBtn').onclick=()=>{$('source').value=demo;$('parseBtn').click()};$('clearBtn').onclick=()=>{$('source').value='';$('source').focus()};$('search').oninput=()=>render();$('objectFilter').onchange=()=>{let value=$('objectFilter').value;render();$('objectFilter').value=value;$('visibleCount').textContent=shown().length};$('sort').onchange=render;$('duplicatesOnly').onchange=render;
+$('checkAll').onchange=e=>{for(let r of shown())e.target.checked?selected.add(r.id):selected.delete(r.id);render()};$('selectVisible').onclick=()=>{shown().forEach(r=>selected.add(r.id));render()};$('unselectAll').onclick=()=>{selected.clear();render()};$('deleteSelected').onclick=()=>{if(!selected.size){note('请先勾选要删除的行。',true);return}let n=selected.size;rows=rows.filter(r=>!selected.has(r.id));selected.clear();render();note(`已删除 ${n} 条预览记录；原始输入未改动。`)};$('restore').onclick=()=>$('parseBtn').click();$('copyTsv').onclick=()=>copy(createOutput('tsv'));$('copyMd').onclick=()=>copy(createOutput('md'));$('downloadTsv').onclick=()=>download(createOutput('tsv'),'业务对象倒排索引.tsv','text/tab-separated-values;charset=utf-8');$('downloadCsv').onclick=()=>download(createOutput('csv'),'业务对象倒排索引.csv','text/csv;charset=utf-8');
+</script></body></html>
