@@ -1,7 +1,7 @@
 {
-    "name" : "一水·瑜伽普拉提",
+    "name" : "瑜伽普拉提",
     "appid" : "__UNI__APPID_PLACEHOLDER__",
-    "description" : "一水·瑜伽普拉提 用户端小程序（原型还原 + mock 数据）",
+    "description" : "瑜伽普拉提 用户端小程序（原型还原 + mock 数据）",
     "versionName" : "1.0.0",
     "versionCode" : "100",
     "transformPx" : false,
@@ -62,7 +62,7 @@
             "port" : 9090,
             "https" : false
         },
-        "title" : "一水·瑜伽普拉提",
+        "title" : "瑜伽普拉提",
         "router" : {
             "mode" : "hash",
             "base" : "./"

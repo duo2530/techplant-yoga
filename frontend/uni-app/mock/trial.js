@@ -12,7 +12,7 @@ export const trialApplications = [
   {
     id: 2001,
     storeId: 1,
-    storeName: '一水·瑜伽普拉提(双桥路店)',
+    storeName: '瑜伽普拉提(双桥路店)',
     contactName: '张小一',
     phone: '13800008888',
     expectDate: '2026-09-24',
@@ -24,7 +24,7 @@ export const trialApplications = [
   {
     id: 2002,
     storeId: 1,
-    storeName: '一水·瑜伽普拉提(双桥路店)',
+    storeName: '瑜伽普拉提(双桥路店)',
     contactName: '张小一',
     phone: '13800008888',
     expectDate: '2026-09-16',

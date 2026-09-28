@@ -19,7 +19,7 @@ import { ref } from 'vue'
  * 首页在 pages.json 里是 `navigationStyle: custom`，所以状态栏高度要自己补。
  */
 defineProps({
-  title: { type: String, default: '一水·瑜伽普拉提' }
+  title: { type: String, default: '瑜伽普拉提' }
 })
 
 const statusBarHeight = ref(0)

@@ -88,7 +88,7 @@
 - 门店定位不跳地图（mock 没有经纬度）、约课页品类 Tab 与日期条的选中态、部分图标用 `uni-icons` 近似原型线稿（原型是内联 SVG，小程序不支持）。
 - 几个页面在原型里是**空态**，有数据时的卡片样式是按设计 token 推导的（已在组件与页面注释里标明）。
 
-**品牌化已完成**：`config.js` 的 `appInfo`、`manifest.json` 的 `name`/`description`/H5 `title`、`index.html` 的 `<title>`、`pages.json` 的 `globalStyle` 与各页标题都已是「一水·瑜伽普拉提」；`baseUrl` 仍留在 `config.js`（当前 mock 阶段用不到，接后端时用）。
+**品牌化已完成**：`config.js` 的 `appInfo`、`manifest.json` 的 `name`/`description`/H5 `title`、`index.html` 的 `<title>`、`pages.json` 的 `globalStyle` 与各页标题都已是「瑜伽普拉提」；`baseUrl` 仍留在 `config.js`（当前 mock 阶段用不到，接后端时用）。
 
 > 注意：`baseUrl` 将来改成 `localhost` 只对本机 H5/开发者工具有效；真机预览和发布都要换成可访问的 https 域名（见第 7 节）。
 
