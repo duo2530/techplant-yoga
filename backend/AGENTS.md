@@ -51,7 +51,7 @@ java -jar backend/ruoyi-admin/target/ruoyi-admin.jar
 - **JDK 必须是 8**：本机 `JAVA_HOME=D:\Develop\Java\jdk1.8.0_202`，命令行/IDEA 都用这个 SDK。
 - 测试：`ruoyi-yoga/src/test` 已有用例（JUnit 5 + Mockito + MockMvc，另有 H2 装配自检）。`ruoyi-yoga/pom.xml` 显式锁定 `maven-surefire-plugin` 2.22.2 —— 本机 Maven 3.3.9 默认绑的 2.12.4 不认识 JUnit 5，去掉就会**静默跑不到用例**。`ruoyi-*` 框架模块仍没有 `src/test`。
 - 启动前置条件：**MySQL 和 Redis 都必须可用**，且 `backend/sql/ry_20260417.sql`、`backend/sql/quartz.sql` 两个脚本都已导入目标库。这两个 SQL 里没有 `CREATE DATABASE`/`use`，必须先自己建库（当前工作区用的是默认库名 `ry-vue`，带横线，命令行/SQL 里记得转义）再导入。
-- 业务模块的表/菜单另有三个脚本：`backend/sql/yoga_course.sql`（`t_course` 建表）、`yoga_course_menu.sql`（`sys_menu` 菜单与按钮权限串）、`yoga_course_dev_data.sql`（开发库演示数据，不要导到生产）。
+- 业务模块的表的脚本：`backend/sql/yoga.sql`
 - 默认端口 8080，默认账号 `admin / admin123`。
 
 ## 5. 配置文件（改配置前先看清这里）
@@ -75,7 +75,7 @@ java -jar backend/ruoyi-admin/target/ruoyi-admin.jar
 
 1. **业务代码不要写进 `ruoyi-*` 框架模块**，也别改 `sys_*` 表结构。业务代码一律放 `ruoyi-yoga` 模块（包名 `com.techplant.yoga`），`com.ruoyi.*` 保持与上游一致，方便后续比对升级。
 2. MyBatis-Plus 与原生 MyBatis XML Mapper 共用 framework 里那一个 `SqlSessionFactory`，**配置是手工装配的、不是自动配置**；改动 MP 相关配置前先读 §8.9，别想当然加 `mybatis-plus.*` 的 yml 配置（那些不生效）。
-3. 管理端菜单/路由由数据库驱动：新增管理端页面必须配套 `sys_menu` 的 SQL（目录 + 菜单 + 按钮权限串），现成范例见 `backend/sql/yoga_course_menu.sql`。
+3. 管理端菜单/路由由数据库驱动：新增管理端页面必须配套 `sys_menu` 的 SQL（目录 + 菜单 + 按钮权限串），现成范例见 `backend/sql/yoga.sql`。
 
 ## 7. 代码约定
 
