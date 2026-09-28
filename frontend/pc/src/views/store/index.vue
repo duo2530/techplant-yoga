@@ -110,23 +110,22 @@
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="所在区域" prop="region">
-              <el-input v-model="form.region" placeholder="如：上海市徐汇区" maxlength="64" show-word-limit />
+            <el-form-item label="行政区划" prop="areaPath">
+              <el-cascader
+                v-model="form.areaPath"
+                :options="areaOptions"
+                :props="areaProps"
+                clearable
+                filterable
+                style="width: 100%"
+                placeholder="请选择省 / 市 / 区"
+                @change="handleAreaChange"
+              />
             </el-form-item>
           </el-col>
-          <el-col :span="8">
-            <el-form-item label="省 code" prop="provinceCode">
-              <el-input v-model="form.provinceCode" placeholder="腾讯地图省 code" maxlength="16" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="8">
-            <el-form-item label="市 code" prop="cityCode">
-              <el-input v-model="form.cityCode" placeholder="腾讯地图市 code" maxlength="16" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="8">
-            <el-form-item label="区 code" prop="districtCode">
-              <el-input v-model="form.districtCode" placeholder="腾讯地图区 code" maxlength="16" />
+          <el-col :span="12">
+            <el-form-item label="所在区域">
+              <el-input :model-value="form.region || '选择行政区划后自动生成'" readonly />
             </el-form-item>
           </el-col>
           <el-col :span="24">
@@ -134,12 +133,12 @@
               <el-input v-model="form.address" placeholder="请输入详细门店地址" maxlength="255" show-word-limit />
             </el-form-item>
           </el-col>
-          <el-col :span="12">
+          <el-col :span="24">
             <el-form-item label="门店电话" prop="phone">
               <el-input v-model="form.phone" placeholder="请输入门店电话" maxlength="32" />
             </el-form-item>
           </el-col>
-          <el-col :span="6">
+          <el-col :span="12">
             <el-form-item label="经营类型" prop="businessType">
               <el-select v-model="form.businessType" style="width: 100%">
                 <el-option label="直营连锁" :value="1" />
@@ -147,7 +146,7 @@
               </el-select>
             </el-form-item>
           </el-col>
-          <el-col :span="6">
+          <el-col :span="12">
             <el-form-item label="门店类型" prop="storeType">
               <el-select v-model="form.storeType" style="width: 100%">
                 <el-option label="主力店" :value="1" />
@@ -174,6 +173,7 @@
 
 <script setup name="Store">
 import { addStore, getStore, listStore, updateStore, updateStoreStatus } from '@/api/store/store'
+import areaData from '@/data/china-area-data.json'
 
 const { proxy } = getCurrentInstance()
 
@@ -184,8 +184,18 @@ const total = ref(0)
 const open = ref(false)
 const title = ref('')
 
+const areaProps = {
+  value: 'value',
+  label: 'label',
+  children: 'children',
+  emitPath: true
+}
+
+const areaOptions = buildAreaOptions()
+
 const emptyForm = () => ({
   storeId: undefined,
+  areaPath: [],
   name: undefined,
   region: undefined,
   provinceCode: undefined,
@@ -211,10 +221,7 @@ const data = reactive({
   },
   rules: {
     name: [{ required: true, message: '门店名称不能为空', trigger: 'blur' }],
-    region: [{ required: true, message: '所在区域不能为空', trigger: 'blur' }],
-    provinceCode: [{ required: true, message: '省 code 不能为空', trigger: 'blur' }],
-    cityCode: [{ required: true, message: '市 code 不能为空', trigger: 'blur' }],
-    districtCode: [{ required: true, message: '区 code 不能为空', trigger: 'blur' }],
+    areaPath: [{ type: 'array', required: true, message: '请选择省、市、区', trigger: 'change' }],
     address: [{ required: true, message: '门店地址不能为空', trigger: 'blur' }],
     phone: [{ required: true, message: '门店电话不能为空', trigger: 'blur' }],
     businessType: [{ required: true, message: '经营类型不能为空', trigger: 'change' }],
@@ -260,7 +267,7 @@ function handleAdd() {
 function handleUpdate(row) {
   reset()
   getStore(row.id).then(response => {
-    form.value = { ...response.data, storeId: row.id }
+    form.value = { ...response.data, areaPath: buildAreaPath(response.data), storeId: row.id }
     title.value = '修改门店'
     open.value = true
   })
@@ -278,6 +285,7 @@ function submitForm() {
     }
     const payload = { ...form.value }
     delete payload.storeId
+    delete payload.areaPath
     const action = form.value.storeId
       ? updateStore(form.value.storeId, payload)
       : addStore(payload)
@@ -287,6 +295,15 @@ function submitForm() {
       getList()
     })
   })
+}
+
+function handleAreaChange(path) {
+  const values = Array.isArray(path) ? path : []
+  const labels = findAreaLabels(values)
+  form.value.provinceCode = values[0] ? String(values[0]) : undefined
+  form.value.cityCode = values[1] ? String(values[1]) : undefined
+  form.value.districtCode = values[2] ? String(values[2]) : undefined
+  form.value.region = labels.join('') || undefined
 }
 
 function handleStatus(row) {
@@ -307,6 +324,69 @@ function businessTypeLabel(value) {
 
 function storeTypeLabel(value) {
   return Number(value) === 1 ? '主力店' : '精品店'
+}
+
+function buildAreaOptions() {
+  const provinces = areaData['86'] || {}
+  return Object.entries(provinces).map(([provinceCode, provinceName]) => {
+    const cities = areaData[provinceCode] || {}
+    const cityOptions = Object.entries(cities).map(([cityCode, cityName]) => ({
+      value: cityCode,
+      label: cityName,
+      children: buildDistrictOptions(cityCode)
+    }))
+
+    // 直辖市的中间层通常叫“市辖区”，界面改成城市名称，保留数据中的 cityCode，
+    // 让表单始终保持省 / 市 / 区三级，并兼容后端现有的 cityCode 字段。
+    if (['110000', '120000', '310000', '500000'].includes(provinceCode)) {
+      const municipalityCityCode = Object.keys(cities)[0]
+      return {
+        value: provinceCode,
+        label: provinceName,
+        children: [{
+          value: municipalityCityCode,
+          label: provinceName,
+          children: buildDistrictOptions(municipalityCityCode)
+        }]
+      }
+    }
+
+    return { value: provinceCode, label: provinceName, children: cityOptions }
+  })
+}
+
+function buildDistrictOptions(cityCode) {
+  const districts = areaData[cityCode] || {}
+  const entries = Object.entries(districts)
+  if (entries.length) {
+    return entries.map(([districtCode, districtName]) => ({
+      value: districtCode,
+      label: districtName
+    }))
+  }
+  // 东莞、中山等无下级区县的城市，用城市自身作为末级 code，保证后端字段完整。
+  return [{ value: cityCode, label: '市辖区域' }]
+}
+
+function buildAreaPath(store) {
+  if (!store || !store.provinceCode || !store.cityCode || !store.districtCode) {
+    return []
+  }
+  return [String(store.provinceCode), String(store.cityCode), String(store.districtCode)]
+}
+
+function findAreaLabels(values) {
+  const labels = []
+  let options = areaOptions
+  values.forEach(value => {
+    const option = options.find(item => String(item.value) === String(value))
+    if (!option) {
+      return
+    }
+    labels.push(option.label)
+    options = option.children || []
+  })
+  return labels
 }
 
 getList()
