@@ -37,7 +37,7 @@ CREATE TABLE `t_store` (
                           KEY `idx_name` (`name`),
                           KEY `idx_region_type_status` (`region`, `store_type`, `status`),
                           KEY `idx_business_type_status` (`business_type`, `status`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='门店基础信息表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='门店基础信息表';
 
 INSERT INTO `t_store`
 (`id`, `name`, `region`, `address`, `phone`, `business_type`, `store_type`, `business_hours`, `status`, `deleted`, `create_by`, `create_time`, `update_by`, `update_time`)
@@ -64,7 +64,7 @@ CREATE TABLE `t_course` (
                             PRIMARY KEY (`id`),
                             KEY `idx_type_status` (`type`, `status`),
                             KEY `idx_name` (`name`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='课程基础信息表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='课程基础信息表';
 
 INSERT INTO `t_course`
 (`id`, `name`, `type`, `difficulty`, `cover_url`, `intro`, `duration_min`, `sort_no`, `status`, `deleted`, `create_by`, `create_time`, `update_by`, `update_time`)
@@ -100,7 +100,7 @@ CREATE TABLE `t_coach` (
   PRIMARY KEY (`id`),
   KEY `idx_name` (`name`),
   KEY `idx_status_name` (`status`, `name`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='教练基础信息表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='教练基础信息表';
 
 INSERT INTO `t_coach`
 (`id`, `intro`, `name`, `title`, `avatar_url`, `album_urls`, `status`, `deleted`, `create_by`, `create_time`, `update_by`, `update_time`)
