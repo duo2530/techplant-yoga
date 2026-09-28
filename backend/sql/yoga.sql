@@ -8,7 +8,7 @@ insert into sys_menu values('2001', '课程管理', '2000', '1', 'course',    'c
 -- 二级菜单：教练管理（路由 /operation/coach，组件 src/views/coach/index.vue）
 insert into sys_menu values('2002', '教练管理', '2000', '2', 'coach',     'coach/index',  '', '', 1, 0, 'C', '0', '0', '',          'user',      'admin', sysdate(), '', null, '教练管理菜单');
 -- 二级菜单：门店管理（路由 /operation/store，组件 src/views/store/index.vue）
-insert into sys_menu values('2003', '门店管理', '2000', '3', 'store',     'store/index',  '', '', 1, 0, 'C', '0', '0', '',          'shop',      'admin', sysdate(), '', null, '门店管理菜单');
+insert into sys_menu values('2003', '门店管理', '2000', '3', 'store',     'store/index',  '', '', 1, 0, 'C', '0', '0', '',          'shopping',  'admin', sysdate(), '', null, '门店管理菜单');
 
 -- 角色绑定：role_id = 1 是若依内置管理员（它的菜单本来就不受 sys_role_menu 限制，
 -- 这里补上是为了让角色-菜单关系在「角色管理」页面里可见、可维护）
@@ -29,7 +29,7 @@ CREATE TABLE `t_store` (
                           `phone`          varchar(32)     NOT NULL                          COMMENT '门店电话',
                           `business_type`  tinyint         NOT NULL                          COMMENT '经营类型：1直营连锁 2加盟',
                           `store_type`     tinyint         NOT NULL                          COMMENT '门店类型：1主力店 2精品店',
-                          `business_hours` varchar(128)    NOT NULL                          COMMENT '营业时间',
+                          `business_hours` varchar(64)     NOT NULL                          COMMENT '营业时间',
                           `status`         tinyint         NOT NULL DEFAULT 1                COMMENT '门店状态：1启用 0停用',
                           `deleted`        tinyint         NOT NULL DEFAULT 0                COMMENT '逻辑删除：0正常 1已删除',
                           `create_by`      bigint unsigned          DEFAULT NULL             COMMENT '创建人ID',
