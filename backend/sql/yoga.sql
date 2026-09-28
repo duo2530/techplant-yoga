@@ -22,6 +22,9 @@ CREATE TABLE `t_store` (
                           `id`             bigint unsigned NOT NULL                          COMMENT '门店ID（雪花ID，应用侧生成）',
                           `name`           varchar(64)     NOT NULL                          COMMENT '门店名称',
                           `region`         varchar(64)     NOT NULL                          COMMENT '所在区域',
+                          `province_code`  varchar(16)     NOT NULL                          COMMENT '省行政区code，用于地图定位',
+                          `city_code`      varchar(16)     NOT NULL                          COMMENT '市行政区code，用于地图定位',
+                          `district_code`  varchar(16)     NOT NULL                          COMMENT '区/县行政区code，用于地图定位',
                           `address`        varchar(255)    NOT NULL                          COMMENT '门店地址；用户端地址与门店地址共用',
                           `phone`          varchar(32)     NOT NULL                          COMMENT '门店电话',
                           `business_type`  tinyint         NOT NULL                          COMMENT '经营类型：1直营连锁 2加盟',
@@ -40,10 +43,10 @@ CREATE TABLE `t_store` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='门店基础信息表';
 
 INSERT INTO `t_store`
-(`id`, `name`, `region`, `address`, `phone`, `business_type`, `store_type`, `business_hours`, `status`, `deleted`, `create_by`, `create_time`, `update_by`, `update_time`)
+(`id`, `name`, `region`, `province_code`, `city_code`, `district_code`, `address`, `phone`, `business_type`, `store_type`, `business_hours`, `status`, `deleted`, `create_by`, `create_time`, `update_by`, `update_time`)
 VALUES
-    (1856739201475235901, '徐汇店', '上海市徐汇区', '漕溪北路 88 号', '021-12345678', 1, 1, '周一至周日 09:00-22:00', 1, 0, 1, '2026-09-20 09:00:00', 1, '2026-09-20 09:00:00'),
-    (1856739201475235902, '静安精品店', '上海市静安区', '愚园路 168 号', '021-87654321', 2, 2, '周一至周日 10:00-21:00', 1, 0, 1, '2026-09-20 09:10:00', 1, '2026-09-20 09:10:00');
+    (1856739201475235901, '徐汇店', '上海市徐汇区', '310000', '310100', '310104', '漕溪北路 88 号', '021-12345678', 1, 1, '周一至周日 09:00-22:00', 1, 0, 1, '2026-09-20 09:00:00', 1, '2026-09-20 09:00:00'),
+    (1856739201475235902, '静安精品店', '上海市静安区', '310000', '310100', '310106', '愚园路 168 号', '021-87654321', 2, 2, '周一至周日 10:00-21:00', 1, 0, 1, '2026-09-20 09:10:00', 1, '2026-09-20 09:10:00');
 
 DROP TABLE IF EXISTS `t_course`;
 CREATE TABLE `t_course` (
