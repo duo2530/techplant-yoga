@@ -1,15 +1,49 @@
-DELETE FROM `sys_role_menu` WHERE `menu_id` IN (2000, 2001);
-DELETE FROM `sys_menu` WHERE `menu_id` IN (2000, 2001);
+DELETE FROM `sys_role_menu` WHERE `menu_id` IN (2000, 2001, 2002, 2003);
+DELETE FROM `sys_menu` WHERE `menu_id` IN (2000, 2001, 2002, 2003);
 
 -- 一级目录：经营基础（门店 / 课程 / 教练 / 排班 / 预约 后续都挂在这个目录下）
 insert into sys_menu values('2000', '经营基础', '0',    '5', 'operation', null,           '', '', 1, 0, 'M', '0', '0', '',          'education', 'admin', sysdate(), '', null, '经营基础目录');
 -- 二级菜单：课程管理（路由 /operation/course，组件 src/views/course/index.vue）
 insert into sys_menu values('2001', '课程管理', '2000', '1', 'course',    'course/index', '', '', 1, 0, 'C', '0', '0', '',          'list',      'admin', sysdate(), '', null, '课程管理菜单');
+-- 二级菜单：教练管理（路由 /operation/coach，组件 src/views/coach/index.vue）
+insert into sys_menu values('2002', '教练管理', '2000', '2', 'coach',     'coach/index',  '', '', 1, 0, 'C', '0', '0', '',          'user',      'admin', sysdate(), '', null, '教练管理菜单');
+-- 二级菜单：门店管理（路由 /operation/store，组件 src/views/store/index.vue）
+insert into sys_menu values('2003', '门店管理', '2000', '3', 'store',     'store/index',  '', '', 1, 0, 'C', '0', '0', '',          'shop',      'admin', sysdate(), '', null, '门店管理菜单');
 
 -- 角色绑定：role_id = 1 是若依内置管理员（它的菜单本来就不受 sys_role_menu 限制，
 -- 这里补上是为了让角色-菜单关系在「角色管理」页面里可见、可维护）
 insert into sys_role_menu values ('1', '2000');
 insert into sys_role_menu values ('1', '2001');
+insert into sys_role_menu values ('1', '2002');
+insert into sys_role_menu values ('1', '2003');
+
+DROP TABLE IF EXISTS `t_store`;
+CREATE TABLE `t_store` (
+                          `id`             bigint unsigned NOT NULL                          COMMENT '门店ID（雪花ID，应用侧生成）',
+                          `name`           varchar(64)     NOT NULL                          COMMENT '门店名称',
+                          `region`         varchar(64)     NOT NULL                          COMMENT '所在区域',
+                          `address`        varchar(255)    NOT NULL                          COMMENT '门店地址；用户端地址与门店地址共用',
+                          `phone`          varchar(32)     NOT NULL                          COMMENT '门店电话',
+                          `business_type`  tinyint         NOT NULL                          COMMENT '经营类型：1直营连锁 2加盟',
+                          `store_type`     tinyint         NOT NULL                          COMMENT '门店类型：1主力店 2精品店',
+                          `business_hours` varchar(128)    NOT NULL                          COMMENT '营业时间',
+                          `status`         tinyint         NOT NULL DEFAULT 1                COMMENT '门店状态：1启用 0停用',
+                          `deleted`        tinyint         NOT NULL DEFAULT 0                COMMENT '逻辑删除：0正常 1已删除',
+                          `create_by`      bigint unsigned          DEFAULT NULL             COMMENT '创建人ID',
+                          `create_time`    datetime        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+                          `update_by`      bigint unsigned          DEFAULT NULL             COMMENT '更新人ID',
+                          `update_time`    datetime        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+                          PRIMARY KEY (`id`),
+                          KEY `idx_name` (`name`),
+                          KEY `idx_region_type_status` (`region`, `store_type`, `status`),
+                          KEY `idx_business_type_status` (`business_type`, `status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='门店基础信息表';
+
+INSERT INTO `t_store`
+(`id`, `name`, `region`, `address`, `phone`, `business_type`, `store_type`, `business_hours`, `status`, `deleted`, `create_by`, `create_time`, `update_by`, `update_time`)
+VALUES
+    (1856739201475235901, '徐汇店', '上海市徐汇区', '漕溪北路 88 号', '021-12345678', 1, 1, '周一至周日 09:00-22:00', 1, 0, 1, '2026-09-20 09:00:00', 1, '2026-09-20 09:00:00'),
+    (1856739201475235902, '静安精品店', '上海市静安区', '愚园路 168 号', '021-87654321', 2, 2, '周一至周日 10:00-21:00', 1, 0, 1, '2026-09-20 09:10:00', 1, '2026-09-20 09:10:00');
 
 DROP TABLE IF EXISTS `t_course`;
 CREATE TABLE `t_course` (
@@ -48,3 +82,30 @@ VALUES
     (1856739201475235811, '冥想放松',   4, 1, NULL,                                          '呼吸练习与冥想引导，用于课后放松。',                   30, 110, 1, 0, 1, '2026-09-20 10:43:18', 1, '2026-09-20 10:43:18'),
     (1856739201475235812, '亲子瑜伽',   4, 2, NULL,                                          '家长与孩子共同参与的课程。',                           45, 120, 1, 0, 1, '2026-09-20 10:46:02', 1, '2026-09-20 10:46:02'),
     (1856739201475235813, '已删除课程', 1, 1, NULL,                                          '仅用于验证逻辑删除不参与查询。',                       NULL, 130, 1, 1, 1, '2026-09-20 10:49:41', 1, '2026-09-20 10:49:41');
+
+DROP TABLE IF EXISTS `t_coach`;
+CREATE TABLE `t_coach` (
+  `id`          bigint unsigned NOT NULL COMMENT '教练ID（雪花ID，应用侧生成）',
+  `intro`       text                                      COMMENT '教练简介',
+  `name`        varchar(64) NOT NULL                       COMMENT '教练名称',
+  `title`       varchar(64)                              DEFAULT NULL COMMENT '教练头衔',
+  `avatar_url`  varchar(255)                             DEFAULT NULL COMMENT '教练头像URL',
+  `album_urls`  json                                     DEFAULT NULL COMMENT '教练相册URL数组，最多5张',
+  `status`      tinyint NOT NULL DEFAULT 1                COMMENT '教练状态：1启用 0停用',
+  `deleted`     tinyint NOT NULL DEFAULT 0                COMMENT '逻辑删除：0正常 1已删除',
+  `create_by`   bigint unsigned                          DEFAULT NULL COMMENT '创建人ID',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_by`   bigint unsigned                          DEFAULT NULL COMMENT '更新人ID',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  KEY `idx_name` (`name`),
+  KEY `idx_status_name` (`status`, `name`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='教练基础信息表';
+
+INSERT INTO `t_coach`
+(`id`, `intro`, `name`, `title`, `avatar_url`, `album_urls`, `status`, `deleted`, `create_by`, `create_time`, `update_by`, `update_time`)
+VALUES
+    (1856739201475235901, '专注基础体式与呼吸练习。', '林教练', '金牌教练', 'https://cdn.example.com/coach/avatar-1.jpg',
+     '["https://cdn.example.com/coach/album-1.jpg", "https://cdn.example.com/coach/album-2.jpg"]', 1, 0, 1, '2026-09-28 10:00:00', 1, '2026-09-28 10:00:00'),
+    (1856739201475235902, '擅长普拉提和体态训练。', '周教练', '瑜伽导师', 'https://cdn.example.com/coach/avatar-2.jpg',
+     '["https://cdn.example.com/coach/album-3.jpg"]', 1, 0, 1, '2026-09-28 10:05:00', 1, '2026-09-28 10:05:00');
