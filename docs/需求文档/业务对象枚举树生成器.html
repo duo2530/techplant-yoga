@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>业务对象枚举树生成器</title>
+<style>
+:root{font-family:Inter,'Microsoft YaHei','PingFang SC',system-ui,sans-serif;color:#1c2b3a;background:#f4f7fb}*{box-sizing:border-box}body{margin:0}main{max-width:1180px;margin:0 auto;padding:30px 24px 55px}h1{margin:0 0 8px;font-size:28px}p{color:#64748b;line-height:1.7;margin:5px 0 18px}.card{background:white;border:1px solid #dbe5f0;border-radius:15px;box-shadow:0 3px 18px #1d3a5610;padding:20px;margin:17px 0}.cols{display:grid;grid-template-columns:1fr 1fr;gap:18px}.title{font-size:16px;font-weight:740;margin:0 0 12px}textarea{width:100%;min-height:380px;padding:14px;border:1px solid #ccdaea;border-radius:10px;font:13px/1.7 Consolas,'Microsoft YaHei',monospace;resize:vertical;background:#fcfdff;color:#23364c;tab-size:2}textarea:focus{outline:2px solid #9cc8ff;outline-offset:1px}.output{min-height:380px}.buttons{display:flex;gap:9px;flex-wrap:wrap;margin-top:12px}.btn{cursor:pointer;border:1px solid #cfdeec;background:white;color:#284963;padding:9px 13px;border-radius:9px;font-weight:650;font-size:13px}.btn:hover{background:#edf5fd}.btn.primary{background:#1769aa;color:white;border-color:#1769aa}.btn.primary:hover{background:#0f578f}.hint{font-size:12px;color:#75899d;margin-top:10px}.status{font-size:13px;color:#457751;min-height:20px;margin-top:10px}.status.error{color:#be4a3e}.stats{font-size:13px;color:#526b82;margin-top:12px}.rules{font-size:13px;line-height:1.8;color:#425972}.rules code{background:#f0f5fa;padding:3px 5px;border-radius:4px}.option{display:flex;align-items:center;gap:8px;margin:0 0 12px;font-size:13px;color:#435b73}@media(max-width:800px){main{padding:20px 12px}.cols{grid-template-columns:1fr}.card{padding:15px}}
+</style>
+</head>
+<body>
+<main>
+<h1>业务对象枚举树生成器</h1>
+<p>粘贴业务对象倒排索引 TSV，生成可复制到 Xmind 的缩进树。按「业务对象 → 属性 → 属性值 / 枚举」组织；来源页面列会忽略。</p>
+<section class="card rules">请粘贴包含表头的 TSV。工具按表头识别「业务对象」「属性」「属性值 / 枚举」三列，同一对象下的同名属性会合并；分号分隔的属性值会拆成子节点，并按首次出现顺序去重。空属性值仍保留属性节点。处理过程仅在本地浏览器中完成。</section>
+<div class="cols">
+<section class="card">
+<div class="title">① 粘贴 TSV 内容</div>
+<textarea id="source" spellcheck="false" placeholder="从业务对象倒排索引.tsv 复制包含表头的内容，然后粘贴到这里"></textarea>
+<div class="buttons"><button class="btn primary" id="generate">生成树状内容</button><button class="btn" id="clear">清空</button></div>
+<div class="hint">只需复制 TSV 表格内容；列顺序可变化，工具会通过表头定位所需字段。</div>
+</section>
+<section class="card">
+<div class="title">② Markdown tree 预览</div>
+<label class="option"><input id="withoutRoot" type="checkbox" checked>不生成额外根节点（推荐）</label>
+<textarea id="output" class="output" spellcheck="false" readonly placeholder="生成结果会显示在这里"></textarea>
+<div class="buttons"><button class="btn primary" id="copy" disabled>复制树状内容</button><button class="btn" id="download" disabled>下载 Markdown</button></div>
+<div id="stats" class="stats"></div>
+<div id="status" class="status" role="status"></div>
+</section>
+</div>
+</main>
+<script>
+'use strict';
+const $=id=>document.getElementById(id);
+let currentGroups=[];
+function parseTsv(text){
+ const lines=text.replace(/^\uFEFF/,'').split(/\r?\n/).filter(line=>line.trim());
+ if(!lines.length)throw Error('请先粘贴 TSV 内容。');
+ const headers=lines[0].split('\t').map(value=>value.trim().replace(/^\uFEFF/,''));
+ const objectIndex=headers.indexOf('业务对象');
+ const attributeIndex=headers.indexOf('属性');
+ const valuesIndex=headers.findIndex(value=>value==='属性值 / 枚举'||value==='属性值/枚举');
+ if(objectIndex<0||attributeIndex<0||valuesIndex<0)throw Error('表头中需要包含「业务对象」「属性」「属性值 / 枚举」三列。');
+ const groups=new Map();
+ for(let lineIndex=1;lineIndex<lines.length;lineIndex++){
+  const cells=lines[lineIndex].split('\t');
+  const object=(cells[objectIndex]||'').trim();
+  const attribute=(cells[attributeIndex]||'').trim();
+  if(!object||!attribute)continue;
+  const key=JSON.stringify([object,attribute]);
+  if(!groups.has(key))groups.set(key,{object,attribute,values:[],valueSet:new Set()});
+  const group=groups.get(key);
+  const rawValues=(cells[valuesIndex]||'').trim();
+  for(const value of rawValues.split(/[；;]/).map(item=>item.trim()).filter(Boolean)){
+   if(!group.valueSet.has(value)){group.valueSet.add(value);group.values.push(value);}
+  }
+ }
+ if(!groups.size)throw Error('没有解析到有效的业务对象和属性记录。');
+ return [...groups.values()];
+}
+function renderTree(groups,withoutRoot){
+ const objectIndent=withoutRoot?0:1;
+ const tree=withoutRoot?[]:['业务对象与属性'];
+ const objects=new Map();
+ for(const group of groups){
+  if(!objects.has(group.object))objects.set(group.object,[]);
+  objects.get(group.object).push(group);
+ }
+ for(const [object,attributes] of objects){
+  tree.push(`${'\t'.repeat(objectIndent)}${object}`);
+  for(const attribute of attributes){
+   tree.push(`${'\t'.repeat(objectIndent+1)}${attribute.attribute}`);
+   for(const value of attribute.values)tree.push(`${'\t'.repeat(objectIndent+2)}${value}`);
+  }
+ }
+ return tree.join('\n');
+}
+function updateOutput(){$('output').value=renderTree(currentGroups,$('withoutRoot').checked)}
+function setStatus(message,error=false){$('status').textContent=message;$('status').className=error?'status error':'status'}
+$('generate').onclick=()=>{
+ try{
+  currentGroups=parseTsv($('source').value);
+  const objects=new Set(currentGroups.map(group=>group.object));
+  updateOutput();
+  $('copy').disabled=false;
+  $('download').disabled=false;
+  $('stats').textContent=`${objects.size} 个业务对象，${currentGroups.length} 个属性，${currentGroups.reduce((total,group)=>total+group.values.length,0)} 个属性值 / 枚举`;
+  setStatus('生成完成，可复制到 Xmind。');
+ }catch(error){currentGroups=[];$('output').value='';$('stats').textContent='';$('copy').disabled=true;$('download').disabled=true;setStatus(error.message,true)}
+};
+$('withoutRoot').onchange=()=>{if(currentGroups.length){updateOutput();setStatus($('withoutRoot').checked?'已移除额外根节点。':'已添加根节点。')}};
+$('copy').onclick=async()=>{
+ const value=$('output').value;
+ try{await navigator.clipboard.writeText(value);setStatus('已复制树状内容，可粘贴到 Xmind。')}
+ catch(error){$('output').focus();$('output').select();const copied=document.execCommand('copy');setStatus(copied?'已复制树状内容，可粘贴到 Xmind。':'浏览器未允许访问剪贴板，请手动复制预览内容。',!copied)}
+};
+$('download').onclick=()=>{
+ const blob=new Blob(['\ufeff',$('output').value],{type:'text/markdown;charset=utf-8'});
+ const url=URL.createObjectURL(blob),link=document.createElement('a');
+ link.href=url;link.download='业务对象属性枚举树.md';link.click();URL.revokeObjectURL(url);
+ setStatus('Markdown 文件已下载。');
+};
+$('clear').onclick=()=>{$('source').value='';$('output').value='';$('stats').textContent='';currentGroups=[];$('copy').disabled=true;$('download').disabled=true;setStatus('');$('source').focus()};
+</script>
+</body>
+</html>

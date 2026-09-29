@@ -3,13 +3,13 @@
 <style>
 :root{font-family:Inter,'Microsoft YaHei','PingFang SC',system-ui,sans-serif;color:#1c2b3a;background:#f4f7fb}*{box-sizing:border-box}body{margin:0}main{max-width:1450px;margin:0 auto;padding:30px 24px 55px}.eyebrow{color:#3c668d;font-size:12px;font-weight:700;letter-spacing:.15em}h1{margin:5px 0 8px;font-size:29px;letter-spacing:-.025em}p{color:#64748b;line-height:1.7;margin:5px 0 18px}.card{background:white;border:1px solid #dbe5f0;border-radius:15px;box-shadow:0 3px 18px #1d3a5610;padding:20px;margin:17px 0}.cols{display:grid;grid-template-columns:minmax(340px,1.1fr) minmax(320px,.9fr);gap:18px}.section-title{font-size:16px;font-weight:740;margin:0 0 12px;display:flex;align-items:center;justify-content:space-between}textarea{width:100%;min-height:365px;padding:15px;border:1px solid #ccdaea;border-radius:10px;font:13px/1.7 Consolas,'Microsoft YaHei',monospace;resize:vertical;background:#fcfdff;color:#23364c;tab-size:2}textarea:focus,input:focus,select:focus{outline:2px solid #9cc8ff;outline-offset:1px}.btns{display:flex;gap:9px;flex-wrap:wrap;align-items:center}.btn{cursor:pointer;border:1px solid #cfdeec;background:white;color:#284963;padding:9px 13px;border-radius:9px;font-weight:650;font-size:13px}.btn:hover{background:#edf5fd}.btn.primary{background:#1769aa;color:white;border-color:#1769aa}.btn.primary:hover{background:#0f578f}.btn.danger{color:#b63c39;border-color:#eacaca}.btn:disabled{opacity:.45;cursor:not-allowed}.hint{font-size:12px;color:#75899d;margin-top:11px}.rules{font-size:13px;line-height:1.9;color:#425972}.rules code{background:#f0f5fa;padding:3px 5px;border-radius:4px}.sample{background:#f5f8fc;border-radius:10px;padding:12px 15px;white-space:pre;font:12px/1.65 Consolas,monospace;overflow-x:auto;color:#3b5670}.stats{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px}.stat{border:1px solid #e0e9f3;border-radius:10px;background:#f8fbfe;padding:11px 15px;min-width:120px}.stat strong{display:block;font-size:24px;color:#173f64}.stat span{font-size:12px;color:#728296}.toolrow{display:flex;gap:9px;flex-wrap:wrap;align-items:center;margin-bottom:14px}.toolrow input,.toolrow select{border:1px solid #d2deea;border-radius:8px;padding:9px 11px;background:white;color:#284058;font-size:13px}.toolrow input{flex:1;min-width:200px}.notice{font-size:12px;color:#457751;margin:5px 0 0;min-height:17px}.scroll{overflow:auto;max-height:580px;border:1px solid #e1eaf1;border-radius:10px}table{border-collapse:separate;border-spacing:0;width:100%;font-size:13px}th{position:sticky;top:0;background:#edf4fa;color:#3a5876;text-align:left;padding:12px 10px;border-bottom:1px solid #d6e2ef;white-space:nowrap}td{padding:10px;border-bottom:1px solid #e9f0f6;vertical-align:top}tr:hover td{background:#f8fbfe}tr.duplicate-row td{background:#fff8e8}tr.duplicate-row:hover td{background:#ffefd0}tr.duplicate-row td.duplicate-attr{background:#ffe3a3;color:#864600;font-weight:750;border-left:3px solid #e5a11d}.duplicate-flag{display:inline-block;margin-left:8px;border-radius:5px;background:#be6b0d;color:white;padding:2px 6px;font-size:11px;font-weight:650;white-space:nowrap}.only-dupes{display:inline-flex;align-items:center;gap:5px;font-size:13px;color:#435b73;white-space:nowrap}td:nth-child(1){text-align:center}td:nth-child(4){min-width:235px}td:nth-child(5){max-width:350px;color:#657b90}.empty{text-align:center;padding:35px;color:#8092a6}small{color:#8394a6}.pill{font-size:11px;background:#e9f3ff;border-radius:5px;padding:3px 7px;color:#286394}.bad{color:#be4a3e}.footer{font-size:12px;color:#8093a6;text-align:center;margin-top:20px}@media(max-width:860px){.cols{grid-template-columns:1fr}main{padding:20px 12px}.card{padding:15px}.scroll{max-height:65vh}}
 </style></head><body><main>
-<div class="eyebrow">LOCAL FIRST · 业务分析工具</div><h1>业务对象倒排索引生成器</h1><p>粘贴「页面 → 业务对象 → 属性 → 属性值」的缩进列表，保留所有原始出现记录，生成可筛选、可删除的索引表。同一业务对象中，后出现的同名属性会高亮，帮助逐项去重。不上传任何数据。</p>
-<div class="cols"><section class="card"><div class="section-title">① 粘贴结构化输入 <span class="pill">兼容 Xmind / Markdown</span></div><textarea id="source" spellcheck="false" placeholder="直接从 Xmind 复制粘贴：\n页面与对象\n    P1-首页\n        课程\n            课程名称\n            课程类型\n                团课\n                私教课\n\n也支持 Markdown 的 - 缩进列表"></textarea><div class="btns" style="margin-top:12px"><button class="btn primary" id="parseBtn">解析并生成表格</button><button class="btn" id="xmindSampleBtn">Xmind 示例</button><button class="btn" id="sampleBtn">Markdown 示例</button><button class="btn" id="clearBtn">清空输入</button></div><div id="parseMsg" class="hint" role="status">按输入的缩进层级解析，不去重、不重命名、不猜测业务对象。</div></section>
-<section class="card"><div class="section-title">解析规则</div><div class="rules"><strong>直接复制 Xmind 节点后粘贴</strong>，不需要加 <code>-</code> 或转换 Markdown。工具会根据每一行开头的 Tab / 空格自动识别层级，也兼容原来的 Markdown 列表。<br><br>· 第 1 层：页面（例如 <code>P1-首页</code>）<br>· 第 2 层：业务对象（例如 <code>课程</code>）<br>· 第 3 层：属性（例如 <code>课程类型</code>）<br>· 第 4 层及以后：属性值（例如 <code>团课</code>）<br><br>可选的“页面与对象”根节点自动跳过。同一属性在不同页面或同一页面重复出现时都保留。<strong>重要：</strong>必须保留粘贴文本的前导缩进；若 Xmind 粘贴时没有缩进，工具会报错提示。</div><div class="sample">页面与对象
+<div class="eyebrow">LOCAL FIRST · 业务分析工具</div><h1>业务对象倒排索引生成器</h1><p>粘贴「页面 → 业务对象 → 属性 → 属性值」的缩进列表，保留所有原始出现记录，生成可筛选、可删除的索引表。同一业务对象的同名属性会共享并合并属性值，删除重复行后仍保留完整枚举；后出现的同名属性会高亮，帮助逐项去重。不上传任何数据。</p>
+<div class="cols"><section class="card"><div class="section-title">① 粘贴结构化输入 <span class="pill">兼容 Xmind / Markdown</span></div><textarea id="source" spellcheck="false" placeholder="直接从 Xmind 复制粘贴：\n页面与对象\n    P1-首页\n        课程\n            课程名称\n            课种\n                团课\n                私教课\n\n也支持 Markdown 的 - 缩进列表"></textarea><div class="btns" style="margin-top:12px"><button class="btn primary" id="parseBtn">解析并生成表格</button><button class="btn" id="xmindSampleBtn">Xmind 示例</button><button class="btn" id="sampleBtn">Markdown 示例</button><button class="btn" id="clearBtn">清空输入</button></div><div id="parseMsg" class="hint" role="status">按输入的缩进层级解析，不去重、不重命名、不猜测业务对象。</div></section>
+<section class="card"><div class="section-title">解析规则</div><div class="rules"><strong>直接复制 Xmind 节点后粘贴</strong>，不需要加 <code>-</code> 或转换 Markdown。工具会根据每一行开头的 Tab / 空格自动识别层级，也兼容原来的 Markdown 列表。<br><br>· 第 1 层：页面（例如 <code>P1-首页</code>）<br>· 第 2 层：业务对象（例如 <code>课程</code>）<br>· 第 3 层：属性（例如 <code>课种</code>）<br>· 第 4 层及以后：属性值（例如 <code>团课</code>）<br><br>可选的“页面与对象”根节点自动跳过。同一属性在不同页面或同一页面重复出现时都保留。<strong>重要：</strong>必须保留粘贴文本的前导缩进；若 Xmind 粘贴时没有缩进，工具会报错提示。</div><div class="sample">页面与对象
     P1-首页
         课程
             课程名称
-            课程类型
+            课种
                 团课
                 精品课
     P2-约课
@@ -35,7 +35,7 @@ const demo=`- 页面与对象
       - 已约人数
   - P1-首页(2)
     - 课程
-      - 课程类型
+      - 课种
         - 团课
         - 精品课
         - 私教课
@@ -46,7 +46,7 @@ const demo=`- 页面与对象
   - P2-约课-01-团课
     - 课程
       - 课程名称
-      - 课程类型
+      - 课种
         - 团课
         - 精品课
       - 课程名称
@@ -97,10 +97,13 @@ function parse(text){
   if(!page.children.length){warnings.push(`第 ${page.line} 行页面「${page.text}」没有业务对象`);continue}
   for(const obj of page.children){
    if(!obj.children.length){warnings.push(`第 ${obj.line} 行业务对象「${obj.text}」没有属性`);continue}
-   for(const attr of obj.children)data.push({id:nextId++,object:obj.text,attribute:attr.text,page:page.text,values:valuesUnder(attr).join('；'),line:attr.line});
+   for(const attr of obj.children){const valueItems=valuesUnder(attr);data.push({id:nextId++,object:obj.text,attribute:attr.text,page:page.text,values:valueItems.join('；'),valueItems,line:attr.line});}
   }
  }
  if(!data.length)throw Error('没有解析出属性。检查是否包含「页面 → 业务对象 → 属性」三级节点，并保留缩进。');
+ const valueGroups=new Map();
+ for(const row of data){const key=JSON.stringify([row.object,row.attribute]);if(!valueGroups.has(key))valueGroups.set(key,[]);const values=valueGroups.get(key);for(const value of row.valueItems)if(!values.includes(value))values.push(value);}
+ for(const row of data){row.values=valueGroups.get(JSON.stringify([row.object,row.attribute])).join('；');delete row.valueItems;}
  return {data,warnings};
 }
 // The earliest surviving occurrence in the original text is the reference row.
@@ -123,7 +126,7 @@ function syncCheckAll(){let list=shown();$('checkAll').checked=!!list.length&&li
 function createOutput(format){let list=shown();if(!list.length)return '';let header=['业务对象','属性','属性来源页面','属性值 / 枚举'];let data=list.map(r=>[r.object,r.attribute,r.page,r.values]);
  if(format==='md')return '| '+header.join(' | ')+' |\n| '+header.map(()=>'---').join(' | ')+' |\n'+data.map(a=>'| '+a.map(s=>s.replace(/\|/g,'\\|').replace(/\r?\n/g,' ')).join(' | ')+' |').join('\n');
  if(format==='csv'){const quote=s=>'"'+String(s).replace(/"/g,'""')+'"';return [header,...data].map(a=>a.map(quote).join(',')).join('\r\n')}
- return [header,...data].map(a=>a.map(s=>String(s).replace(/[\t\r\n]+/g,' ')).join('\t')).join('\r\n');}
+  const tsvRow=a=>{const cells=a.map(s=>String(s).replace(/[\t\r\n]+/g,' '));while(cells.length>1&&cells[cells.length-1]==='')cells.pop();return cells.join('\t')};return [header,...data].map(tsvRow).join('\r\n');}
 function note(msg,error=false){$('actionMsg').textContent=msg;$('actionMsg').className=error?'notice bad':'notice'}
 async function copy(text){if(!text){note('当前没有可复制的记录',true);return}try{await navigator.clipboard.writeText(text);note('已复制，可直接粘贴到飞书或 Excel。')}catch(e){let t=document.createElement('textarea');t.value=text;document.body.append(t);t.select();let ok=document.execCommand('copy');t.remove();note(ok?'已复制，可直接粘贴到飞书或 Excel。':'浏览器限制了复制；可改用下载文件。',!ok)}}
 function download(content,filename,mime){if(!content){note('当前没有可导出的记录',true);return}let blob=new Blob(['\ufeff'+content],{type:mime}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=filename;a.click();URL.revokeObjectURL(url);note(`已导出 ${shown().length} 行：${filename}`)}

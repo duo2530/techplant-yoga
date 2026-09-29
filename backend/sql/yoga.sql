@@ -52,7 +52,7 @@ DROP TABLE IF EXISTS `t_course`;
 CREATE TABLE `t_course` (
                             `id`           bigint unsigned NOT NULL                          COMMENT '课程ID',
                             `name`         varchar(64)     NOT NULL                          COMMENT '课程名称',
-                            `type`         tinyint         NOT NULL                          COMMENT '课程类型：1团课 2精品课 3私教课 4特色课',
+                            `type`         tinyint         NOT NULL                          COMMENT '课种：1团课 2精品课 3私教课 4特色课',
                             `difficulty`   tinyint         NOT NULL DEFAULT 1                COMMENT '课程难度：1~5 星',
                             `cover_url`    varchar(255)             DEFAULT NULL             COMMENT '课程封面图URL',
                             `intro`        text                                              COMMENT '课程介绍',
