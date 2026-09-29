@@ -2,13 +2,13 @@
   <div class="app-container">
     <el-form ref="queryRef" :model="queryParams" :inline="true" v-show="showSearch">
       <el-form-item label="门店" prop="storeId">
-        <el-select v-model="queryParams.storeId" clearable filterable placeholder="请选择门店" style="width: 180px">
+        <el-select v-model="queryParams.storeId" clearable filterable placeholder="请选择门店" style="width: 180px" @change="handleQueryStoreChange">
           <el-option v-for="item in storeOptions" :key="item.id" :label="item.name" :value="item.id" />
         </el-select>
       </el-form-item>
       <el-form-item label="课程" prop="courseId">
         <el-select v-model="queryParams.courseId" clearable filterable placeholder="请选择课程" style="width: 180px">
-          <el-option v-for="item in courseOptions" :key="item.id" :label="item.name" :value="item.id" />
+          <el-option v-for="item in queryCourseOptions" :key="item.id" :label="item.name" :value="item.id" />
         </el-select>
       </el-form-item>
       <el-form-item label="状态" prop="status">
@@ -34,8 +34,8 @@
 
     <el-dialog v-model="open" :title="title" width="620px" append-to-body>
       <el-form ref="formRef" :model="form" :rules="rules" label-width="100px">
-        <el-form-item label="门店" prop="storeId"><el-select v-model="form.storeId" filterable placeholder="请选择门店" style="width: 100%"><el-option v-for="item in storeOptions" :key="item.id" :label="item.name" :value="item.id" /></el-select></el-form-item>
-        <el-form-item label="课程" prop="courseId"><el-select v-model="form.courseId" filterable placeholder="请选择课程" style="width: 100%"><el-option v-for="item in courseOptions" :key="item.id" :label="item.name" :value="item.id" /></el-select></el-form-item>
+        <el-form-item label="门店" prop="storeId"><el-select v-model="form.storeId" filterable placeholder="请选择门店" style="width: 100%" @change="handleFormStoreChange"><el-option v-for="item in storeOptions" :key="item.id" :label="item.name" :value="item.id" /></el-select></el-form-item>
+        <el-form-item label="课程" prop="courseId"><el-select v-model="form.courseId" filterable placeholder="请选择课程" style="width: 100%"><el-option v-for="item in formCourseOptions" :key="item.id" :label="item.name" :value="item.id" /></el-select></el-form-item>
         <el-form-item label="开始时间" prop="startTime"><el-date-picker v-model="form.startTime" type="datetime" value-format="YYYY-MM-DD HH:mm:ss" placeholder="请选择开始时间" style="width: 100%" /></el-form-item>
         <el-form-item label="结束时间" prop="endTime"><el-date-picker v-model="form.endTime" type="datetime" value-format="YYYY-MM-DD HH:mm:ss" placeholder="请选择结束时间" style="width: 100%" /></el-form-item>
         <el-form-item label="时间段容量" prop="capacity"><el-input-number v-model="form.capacity" :min="1" :max="9999" controls-position="right" /></el-form-item>
@@ -51,20 +51,61 @@ import { listCourse } from '@/api/course/course'
 import { addSchedule, listSchedule, getSchedule, updateSchedule, updateScheduleStatus } from '@/api/schedule/schedule'
 
 const { proxy } = getCurrentInstance()
-const scheduleList = ref([]); const storeOptions = ref([]); const courseOptions = ref([])
+const scheduleList = ref([]); const storeOptions = ref([]); const courseOptions = ref([]); const queryCourseOptions = ref([]); const formCourseOptions = ref([])
 const loading = ref(true); const showSearch = ref(true); const total = ref(0); const open = ref(false); const title = ref('')
 const emptyForm = () => ({ id: undefined, storeId: undefined, courseId: undefined, startTime: undefined, endTime: undefined, capacity: 20 })
 const data = reactive({ form: emptyForm(), queryParams: { pageNum: 1, pageSize: 10, storeId: undefined, courseId: undefined, status: undefined }, rules: { storeId: [{ required: true, message: '请选择门店', trigger: 'change' }], courseId: [{ required: true, message: '请选择课程', trigger: 'change' }], startTime: [{ required: true, message: '请选择开始时间', trigger: 'change' }], endTime: [{ required: true, message: '请选择结束时间', trigger: 'change' }], capacity: [{ required: true, message: '请输入容量', trigger: 'blur' }] } })
 const { form, queryParams, rules } = toRefs(data)
-function getOptions() { listStore({ pageNum: 1, pageSize: 100, status: 1 }).then(r => { storeOptions.value = r.rows || [] }); listCourse({ pageNum: 1, pageSize: 100, status: 1 }).then(r => { courseOptions.value = r.rows || [] }) }
+function loadCourses(storeId) {
+  const params = { pageNum: 1, pageSize: 100, status: 1 }
+  if (storeId) {
+    params.storeId = storeId
+  }
+  return listCourse(params).then(r => r.rows || [])
+}
+function getOptions() {
+  listStore({ pageNum: 1, pageSize: 100, status: 1 }).then(r => { storeOptions.value = r.rows || [] })
+  loadCourses().then(rows => {
+    courseOptions.value = rows
+    queryCourseOptions.value = rows
+    formCourseOptions.value = rows
+  })
+}
 function getList() { loading.value = true; listSchedule(queryParams.value).then(r => { scheduleList.value = r.rows || []; total.value = r.total || 0 }).finally(() => { loading.value = false }) }
 function handleQuery() { queryParams.value.pageNum = 1; getList() }
-function resetQuery() { proxy.resetForm('queryRef'); handleQuery() }
+function resetQuery() {
+  proxy.resetForm('queryRef')
+  loadCourses().then(rows => { queryCourseOptions.value = rows })
+  handleQuery()
+}
+function handleQueryStoreChange(storeId) {
+  queryParams.value.courseId = undefined
+  loadCourses(storeId).then(rows => { queryCourseOptions.value = rows })
+}
+function handleFormStoreChange(storeId) {
+  form.value.courseId = undefined
+  loadCourses(storeId).then(rows => { formCourseOptions.value = rows })
+}
 function storeLabel(id) { const item = storeOptions.value.find(x => String(x.id) === String(id)); return item ? item.name : id || '-' }
 function courseLabel(id) { const item = courseOptions.value.find(x => String(x.id) === String(id)); return item ? item.name : id || '-' }
 function statusLabel(value) { return value === 1 ? '可预约' : value === 2 ? '已取消' : '已结束' }
-function handleAdd() { form.value = emptyForm(); title.value = '新增排班'; open.value = true }
-function handleUpdate(row) { getSchedule(row.id).then(r => { form.value = { ...r.data }; title.value = '修改排班'; open.value = true }) }
+function handleAdd() {
+  form.value = emptyForm()
+  formCourseOptions.value = courseOptions.value
+  title.value = '新增排班'
+  open.value = true
+}
+function handleUpdate(row) {
+  getSchedule(row.id).then(r => {
+    const detail = r.data
+    form.value = { ...detail }
+    return loadCourses(detail.storeId)
+  }).then(rows => {
+    formCourseOptions.value = rows
+    title.value = '修改排班'
+    open.value = true
+  })
+}
 function submitForm() { proxy.$refs.formRef.validate(valid => { if (!valid) return; const action = form.value.id ? updateSchedule(form.value.id, form.value) : addSchedule(form.value); action.then(() => { proxy.$modal.msgSuccess(form.value.id ? '修改成功' : '新增成功'); open.value = false; getList() }) }) }
 function handleStatus(row) { const target = row.status === 1 ? 2 : 1; proxy.$modal.confirm('确认修改该排班状态吗？').then(() => updateScheduleStatus(row.id, target)).then(() => { proxy.$modal.msgSuccess('操作成功'); getList() }).catch(() => {}) }
 getOptions(); getList()
