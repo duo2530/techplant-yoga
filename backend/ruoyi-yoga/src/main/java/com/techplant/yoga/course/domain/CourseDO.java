@@ -23,7 +23,7 @@ import com.baomidou.mybatisplus.annotation.TableName;
 @TableName("t_course")
 public class CourseDO
 {
-    /** 课程ID（雪花ID，应用侧生成） */
+    /** 课程ID */
     @TableId(value = "id", type = IdType.ASSIGN_ID)
     private Long id;
 

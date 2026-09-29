@@ -19,7 +19,7 @@ insert into sys_role_menu values ('1', '2003');
 
 DROP TABLE IF EXISTS `t_store`;
 CREATE TABLE `t_store` (
-                          `id`             bigint unsigned NOT NULL                          COMMENT '门店ID（雪花ID，应用侧生成）',
+                          `id`             bigint unsigned NOT NULL                          COMMENT '门店ID',
                           `name`           varchar(64)     NOT NULL                          COMMENT '门店名称',
                           `region`         varchar(64)     NOT NULL                          COMMENT '所在区域',
                           `province_code`  varchar(16)     NOT NULL                          COMMENT '省行政区code，用于地图定位',
@@ -50,7 +50,7 @@ VALUES
 
 DROP TABLE IF EXISTS `t_course`;
 CREATE TABLE `t_course` (
-                            `id`           bigint unsigned NOT NULL                          COMMENT '课程ID（雪花ID，应用侧生成）',
+                            `id`           bigint unsigned NOT NULL                          COMMENT '课程ID',
                             `name`         varchar(64)     NOT NULL                          COMMENT '课程名称',
                             `type`         tinyint         NOT NULL                          COMMENT '课程类型：1团课 2精品课 3私教课 4特色课',
                             `difficulty`   tinyint         NOT NULL DEFAULT 1                COMMENT '课程难度：1~5 星',
@@ -88,7 +88,7 @@ VALUES
 
 DROP TABLE IF EXISTS `t_coach`;
 CREATE TABLE `t_coach` (
-  `id`          bigint unsigned NOT NULL COMMENT '教练ID（雪花ID，应用侧生成）',
+  `id`          bigint unsigned NOT NULL COMMENT '教练ID',
   `intro`       text                                      COMMENT '教练简介',
   `name`        varchar(64) NOT NULL                       COMMENT '教练名称',
   `title`       varchar(64)                              DEFAULT NULL COMMENT '教练头衔',
