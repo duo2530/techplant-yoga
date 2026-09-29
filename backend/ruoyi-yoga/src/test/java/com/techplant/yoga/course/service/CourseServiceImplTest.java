@@ -183,6 +183,7 @@ class CourseServiceImplTest
     void createCourse_shouldReturnGeneratedId()
     {
         CourseCreateDTO dto = new CourseCreateDTO();
+        dto.setStoreId(2001L);
         dto.setName("哈他瑜伽");
         dto.setType(1);
         dto.setDifficulty(2);
@@ -217,6 +218,7 @@ class CourseServiceImplTest
     void createCourse_withoutSortNo_shouldDefaultZero()
     {
         CourseCreateDTO dto = new CourseCreateDTO();
+        dto.setStoreId(2001L);
         dto.setName("流瑜伽");
         dto.setType(2);
         dto.setDifficulty(3);
@@ -336,6 +338,7 @@ class CourseServiceImplTest
         when(courseDao.updateById(any(CourseDO.class))).thenReturn(1);
 
         CourseUpdateDTO dto = new CourseUpdateDTO();
+        dto.setStoreId(2001L);
         dto.setName("哈他瑜伽（初级）");
         dto.setType(1);
         dto.setDifficulty(3);
@@ -367,6 +370,7 @@ class CourseServiceImplTest
         when(courseDao.updateById(any(CourseDO.class))).thenReturn(1);
 
         CourseUpdateDTO dto = new CourseUpdateDTO();
+        dto.setStoreId(2001L);
         dto.setName("哈他瑜伽（初级）");
         dto.setType(1);
         dto.setDifficulty(3);
@@ -394,6 +398,7 @@ class CourseServiceImplTest
         when(courseDao.selectById(COURSE_ID)).thenReturn(null);
 
         CourseUpdateDTO dto = new CourseUpdateDTO();
+        dto.setStoreId(2001L);
         dto.setName("哈他瑜伽");
         dto.setType(1);
         dto.setDifficulty(2);

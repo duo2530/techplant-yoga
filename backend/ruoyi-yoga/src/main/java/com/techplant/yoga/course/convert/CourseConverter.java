@@ -38,6 +38,7 @@ public final class CourseConverter
     public static CourseDO toDO(CourseCreateDTO dto)
     {
         CourseDO course = new CourseDO();
+        course.setStoreId(dto.getStoreId());
         course.setName(dto.getName());
         course.setType(dto.getType());
         course.setDifficulty(dto.getDifficulty());
@@ -58,6 +59,7 @@ public final class CourseConverter
      */
     public static void applyUpdate(CourseDO course, CourseUpdateDTO dto)
     {
+        course.setStoreId(dto.getStoreId());
         course.setName(dto.getName());
         course.setType(dto.getType());
         course.setDifficulty(dto.getDifficulty());
@@ -74,6 +76,7 @@ public final class CourseConverter
     {
         CourseListItemVO vo = new CourseListItemVO();
         vo.setId(course.getId());
+        vo.setStoreId(course.getStoreId());
         vo.setName(course.getName());
         vo.setType(course.getType());
         vo.setDifficulty(course.getDifficulty());
@@ -108,6 +111,7 @@ public final class CourseConverter
     {
         CourseDetailVO vo = new CourseDetailVO();
         vo.setId(course.getId());
+        vo.setStoreId(course.getStoreId());
         vo.setName(course.getName());
         vo.setType(course.getType());
         vo.setDifficulty(course.getDifficulty());
@@ -138,8 +142,8 @@ public final class CourseConverter
         {
             return "-";
         }
-        return String.format("name=%s type=%s difficulty=%s durationMin=%s sortNo=%s cover=%s intro=%s", course.getName(),
-                course.getType(), course.getDifficulty(), course.getDurationMin(), course.getSortNo(),
+        return String.format("storeId=%s name=%s type=%s difficulty=%s durationMin=%s sortNo=%s cover=%s intro=%s",
+                course.getStoreId(), course.getName(), course.getType(), course.getDifficulty(), course.getDurationMin(), course.getSortNo(),
                 hasText(course.getCoverUrl()) ? "有" : "无", hasText(course.getIntro()) ? "有" : "无");
     }
 
@@ -149,6 +153,7 @@ public final class CourseConverter
     public static String diff(CourseDO before, CourseDO after)
     {
         List<String> changes = new ArrayList<String>();
+        addChange(changes, "storeId", before.getStoreId(), after.getStoreId());
         addChange(changes, "name", before.getName(), after.getName());
         addChange(changes, "type", before.getType(), after.getType());
         addChange(changes, "difficulty", before.getDifficulty(), after.getDifficulty());

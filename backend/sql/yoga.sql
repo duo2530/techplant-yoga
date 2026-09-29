@@ -1,5 +1,5 @@
-DELETE FROM `sys_role_menu` WHERE `menu_id` IN (2000, 2001, 2002, 2003);
-DELETE FROM `sys_menu` WHERE `menu_id` IN (2000, 2001, 2002, 2003);
+DELETE FROM `sys_role_menu` WHERE `menu_id` IN (2000, 2001, 2002, 2003, 2004, 2005);
+DELETE FROM `sys_menu` WHERE `menu_id` IN (2000, 2001, 2002, 2003, 2004, 2005);
 
 -- 一级目录：经营基础（门店 / 课程 / 教练 / 排班 / 预约 后续都挂在这个目录下）
 insert into sys_menu values('2000', '经营基础', '0',    '5', 'operation', null,           '', '', 1, 0, 'M', '0', '0', '',          'education', 'admin', sysdate(), '', null, '经营基础目录');
@@ -9,6 +9,10 @@ insert into sys_menu values('2001', '课程管理', '2000', '1', 'course',    'c
 insert into sys_menu values('2002', '教练管理', '2000', '2', 'coach',     'coach/index',  '', '', 1, 0, 'C', '0', '0', '',          'user',      'admin', sysdate(), '', null, '教练管理菜单');
 -- 二级菜单：门店管理（路由 /operation/store，组件 src/views/store/index.vue）
 insert into sys_menu values('2003', '门店管理', '2000', '3', 'store',     'store/index',  '', '', 1, 0, 'C', '0', '0', '',          'shopping',  'admin', sysdate(), '', null, '门店管理菜单');
+-- 二级菜单：排班管理（路由 /operation/schedule，组件 src/views/schedule/index.vue）
+insert into sys_menu values('2004', '排班管理', '2000', '4', 'schedule',  'schedule/index', '', '', 1, 0, 'C', '0', '0', '',          'date',      'admin', sysdate(), '', null, '排班管理菜单');
+-- 二级菜单：预约管理（路由 /operation/booking，组件 src/views/booking/index.vue）
+insert into sys_menu values('2005', '预约管理', '2000', '5', 'booking',   'booking/index',  '', '', 1, 0, 'C', '0', '0', '',          'list',      'admin', sysdate(), '', null, '预约管理菜单');
 
 -- 角色绑定：role_id = 1 是若依内置管理员（它的菜单本来就不受 sys_role_menu 限制，
 -- 这里补上是为了让角色-菜单关系在「角色管理」页面里可见、可维护）
@@ -16,6 +20,8 @@ insert into sys_role_menu values ('1', '2000');
 insert into sys_role_menu values ('1', '2001');
 insert into sys_role_menu values ('1', '2002');
 insert into sys_role_menu values ('1', '2003');
+insert into sys_role_menu values ('1', '2004');
+insert into sys_role_menu values ('1', '2005');
 
 DROP TABLE IF EXISTS `t_store`;
 CREATE TABLE `t_store` (
@@ -51,6 +57,7 @@ VALUES
 DROP TABLE IF EXISTS `t_course`;
 CREATE TABLE `t_course` (
                             `id`           bigint unsigned NOT NULL                          COMMENT '课程ID',
+                            `store_id`     bigint unsigned NOT NULL                          COMMENT '所属门店ID',
                             `name`         varchar(64)     NOT NULL                          COMMENT '课程名称',
                             `type`         tinyint         NOT NULL                          COMMENT '课程类型：1团课 2精品课 3私教课 4特色课',
                             `difficulty`   tinyint         NOT NULL DEFAULT 1                COMMENT '课程难度：1~5 星',
@@ -65,26 +72,79 @@ CREATE TABLE `t_course` (
                             `update_by`    bigint unsigned          DEFAULT NULL             COMMENT '更新人ID',
                             `update_time`  datetime        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
                             PRIMARY KEY (`id`),
+                            KEY `idx_store_type_status` (`store_id`, `type`, `status`),
                             KEY `idx_type_status` (`type`, `status`),
                             KEY `idx_name` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='课程基础信息表';
 
 INSERT INTO `t_course`
-(`id`, `name`, `type`, `difficulty`, `cover_url`, `intro`, `duration_min`, `sort_no`, `status`, `deleted`, `create_by`, `create_time`, `update_by`, `update_time`)
+(`id`, `store_id`, `name`, `type`, `difficulty`, `cover_url`, `intro`, `duration_min`, `sort_no`, `status`, `deleted`, `create_by`, `create_time`, `update_by`, `update_time`)
 VALUES
-    (1856739201475235801, '哈他瑜伽',   1, 2, 'https://cdn.example.com/course/hata.jpg',      '以体式与呼吸配合为主的经典课程，适合初学者建立基础。', 60,  10, 1, 0, 1, '2026-09-20 10:12:33', 1, '2026-09-21 09:03:11'),
-    (1856739201475235802, '流瑜伽',     2, 3, 'https://cdn.example.com/course/vinyasa.jpg',   '体式之间以呼吸串联，节奏连贯流畅。',                   75,  20, 1, 0, 1, '2026-09-20 10:15:02', 1, '2026-09-22 08:41:07'),
-    (1856739201475235803, '阴瑜伽',     2, 1, 'https://cdn.example.com/course/yin.jpg',       '长时间保持体式，作用于筋膜与关节。',                   90,  30, 1, 0, 1, '2026-09-20 10:18:44', 1, '2026-09-20 10:18:44'),
-    (1856739201475235804, '普拉提垫上', 1, 2, 'https://cdn.example.com/course/mat.jpg',       '核心控制与呼吸配合的垫上训练。',                       50,  40, 1, 0, 1, '2026-09-20 10:22:10', 1, '2026-09-20 10:22:10'),
-    (1856739201475235805, '空中瑜伽',   4, 4, 'https://cdn.example.com/course/aerial.jpg',    '借助吊床完成体式，需要一定基础。',                     60,  50, 1, 0, 1, '2026-09-20 10:25:39', 1, '2026-09-20 10:25:39'),
-    (1856739201475235806, '孕产瑜伽',   4, 1, 'https://cdn.example.com/course/prenatal.jpg',  '面向孕产期人群的温和课程，需教练评估后参加。',         60,  60, 1, 0, 1, '2026-09-20 10:28:57', 1, '2026-09-20 10:28:57'),
-    (1856739201475235807, '阿斯汤加',   2, 5, 'https://cdn.example.com/course/ashtanga.jpg',  '固定序列的进阶课程，强度较高。',                       90,  70, 0, 0, 1, '2026-09-20 10:31:12', 1, '2026-09-22 11:02:45'),
-    (1856739201475235808, '普拉提器械', 3, 4, 'https://cdn.example.com/course/reformer.jpg',  '一对一器械课程，按学员情况定制。',                     55,  80, 1, 0, 1, '2026-09-20 10:34:20', 1, '2026-09-20 10:34:20'),
-    (1856739201475235809, '私教体验课', 3, 1, 'https://cdn.example.com/course/trial.jpg',     '私教体验课程，用于首次到店评估。',                     45,  90, 1, 0, 1, '2026-09-20 10:37:05', 1, '2026-09-20 10:37:05'),
-    (1856739201475235810, '肩颈理疗',   4, 1, NULL,                                          '针对久坐人群的肩颈放松课程。',                         60, 100, 1, 0, 1, '2026-09-20 10:40:33', 1, '2026-09-20 10:40:33'),
-    (1856739201475235811, '冥想放松',   4, 1, NULL,                                          '呼吸练习与冥想引导，用于课后放松。',                   30, 110, 1, 0, 1, '2026-09-20 10:43:18', 1, '2026-09-20 10:43:18'),
-    (1856739201475235812, '亲子瑜伽',   4, 2, NULL,                                          '家长与孩子共同参与的课程。',                           45, 120, 1, 0, 1, '2026-09-20 10:46:02', 1, '2026-09-20 10:46:02'),
-    (1856739201475235813, '已删除课程', 1, 1, NULL,                                          '仅用于验证逻辑删除不参与查询。',                       NULL, 130, 1, 1, 1, '2026-09-20 10:49:41', 1, '2026-09-20 10:49:41');
+    (1856739201475235801, 1856739201475235901, '哈他瑜伽',   1, 2, 'https://cdn.example.com/course/hata.jpg',      '以体式与呼吸配合为主的经典课程，适合初学者建立基础。', 60,  10, 1, 0, 1, '2026-09-20 10:12:33', 1, '2026-09-21 09:03:11'),
+    (1856739201475235802, 1856739201475235901, '流瑜伽',     2, 3, 'https://cdn.example.com/course/vinyasa.jpg',   '体式之间以呼吸串联，节奏连贯流畅。',                   75,  20, 1, 0, 1, '2026-09-20 10:15:02', 1, '2026-09-22 08:41:07'),
+    (1856739201475235803, 1856739201475235901, '阴瑜伽',     2, 1, 'https://cdn.example.com/course/yin.jpg',       '长时间保持体式，作用于筋膜与关节。',                   90,  30, 1, 0, 1, '2026-09-20 10:18:44', 1, '2026-09-20 10:18:44'),
+    (1856739201475235804, 1856739201475235901, '普拉提垫上', 1, 2, 'https://cdn.example.com/course/mat.jpg',       '核心控制与呼吸配合的垫上训练。',                       50,  40, 1, 0, 1, '2026-09-20 10:22:10', 1, '2026-09-20 10:22:10'),
+    (1856739201475235805, 1856739201475235901, '空中瑜伽',   4, 4, 'https://cdn.example.com/course/aerial.jpg',    '借助吊床完成体式，需要一定基础。',                     60,  50, 1, 0, 1, '2026-09-20 10:25:39', 1, '2026-09-20 10:25:39'),
+    (1856739201475235806, 1856739201475235901, '孕产瑜伽',   4, 1, 'https://cdn.example.com/course/prenatal.jpg',  '面向孕产期人群的温和课程，需教练评估后参加。',         60,  60, 1, 0, 1, '2026-09-20 10:28:57', 1, '2026-09-20 10:28:57'),
+    (1856739201475235807, 1856739201475235901, '阿斯汤加',   2, 5, 'https://cdn.example.com/course/ashtanga.jpg',  '固定序列的进阶课程，强度较高。',                       90,  70, 0, 0, 1, '2026-09-20 10:31:12', 1, '2026-09-22 11:02:45'),
+    (1856739201475235808, 1856739201475235902, '普拉提器械', 3, 4, 'https://cdn.example.com/course/reformer.jpg',  '一对一器械课程，按学员情况定制。',                     55,  80, 1, 0, 1, '2026-09-20 10:34:20', 1, '2026-09-20 10:34:20'),
+    (1856739201475235809, 1856739201475235902, '私教体验课', 3, 1, 'https://cdn.example.com/course/trial.jpg',     '私教体验课程，用于首次到店评估。',                     45,  90, 1, 0, 1, '2026-09-20 10:37:05', 1, '2026-09-20 10:37:05'),
+    (1856739201475235810, 1856739201475235902, '肩颈理疗',   4, 1, NULL,                                          '针对久坐人群的肩颈放松课程。',                         60, 100, 1, 0, 1, '2026-09-20 10:40:33', 1, '2026-09-20 10:40:33'),
+    (1856739201475235811, 1856739201475235902, '冥想放松',   4, 1, NULL,                                          '呼吸练习与冥想引导，用于课后放松。',                   30, 110, 1, 0, 1, '2026-09-20 10:43:18', 1, '2026-09-20 10:43:18'),
+    (1856739201475235812, 1856739201475235902, '亲子瑜伽',   4, 2, NULL,                                          '家长与孩子共同参与的课程。',                           45, 120, 1, 0, 1, '2026-09-20 10:46:02', 1, '2026-09-20 10:46:02'),
+    (1856739201475235813, 1856739201475235901, '已删除课程', 1, 1, NULL,                                          '仅用于验证逻辑删除不参与查询。',                       NULL, 130, 1, 1, 1, '2026-09-20 10:49:41', 1, '2026-09-20 10:49:41');
+
+DROP TABLE IF EXISTS `t_booking`;
+DROP TABLE IF EXISTS `t_schedule`;
+CREATE TABLE `t_schedule` (
+                              `id`             bigint unsigned NOT NULL                          COMMENT '排班ID',
+                              `store_id`       bigint unsigned NOT NULL                          COMMENT '门店ID',
+                              `course_id`      bigint unsigned NOT NULL                          COMMENT '课程ID',
+                              `start_time`     datetime        NOT NULL                          COMMENT '开始时间',
+                              `end_time`       datetime        NOT NULL                          COMMENT '结束时间',
+                              `capacity`       int unsigned    NOT NULL                          COMMENT '时间段容量',
+                              `booking_count`  int unsigned    NOT NULL DEFAULT 0                COMMENT '已预约人数',
+                              `status`         tinyint         NOT NULL DEFAULT 1                COMMENT '状态：1可预约 2已取消 3已结束',
+                              `deleted`        tinyint         NOT NULL DEFAULT 0                COMMENT '逻辑删除：0正常 1已删除',
+                              `create_by`      bigint unsigned          DEFAULT NULL             COMMENT '创建人ID',
+                              `create_time`    datetime        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+                              `update_by`      bigint unsigned          DEFAULT NULL             COMMENT '更新人ID',
+                              `update_time`    datetime        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+                              PRIMARY KEY (`id`),
+                              KEY `idx_store_start_status` (`store_id`, `start_time`, `status`),
+                              KEY `idx_course_start_status` (`course_id`, `start_time`, `status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='课程排班表';
+
+INSERT INTO `t_schedule`
+(`id`, `store_id`, `course_id`, `start_time`, `end_time`, `capacity`, `booking_count`, `status`, `deleted`, `create_by`, `create_time`, `update_by`, `update_time`)
+VALUES
+    (1856739201475236001, 1856739201475235901, 1856739201475235801, '2026-10-01 09:00:00', '2026-10-01 10:00:00', 20, 1, 1, 0, 1, '2026-09-29 09:00:00', 1, '2026-09-29 09:00:00'),
+    (1856739201475236002, 1856739201475235901, 1856739201475235802, '2026-10-01 19:00:00', '2026-10-01 20:15:00', 15, 0, 1, 0, 1, '2026-09-29 09:05:00', 1, '2026-09-29 09:05:00'),
+    (1856739201475236003, 1856739201475235902, 1856739201475235808, '2026-10-02 14:00:00', '2026-10-02 14:55:00', 1, 0, 1, 0, 1, '2026-09-29 09:10:00', 1, '2026-09-29 09:10:00');
+
+CREATE TABLE `t_booking` (
+                             `id`             bigint unsigned NOT NULL                          COMMENT '预约ID',
+                             `schedule_id`    bigint unsigned NOT NULL                          COMMENT '排班ID',
+                             `user_id`        bigint unsigned NOT NULL                          COMMENT '用户ID，对应 sys_user.user_id',
+                             `store_id`       bigint unsigned NOT NULL                          COMMENT '门店ID快照',
+                             `course_id`      bigint unsigned NOT NULL                          COMMENT '课程ID快照',
+                             `booking_status` tinyint         NOT NULL DEFAULT 1                COMMENT '预约状态：1已预约 2已取消 3已签到',
+                             `booking_count`  int unsigned    NOT NULL DEFAULT 1                COMMENT '本次预约人数',
+                             `deleted`        tinyint         NOT NULL DEFAULT 0                COMMENT '逻辑删除：0正常 1已删除',
+                             `create_by`      bigint unsigned          DEFAULT NULL             COMMENT '创建人ID',
+                             `create_time`    datetime        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+                             `update_by`      bigint unsigned          DEFAULT NULL             COMMENT '更新人ID',
+                             `update_time`    datetime        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+                             PRIMARY KEY (`id`),
+                             UNIQUE KEY `uk_schedule_user_status` (`schedule_id`, `user_id`, `booking_status`),
+                             KEY `idx_user_status_time` (`user_id`, `booking_status`, `create_time`),
+                             KEY `idx_course_status` (`course_id`, `booking_status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='课程预约表';
+
+INSERT INTO `t_booking`
+(`id`, `schedule_id`, `user_id`, `store_id`, `course_id`, `booking_status`, `booking_count`, `deleted`, `create_by`, `create_time`, `update_by`, `update_time`)
+VALUES
+    (1856739201475236101, 1856739201475236001, 2, 1856739201475235901, 1856739201475235801, 1, 1, 0, 2, '2026-09-29 09:20:00', 2, '2026-09-29 09:20:00');
 
 DROP TABLE IF EXISTS `t_coach`;
 CREATE TABLE `t_coach` (

@@ -27,6 +27,9 @@ public class CourseDO
     @TableId(value = "id", type = IdType.ASSIGN_ID)
     private Long id;
 
+    /** 所属门店ID */
+    private Long storeId;
+
     /** 课程名称 */
     private String name;
 
@@ -79,6 +82,16 @@ public class CourseDO
     public void setId(Long id)
     {
         this.id = id;
+    }
+
+    public Long getStoreId()
+    {
+        return storeId;
+    }
+
+    public void setStoreId(Long storeId)
+    {
+        this.storeId = storeId;
     }
 
     public String getName()

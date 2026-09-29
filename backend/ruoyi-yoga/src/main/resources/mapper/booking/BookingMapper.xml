@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.techplant.yoga.booking.mapper.BookingMapper">
+
+    <!-- 未结束预约用于课程停用前的引用检查；已取消、已签到不阻塞停用。 -->
+    <select id="countUnfinishedByCourseId" resultType="long">
+        SELECT COUNT(1)
+        FROM t_booking b
+        INNER JOIN t_schedule s ON s.id = b.schedule_id AND s.deleted = 0
+        WHERE b.course_id = #{courseId}
+          AND b.booking_status = 1
+          AND b.deleted = 0
+          AND s.status = 1
+          AND s.end_time &gt; NOW()
+    </select>
+</mapper>

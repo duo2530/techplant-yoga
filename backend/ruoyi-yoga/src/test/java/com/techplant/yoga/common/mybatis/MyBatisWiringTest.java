@@ -96,6 +96,7 @@ class MyBatisWiringTest
             statement.execute("DROP TABLE IF EXISTS t_course");
             statement.execute("CREATE TABLE t_course (" //
                     + "id bigint NOT NULL," //
+                    + "store_id bigint DEFAULT NULL," //
                     + "name varchar(64) NOT NULL," //
                     + "type tinyint NOT NULL," //
                     + "difficulty tinyint NOT NULL DEFAULT 1," //
