@@ -40,7 +40,8 @@
     {
       "path": "pages/coaches/index",
       "style": {
-        "navigationBarTitleText": "约教练"
+        "navigationBarTitleText": "约教练",
+        "enablePullDownRefresh": true
       }
     },
     {

@@ -112,7 +112,7 @@
     <view class="home__head home__head--coach">
       <ys-section-head title="金牌教练" more-text="更多教练" @more="goCoaches" />
     </view>
-    <view class="coaches">
+    <view v-if="coaches.length" class="coaches">
       <view
         v-for="coach in coaches"
         :key="coach.id"
@@ -123,12 +123,15 @@
           <image class="coach__avatar" :src="coachAvatar(coach)" mode="aspectFill" />
           <view class="coach__text">
             <text class="coach__name">{{ coach.name }}</text>
-            <text class="coach__intro">暂无介绍</text>
-            <text class="coach__link" decode>查看课程 {{ '>' }}</text>
+            <text class="coach__intro">{{ coach.title || '金牌教练' }}</text>
+            <text class="coach__link" decode>查看教练 {{ '>' }}</text>
           </view>
         </view>
         <image class="coach__photo" :src="coachPhoto(coach)" mode="aspectFill" />
       </view>
+    </view>
+    <view v-else class="coach-empty">
+      <text class="coach-empty__text">暂无金牌教练</text>
     </view>
 
     <!-- ================= 场景横幅（无标题、无叠加 UI，纯图片 364×257pt） ================= -->
@@ -148,13 +151,14 @@
 import { ref, computed } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { getHomeData } from '@/api/home'
+import { getFeaturedCoaches } from '@/api/coach'
 import { listStores, setCurrentStoreId } from '@/api/store'
 import { bookSchedule } from '@/api/course'
 
 /**
  * 首页（严格照 docs/原型/home.html）
  *
- * 数据来自 @/api/home（内部读 mock），不发任何网络请求。
+ * 门店、课程等基础数据来自 @/api/home（内部读 mock）；金牌教练通过公开接口查询。
  * 状态栏 / 导航栏 / 微信胶囊 / TabBar 都由小程序绘制，本页只画内容区：
  * 唯一例外是导航栏用现成组件 ys-nav-brand（pages.json 里首页是 navigationStyle:custom）。
  */
@@ -207,6 +211,12 @@ function stopNoticeTimer() {
 
 async function loadHome() {
   home.value = await getHomeData()
+  try {
+    home.value.coaches = await getFeaturedCoaches()
+  } catch (error) {
+    // 金牌教练查询失败时只显示该模块空态，不阻断首页其它 mock 数据。
+    home.value.coaches = []
+  }
   noticeIndex.value = 0
   startNoticeTimer()
 }
@@ -291,11 +301,11 @@ async function onBook(item) {
 /* ---------------- 展示兜底（mock 里教练头像/照片已配好，缺失时给占位） ---------------- */
 
 function coachAvatar(coach) {
-  return coach.avatar || '/static/images/home/coach1-avatar.jpg'
+  return coach.avatarUrl || '/static/images/home/coach1-avatar.jpg'
 }
 
 function coachPhoto(coach) {
-  return coach.photo || '/static/images/home/coach1-photo.jpg'
+  return coach.avatarUrl || '/static/images/home/coach1-photo.jpg'
 }
 
 /** 热门课程返回的是课程对象（不是场次），补成 ys-course-card 需要的形状 */
@@ -574,6 +584,21 @@ function hotCourseCard(course) {
 /* ---------------- 金牌教练 ---------------- */
 .coaches {
   margin: 24rpx $ys-gap 0;
+}
+
+.coach-empty {
+  display: flex;
+  justify-content: center;
+  margin: 24rpx $ys-gap 0;
+  padding: 48rpx 0;
+  background: #fff;
+  border-radius: $ys-radius-md;
+  box-shadow: $ys-card-shadow;
+}
+
+.coach-empty__text {
+  font-size: 25rpx;
+  color: $ys-ink-3;
 }
 
 .coach {
