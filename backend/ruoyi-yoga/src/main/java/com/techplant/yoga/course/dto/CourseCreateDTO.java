@@ -16,6 +16,11 @@ import io.swagger.annotations.ApiModelProperty;
 @ApiModel("新增课程请求")
 public class CourseCreateDTO
 {
+    @ApiModelProperty(value = "所属门店ID", required = true, example = "1856739201475235901")
+    @NotNull(message = "所属门店不能为空")
+    @Min(value = 1, message = "所属门店ID必须大于 0")
+    private Long storeId;
+
     @ApiModelProperty(value = "课程名称", required = true, example = "哈他瑜伽")
     @NotBlank(message = "课程名称不能为空")
     @Size(max = 64, message = "课程名称长度不能超过 64")
@@ -51,6 +56,16 @@ public class CourseCreateDTO
     public String getName()
     {
         return name;
+    }
+
+    public Long getStoreId()
+    {
+        return storeId;
+    }
+
+    public void setStoreId(Long storeId)
+    {
+        this.storeId = storeId;
     }
 
     public void setName(String name)

@@ -17,4 +17,7 @@ public interface ScheduleQueryService
      * @return 未完成排班数量
      */
     long countUnfinishedByCourseId(Long courseId);
+
+    /** 统计课程关联的排班数量，用于修改课程门店归属时的引用保护。 */
+    long countByCourseId(Long courseId);
 }

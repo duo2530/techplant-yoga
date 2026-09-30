@@ -16,6 +16,9 @@ public class CourseListItemVO
     @ApiModelProperty(value = "课程ID（雪花ID，字符串）", example = "1856739201475235840")
     private Long id;
 
+    @ApiModelProperty(value = "所属门店ID", example = "1856739201475235901")
+    private Long storeId;
+
     @ApiModelProperty(value = "课程名称", example = "哈他瑜伽")
     private String name;
 
@@ -55,6 +58,16 @@ public class CourseListItemVO
     public String getName()
     {
         return name;
+    }
+
+    public Long getStoreId()
+    {
+        return storeId;
+    }
+
+    public void setStoreId(Long storeId)
+    {
+        this.storeId = storeId;
     }
 
     public void setName(String name)

@@ -260,6 +260,7 @@ public class CourseServiceImpl implements CourseService
     {
         CourseDO copy = new CourseDO();
         copy.setId(course.getId());
+        copy.setStoreId(course.getStoreId());
         copy.setName(course.getName());
         copy.setType(course.getType());
         copy.setDifficulty(course.getDifficulty());

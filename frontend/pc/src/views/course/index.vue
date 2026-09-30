@@ -11,6 +11,11 @@
           @keyup.enter="handleQuery"
         />
       </el-form-item>
+      <el-form-item label="所属门店" prop="storeId">
+        <el-select v-model="queryParams.storeId" placeholder="请选择所属门店" clearable filterable style="width: 200px">
+          <el-option v-for="item in storeOptions" :key="item.id" :label="item.name" :value="item.id" />
+        </el-select>
+      </el-form-item>
       <el-form-item label="课程类型" prop="type">
         <el-select v-model="queryParams.type" placeholder="请选择课程类型" clearable style="width: 200px">
           <el-option v-for="item in COURSE_TYPES" :key="item.value" :label="item.label" :value="item.value" />
@@ -37,6 +42,7 @@
     </el-row>
 
     <el-table v-loading="loading" :data="courseList">
+      <el-table-column label="所属门店" min-width="130"><template #default="scope">{{ storeLabel(scope.row.storeId) }}</template></el-table-column>
       <el-table-column label="课程名称" prop="name" :show-overflow-tooltip="true" min-width="160" />
       <el-table-column label="课程类型" align="center" prop="type" width="100">
         <template #default="scope">{{ labelOf(COURSE_TYPES, scope.row.type) }}</template>
@@ -90,6 +96,11 @@
     <!-- 新增 / 编辑课程：请求体不含 status（状态只走列表上的启用/停用），见 §2.2.3、§2.2.4 -->
     <el-dialog :title="title" v-model="open" width="680px" append-to-body>
       <el-form ref="courseRef" :model="form" :rules="rules" label-width="100px">
+        <el-form-item label="所属门店" prop="storeId">
+          <el-select v-model="form.storeId" placeholder="请选择所属门店" filterable style="width: 100%">
+            <el-option v-for="item in storeOptions" :key="item.id" :label="item.name" :value="item.id" />
+          </el-select>
+        </el-form-item>
         <el-form-item label="课程名称" prop="name">
           <el-input v-model="form.name" placeholder="请输入课程名称" maxlength="64" show-word-limit />
         </el-form-item>
@@ -128,6 +139,7 @@
     <el-dialog title="课程详情" v-model="openView" width="680px" append-to-body>
       <el-descriptions :column="2" border>
         <el-descriptions-item label="课程名称">{{ viewForm.name }}</el-descriptions-item>
+        <el-descriptions-item label="所属门店">{{ storeLabel(viewForm.storeId) }}</el-descriptions-item>
         <el-descriptions-item label="课程类型">{{ labelOf(COURSE_TYPES, viewForm.type) }}</el-descriptions-item>
         <el-descriptions-item label="课程难度">{{ difficultyLabel(viewForm.difficulty) }}</el-descriptions-item>
         <el-descriptions-item label="课程状态">
@@ -165,6 +177,7 @@
 
 <script setup name="Course">
 import { listCourse, getCourse, addCourse, updateCourse, changeCourseStatus } from "@/api/course/course"
+import { listStore } from "@/api/store/store"
 
 const { proxy } = getCurrentInstance()
 
@@ -186,6 +199,7 @@ const COURSE_STATUSES = [
 const DIFFICULTY_LABELS = ["", "1 星", "2 星", "3 星", "4 星", "5 星"]
 
 const courseList = ref([])
+const storeOptions = ref([])
 const open = ref(false)
 const openView = ref(false)
 const loading = ref(true)
@@ -198,8 +212,9 @@ const data = reactive({
   viewForm: {},
   queryParams: {
     pageNum: 1,
-    pageSize: 10,
-    name: undefined,
+      pageSize: 10,
+      name: undefined,
+      storeId: undefined,
     type: undefined,
     status: undefined
   },
@@ -208,6 +223,7 @@ const data = reactive({
       { required: true, message: "课程名称不能为空", trigger: "blur" },
       { max: 64, message: "课程名称长度不能超过 64", trigger: "blur" }
     ],
+    storeId: [{ required: true, message: "请选择所属门店", trigger: "change" }],
     type: [{ required: true, message: "课程类型不能为空", trigger: "change" }],
     difficulty: [{ required: true, type: "number", min: 1, message: "请选择课程难度（1~5 星）", trigger: "change" }]
   }
@@ -226,6 +242,11 @@ function difficultyLabel(difficulty) {
   return DIFFICULTY_LABELS[difficulty] || "-"
 }
 
+function storeLabel(storeId) {
+  const item = storeOptions.value.find(item => String(item.id) === String(storeId))
+  return item ? item.name : "-"
+}
+
 /** 查询课程列表 */
 function getList() {
   loading.value = true
@@ -235,6 +256,12 @@ function getList() {
     loading.value = false
   }).catch(() => {
     loading.value = false
+  })
+}
+
+function getStoreOptions() {
+  listStore({ pageNum: 1, pageSize: 100, status: 1 }).then(response => {
+    storeOptions.value = response.rows || []
   })
 }
 
@@ -254,6 +281,7 @@ function resetQuery() {
 function reset() {
   form.value = {
     id: undefined,
+    storeId: undefined,
     name: undefined,
     type: undefined,
     difficulty: 1,
@@ -279,6 +307,7 @@ function handleUpdate(row) {
     const detail = response.data
     form.value = {
       id: detail.id,
+      storeId: detail.storeId,
       name: detail.name,
       type: detail.type,
       difficulty: detail.difficulty,
@@ -308,6 +337,7 @@ function submitForm() {
     }
     const payload = {
       name: form.value.name,
+      storeId: form.value.storeId,
       type: form.value.type,
       difficulty: form.value.difficulty,
       coverUrl: form.value.coverUrl || null,
@@ -342,6 +372,7 @@ function cancel() {
   reset()
 }
 
+getStoreOptions()
 getList()
 </script>
 

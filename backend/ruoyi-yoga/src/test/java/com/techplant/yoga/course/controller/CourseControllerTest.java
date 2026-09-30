@@ -119,7 +119,7 @@ class CourseControllerTest
     {
         mockMvc.perform(post("/admin/courses")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"type\":1,\"difficulty\":2}"))
+                        .content("{\"storeId\":1,\"type\":1,\"difficulty\":2}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(500))
                 .andExpect(jsonPath("$.msg").value("课程名称不能为空"));
@@ -133,7 +133,7 @@ class CourseControllerTest
     {
         mockMvc.perform(post("/admin/courses")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":\"哈他瑜伽\",\"type\":1,\"difficulty\":6}"))
+                        .content("{\"storeId\":1,\"name\":\"哈他瑜伽\",\"type\":1,\"difficulty\":6}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(500))
                 .andExpect(jsonPath("$.msg").value("课程难度取值为 1~5"));
@@ -149,7 +149,7 @@ class CourseControllerTest
 
         mockMvc.perform(post("/admin/courses")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":\"哈他瑜伽\",\"type\":1,\"difficulty\":2,\"sortNo\":10}"))
+                        .content("{\"storeId\":1,\"name\":\"哈他瑜伽\",\"type\":1,\"difficulty\":2,\"sortNo\":10}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200))
                 // 带引号的字符串，不是数字（雪花ID 超出 JS 53 位精度）

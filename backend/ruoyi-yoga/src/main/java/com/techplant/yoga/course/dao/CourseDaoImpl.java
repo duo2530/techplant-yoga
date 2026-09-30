@@ -28,11 +28,12 @@ public class CourseDaoImpl implements CourseDao
     {
         // 只查列表列，避免把 intro 这类长文本带进列表查询（§4.1.3.1）
         LambdaQueryWrapper<CourseDO> wrapper = Wrappers.<CourseDO>lambdaQuery();
-        wrapper.select(CourseDO::getId, CourseDO::getName, CourseDO::getType, CourseDO::getDifficulty,
+        wrapper.select(CourseDO::getId, CourseDO::getStoreId, CourseDO::getName, CourseDO::getType, CourseDO::getDifficulty,
                 CourseDO::getCoverUrl, CourseDO::getStatus, CourseDO::getSortNo, CourseDO::getCreateTime,
                 CourseDO::getUpdateTime);
         boolean hasName = query.getName() != null && !query.getName().trim().isEmpty();
         wrapper.like(hasName, CourseDO::getName, query.getName());
+        wrapper.eq(query.getStoreId() != null, CourseDO::getStoreId, query.getStoreId());
         wrapper.eq(query.getType() != null, CourseDO::getType, query.getType());
         wrapper.eq(query.getStatus() != null, CourseDO::getStatus, query.getStatus());
         // 排序必须稳定：sort_no 升序 + id 降序兜底，否则翻页会重复/漏项（§4.1.3.1、用例 5.2.1.9）
@@ -73,6 +74,7 @@ public class CourseDaoImpl implements CourseDao
         // 若改用 MyBatis-Plus 的 updateById(entity)，null 字段会被默认的 NOT_NULL 策略跳过，运营就清不掉封面图和介绍。
         return courseMapper.update(null, Wrappers.<CourseDO>lambdaUpdate()
                 .eq(CourseDO::getId, course.getId())
+                .set(CourseDO::getStoreId, course.getStoreId())
                 .set(CourseDO::getName, course.getName())
                 .set(CourseDO::getType, course.getType())
                 .set(CourseDO::getDifficulty, course.getDifficulty())

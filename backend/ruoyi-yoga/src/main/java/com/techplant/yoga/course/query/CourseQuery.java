@@ -27,6 +27,10 @@ public class CourseQuery
     @Size(max = 64, message = "课程名称长度不能超过 64")
     private String name;
 
+    @ApiModelProperty(value = "门店ID", example = "1856739201475235901")
+    @Min(value = 1, message = "门店ID必须大于 0")
+    private Long storeId;
+
     @ApiModelProperty(value = "课程类型，1~4", example = "1")
     @Min(value = 1, message = "课程类型取值为 1~4")
     @Max(value = 4, message = "课程类型取值为 1~4")
@@ -65,6 +69,16 @@ public class CourseQuery
     public String getName()
     {
         return name;
+    }
+
+    public Long getStoreId()
+    {
+        return storeId;
+    }
+
+    public void setStoreId(Long storeId)
+    {
+        this.storeId = storeId;
     }
 
     public void setName(String name)
