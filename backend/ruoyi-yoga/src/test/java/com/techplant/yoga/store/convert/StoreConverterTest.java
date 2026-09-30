@@ -69,24 +69,19 @@ class StoreConverterTest
     }
 
     @Test
-    @DisplayName("VO 不暴露审计字段，日志摘要不包含电话和地址原文")
-    void voAndSnapshot_shouldNotExposeAuditOrSensitiveText()
+    @DisplayName("VO 不暴露审计字段")
+    void vo_shouldNotExposeAuditOrSensitiveText()
     {
         StoreDO store = StoreConverter.toDO(createDTO());
         store.setId(1001L);
 
         StoreListItemVO listVO = StoreConverter.toListItemVO(store);
         StoreDetailVO detailVO = StoreConverter.toDetailVO(store);
-        String snapshot = StoreConverter.snapshot(store);
 
         assertEquals(1001L, listVO.getId());
         assertEquals("漕溪北路 88 号", detailVO.getAddress());
         assertFalse(hasField(StoreListItemVO.class, "createBy"));
         assertFalse(hasField(StoreDetailVO.class, "updateBy"));
-        assertTrue(snapshot.contains("phone=有"), snapshot);
-        assertTrue(snapshot.contains("address=有"), snapshot);
-        assertFalse(snapshot.contains("021-12345678"), snapshot);
-        assertFalse(snapshot.contains("漕溪北路"), snapshot);
     }
 
     @Test

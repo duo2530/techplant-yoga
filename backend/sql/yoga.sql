@@ -42,10 +42,7 @@ CREATE TABLE `t_store` (
                           `create_time`    datetime        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
                           `update_by`      bigint unsigned          DEFAULT NULL             COMMENT '更新人ID',
                           `update_time`    datetime        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-                          PRIMARY KEY (`id`),
-                          KEY `idx_name` (`name`),
-                          KEY `idx_region_type_status` (`region`, `store_type`, `status`),
-                          KEY `idx_business_type_status` (`business_type`, `status`)
+                          PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='门店基础信息表';
 
 INSERT INTO `t_store`
@@ -71,10 +68,7 @@ CREATE TABLE `t_course` (
                             `create_time`  datetime        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
                             `update_by`    bigint unsigned          DEFAULT NULL             COMMENT '更新人ID',
                             `update_time`  datetime        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-                            PRIMARY KEY (`id`),
-                            KEY `idx_store_type_status` (`store_id`, `type`, `status`),
-                            KEY `idx_type_status` (`type`, `status`),
-                            KEY `idx_name` (`name`)
+                            PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='课程基础信息表';
 
 INSERT INTO `t_course`
@@ -110,9 +104,7 @@ CREATE TABLE `t_schedule` (
                               `create_time`    datetime        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
                               `update_by`      bigint unsigned          DEFAULT NULL             COMMENT '更新人ID',
                               `update_time`    datetime        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-                              PRIMARY KEY (`id`),
-                              KEY `idx_store_start_status` (`store_id`, `start_time`, `status`),
-                              KEY `idx_course_start_status` (`course_id`, `start_time`, `status`)
+                              PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='课程排班表';
 
 INSERT INTO `t_schedule`
@@ -136,9 +128,7 @@ CREATE TABLE `t_booking` (
                              `update_by`      bigint unsigned          DEFAULT NULL             COMMENT '更新人ID',
                              `update_time`    datetime        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
                              PRIMARY KEY (`id`),
-                             UNIQUE KEY `uk_schedule_user_status` (`schedule_id`, `user_id`, `booking_status`),
-                             KEY `idx_user_status_time` (`user_id`, `booking_status`, `create_time`),
-                             KEY `idx_course_status` (`course_id`, `booking_status`)
+                             UNIQUE KEY `uk_schedule_user_status` (`schedule_id`, `user_id`, `booking_status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='课程预约表';
 
 INSERT INTO `t_booking`
@@ -160,9 +150,7 @@ CREATE TABLE `t_coach` (
   `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_by`   bigint unsigned                          DEFAULT NULL COMMENT '更新人ID',
   `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-  PRIMARY KEY (`id`),
-  KEY `idx_name` (`name`),
-  KEY `idx_status_name` (`status`, `name`)
+  PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='教练基础信息表';
 
 INSERT INTO `t_coach`

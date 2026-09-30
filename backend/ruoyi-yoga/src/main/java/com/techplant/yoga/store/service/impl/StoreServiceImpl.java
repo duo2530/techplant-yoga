@@ -5,7 +5,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.ruoyi.common.exception.ServiceException;
-import com.techplant.yoga.common.log.BusinessLog;
 import com.techplant.yoga.common.response.PageResult;
 import com.techplant.yoga.common.util.CurrentUserUtils;
 import com.techplant.yoga.store.convert.StoreConverter;
@@ -64,14 +63,11 @@ public class StoreServiceImpl implements StoreService
     {
         long start = System.currentTimeMillis();
         StoreDO store = StoreConverter.toDO(dto);
-        BusinessLog.start("CREATE", "store:-", StoreConverter.snapshot(store));
         int rows = storeDao.insert(store);
         if (rows != 1 || store.getId() == null)
         {
             throw new ServiceException("新增门店失败", INTERNAL_ERROR);
         }
-        BusinessLog.success("CREATE", "store:" + store.getId(), StoreConverter.snapshot(store),
-                System.currentTimeMillis() - start);
     }
 
     @Override
@@ -82,12 +78,9 @@ public class StoreServiceImpl implements StoreService
         StoreDO store = storeDao.selectById(storeId);
         if (store == null)
         {
-            BusinessLog.warn("UPDATE", "store:" + storeId, "门店不存在或已被删除");
             throw notFound();
         }
 
-        StoreDO before = copyOf(store);
-        BusinessLog.start("UPDATE", "store:" + storeId, StoreConverter.snapshot(store));
         StoreConverter.applyUpdate(store, dto);
         store.setUpdateBy(CurrentUserUtils.getUserIdOrNull());
         storeDao.updateById(store);
@@ -95,11 +88,8 @@ public class StoreServiceImpl implements StoreService
         StoreDO latest = storeDao.selectById(storeId);
         if (latest == null)
         {
-            BusinessLog.warn("UPDATE", "store:" + storeId, "更新后门店已不存在（并发删除）");
             throw notFound();
         }
-        BusinessLog.success("UPDATE", "store:" + storeId, StoreConverter.diff(before, latest),
-                System.currentTimeMillis() - start);
         return StoreConverter.toDetailVO(latest);
     }
 
@@ -111,33 +101,12 @@ public class StoreServiceImpl implements StoreService
         StoreDO store = storeDao.selectById(storeId);
         if (store == null)
         {
-            BusinessLog.warn("CHANGE_STATUS", "store:" + storeId, "门店不存在或已被删除");
             throw notFound();
         }
 
         Integer oldStatus = store.getStatus();
         // 本期没有已确认的排班、预约引用门禁规则，状态变更只保存门店自身状态。
         storeDao.updateStatus(storeId, status, CurrentUserUtils.getUserIdOrNull());
-        BusinessLog.success("CHANGE_STATUS", "store:" + storeId,
-                String.format("status: %s -> %s", oldStatus, status), System.currentTimeMillis() - start);
-    }
-
-    private StoreDO copyOf(StoreDO source)
-    {
-        StoreDO copy = new StoreDO();
-        copy.setId(source.getId());
-        copy.setName(source.getName());
-        copy.setRegion(source.getRegion());
-        copy.setProvinceCode(source.getProvinceCode());
-        copy.setCityCode(source.getCityCode());
-        copy.setDistrictCode(source.getDistrictCode());
-        copy.setAddress(source.getAddress());
-        copy.setPhone(source.getPhone());
-        copy.setBusinessType(source.getBusinessType());
-        copy.setStoreType(source.getStoreType());
-        copy.setBusinessHours(source.getBusinessHours());
-        copy.setStatus(source.getStatus());
-        return copy;
     }
 
     private ServiceException notFound()

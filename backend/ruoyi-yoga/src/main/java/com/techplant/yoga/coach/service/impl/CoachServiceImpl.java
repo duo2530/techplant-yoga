@@ -16,7 +16,6 @@ import com.techplant.yoga.coach.vo.CoachCardVO;
 import com.techplant.yoga.coach.vo.CoachDetailVO;
 import com.techplant.yoga.coach.vo.CoachIdVO;
 import com.techplant.yoga.coach.vo.CoachListItemVO;
-import com.techplant.yoga.common.log.BusinessLog;
 import com.techplant.yoga.common.response.PageResult;
 import com.techplant.yoga.common.util.CurrentUserUtils;
 
@@ -28,9 +27,6 @@ public class CoachServiceImpl implements CoachService
     private static final int NOT_FOUND = 404;
     private static final int INTERNAL_ERROR = 500;
     private static final int MAX_ALBUM_SIZE = 5;
-    private static final String ACTION_CREATE = "CREATE";
-    private static final String ACTION_UPDATE = "UPDATE";
-    private static final String ACTION_CHANGE_STATUS = "CHANGE_STATUS";
 
     private final CoachDao coachDao;
 
@@ -78,9 +74,6 @@ public class CoachServiceImpl implements CoachService
     {
         validateAlbumUrls(dto.getAlbumUrls());
         long start = System.currentTimeMillis();
-        BusinessLog.start(ACTION_CREATE, "-", String.format("name=%s title=%s avatar=%s albumCount=%d intro=%s",
-                dto.getName(), dto.getTitle(), hasText(dto.getAvatarUrl()) ? "有" : "无",
-                dto.getAlbumUrls() == null ? 0 : dto.getAlbumUrls().size(), hasText(dto.getIntro()) ? "有" : "无"));
 
         CoachDO coach = CoachConverter.toDO(dto);
         int rows = coachDao.insert(coach);
@@ -88,8 +81,6 @@ public class CoachServiceImpl implements CoachService
         {
             throw new ServiceException("新增教练失败", INTERNAL_ERROR);
         }
-        BusinessLog.success(ACTION_CREATE, "coach:" + coach.getId(), CoachConverter.snapshot(coach),
-                System.currentTimeMillis() - start);
         return CoachConverter.toIdVO(coach.getId());
     }
 
@@ -102,11 +93,8 @@ public class CoachServiceImpl implements CoachService
         CoachDO coach = coachDao.selectById(coachId);
         if (coach == null)
         {
-            BusinessLog.warn(ACTION_UPDATE, "coach:" + coachId, "教练不存在或已被删除");
             throw notFound();
         }
-        CoachDO before = copyOf(coach);
-        BusinessLog.start(ACTION_UPDATE, "coach:" + coachId, CoachConverter.snapshot(coach));
         CoachConverter.applyUpdate(coach, dto);
         coach.setUpdateBy(CurrentUserUtils.getUserIdOrNull());
         coachDao.updateById(coach);
@@ -114,11 +102,8 @@ public class CoachServiceImpl implements CoachService
         CoachDO latest = coachDao.selectById(coachId);
         if (latest == null)
         {
-            BusinessLog.warn(ACTION_UPDATE, "coach:" + coachId, "更新后教练已不存在（并发删除）");
             throw notFound();
         }
-        BusinessLog.success(ACTION_UPDATE, "coach:" + coachId, CoachConverter.diff(before, latest),
-                System.currentTimeMillis() - start);
         return CoachConverter.toDetailVO(latest);
     }
 
@@ -129,13 +114,10 @@ public class CoachServiceImpl implements CoachService
         CoachDO coach = coachDao.selectById(coachId);
         if (coach == null)
         {
-            BusinessLog.warn(ACTION_CHANGE_STATUS, "coach:" + coachId, "教练不存在或已被删除");
             throw notFound();
         }
         Integer oldStatus = coach.getStatus();
         coachDao.updateStatus(coachId, status, CurrentUserUtils.getUserIdOrNull());
-        BusinessLog.success(ACTION_CHANGE_STATUS, "coach:" + coachId,
-                String.format("oldStatus=%s newStatus=%s", oldStatus, status), null);
     }
 
     private void validateAlbumUrls(List<String> albumUrls)
@@ -155,20 +137,6 @@ public class CoachServiceImpl implements CoachService
                 throw new ServiceException("教练相册图片 URL 不合法", INTERNAL_ERROR);
             }
         }
-    }
-
-    private CoachDO copyOf(CoachDO source)
-    {
-        CoachDO target = new CoachDO();
-        target.setId(source.getId());
-        target.setIntro(source.getIntro());
-        target.setName(source.getName());
-        target.setTitle(source.getTitle());
-        target.setAvatarUrl(source.getAvatarUrl());
-        target.setAlbumUrlsJson(source.getAlbumUrlsJson());
-        target.setStatus(source.getStatus());
-        target.setDeleted(source.getDeleted());
-        return target;
     }
 
     private ServiceException notFound()

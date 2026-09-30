@@ -5,7 +5,6 @@ import org.springframework.transaction.annotation.Transactional;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.ruoyi.common.exception.ServiceException;
 import com.techplant.yoga.booking.service.BookingQueryService;
-import com.techplant.yoga.common.log.BusinessLog;
 import com.techplant.yoga.common.response.PageResult;
 import com.techplant.yoga.common.util.CurrentUserUtils;
 import com.techplant.yoga.course.convert.CourseConverter;
@@ -23,7 +22,7 @@ import com.techplant.yoga.schedule.service.ScheduleQueryService;
 /**
  * 课程业务实现（详细设计 §3.1.1、§3.1.4、§4.1）。
  *
- * <p>职责：存在性校验、跨模块引用检查、事务边界、业务日志；对象转换交给 {@code CourseConverter}。</p>
+ * <p>职责：存在性校验、跨模块引用检查、事务边界；对象转换交给 {@code CourseConverter}。</p>
  *
  * <p><b>异常口径：</b>业务失败统一抛若依的 {@link ServiceException}（带业务码），由框架自带的
  * {@code GlobalExceptionHandler} 转成 {@code AjaxResult}（2026-09-22 决策：全项目统一若依响应体系）：
@@ -44,12 +43,6 @@ public class CourseServiceImpl implements CourseService
     /** 新增/更新未生效 */
     private static final int INTERNAL_ERROR = 500;
 
-    /** 状态变更动作名（业务日志） */
-    private static final String ACTION_CHANGE_STATUS = "CHANGE_STATUS";
-
-    /** 引用检查动作名（业务日志） */
-    private static final String ACTION_REFERENCE_CHECK = "REFERENCE_CHECK";
-
     private final CourseDao courseDao;
 
     private final ScheduleQueryService scheduleQueryService;
@@ -65,7 +58,7 @@ public class CourseServiceImpl implements CourseService
     }
 
     /**
-     * 查询课程列表：只读，不需要事务；查询类接口不写业务日志（§6.1.4）
+     * 查询课程列表：只读，不需要事务
      */
     @Override
     public PageResult<CourseListItemVO> page(CourseQuery query)
@@ -98,10 +91,6 @@ public class CourseServiceImpl implements CourseService
     public CourseCreatedVO create(CourseCreateDTO dto)
     {
         long start = System.currentTimeMillis();
-        // §6.1.1 埋点（1）：请求进入（不含长文本，封面图与介绍只记有/无）
-        BusinessLog.start("CREATE", "-", String.format("name=%s type=%s difficulty=%s sortNo=%s cover=%s intro=%s",
-                dto.getName(), dto.getType(), dto.getDifficulty(), dto.getSortNo(),
-                hasText(dto.getCoverUrl()) ? "有" : "无", hasText(dto.getIntro()) ? "有" : "无"));
 
         CourseDO course = CourseConverter.toDO(dto);
         int rows = courseDao.insert(course);
@@ -109,9 +98,6 @@ public class CourseServiceImpl implements CourseService
         {
             throw new ServiceException("新增课程失败", INTERNAL_ERROR);
         }
-        // §6.1.1 埋点（3）：新增成功（课程编号必须序列化为字符串，见 §2.1.5）
-        BusinessLog.success("CREATE", "course:" + course.getId(), CourseConverter.snapshot(course),
-                System.currentTimeMillis() - start);
         return CourseConverter.toCreatedVO(course.getId());
     }
 
@@ -126,14 +112,9 @@ public class CourseServiceImpl implements CourseService
         CourseDO course = courseDao.selectById(courseId);
         if (course == null)
         {
-            // §6.1.2 埋点（3）：课程不存在（并发删除）→ WARN
-            BusinessLog.warn("UPDATE", "course:" + courseId, "课程不存在或已被删除");
             throw notFound();
         }
-        // §6.1.2 埋点（1）：更新前的字段快照，便于回溯「改之前是什么」
-        BusinessLog.start("UPDATE", "course:" + courseId, CourseConverter.snapshot(course));
 
-        CourseDO before = copyOf(course);
         CourseConverter.applyUpdate(course, dto);
         course.setUpdateBy(CurrentUserUtils.getUserIdOrNull());
         int rows = courseDao.updateById(course);
@@ -142,12 +123,9 @@ public class CourseServiceImpl implements CourseService
         if (latest == null)
         {
             // 并发下课程被删：存在性校验通过、更新落空
-            BusinessLog.warn("UPDATE", "course:" + courseId, "更新后课程已不存在（并发删除）");
             throw notFound();
         }
         // rows = 0 只说明「提交值与库中一致」（MySQL 影响行数口径），不是失败，按成功处理
-        BusinessLog.success("UPDATE", "course:" + courseId, CourseConverter.diff(before, latest),
-                System.currentTimeMillis() - start);
         return CourseConverter.toDetailVO(latest);
     }
 
@@ -162,8 +140,6 @@ public class CourseServiceImpl implements CourseService
         CourseDO course = courseDao.selectById(courseId);
         if (course == null)
         {
-            // §6.1.3 埋点（3）：课程不存在 → WARN
-            BusinessLog.warn(ACTION_CHANGE_STATUS, "course:" + courseId, "课程不存在或已被删除");
             throw notFound();
         }
 
@@ -175,9 +151,6 @@ public class CourseServiceImpl implements CourseService
             long bookingCount = countUnfinishedBookings(courseId);
             if (scheduleCount > 0 || bookingCount > 0)
             {
-                // §6.1.3 埋点（2）：本模块最重要的一条日志 —— 运营会问「为什么停不了」
-                BusinessLog.blocked(ACTION_CHANGE_STATUS, "course:" + courseId,
-                        String.format("scheduleCount=%d bookingCount=%d", scheduleCount, bookingCount));
                 // 业务码 409：提示语里带上阻塞明细（若依的 AjaxResult 只能承载 code/msg，
                 // 结构化明细随 2026-09-22 的响应体系决策取消，2026-09-22 详见交付说明）
                 throw new ServiceException(
@@ -190,15 +163,11 @@ public class CourseServiceImpl implements CourseService
         if (rows == 0)
         {
             // 幂等：重复设置同一状态时 MySQL 影响行数可能是 0，按成功处理（§4.1.4）
-            BusinessLog.debug(ACTION_CHANGE_STATUS, "course:" + courseId, "影响行数为 0（状态未变化或并发删除）", null);
         }
-        // §6.1.3 埋点（1）：状态变更成功（原状态 → 新状态）
-        BusinessLog.success(ACTION_CHANGE_STATUS, "course:" + courseId,
-                String.format("status: %s -> %s", oldStatus, status), System.currentTimeMillis() - start);
     }
 
     /**
-     * 统计该课程下未完成的排班数量（跨模块调用，§6.1.5）
+     * 统计该课程下未完成的排班数量（跨模块调用）
      *
      * <p><b>fail-closed：</b>调用失败不吞异常、不降级放行 —— 否则统计服务一抖动课程就会被误停用。</p>
      */
@@ -208,22 +177,16 @@ public class CourseServiceImpl implements CourseService
         try
         {
             long count = scheduleQueryService.countUnfinishedByCourseId(courseId);
-            // §6.1.5 埋点（1）：DEBUG，默认关闭避免噪音
-            BusinessLog.debug(ACTION_REFERENCE_CHECK, "course:" + courseId, "module=schedule count=" + count,
-                    System.currentTimeMillis() - start);
             return count;
         }
         catch (RuntimeException e)
         {
-            // §6.1.5 埋点（2）：跨模块调用失败 → WARN，并让停用操作失败
-            BusinessLog.warn(ACTION_REFERENCE_CHECK, "course:" + courseId,
-                    "module=schedule 调用失败：" + e.getClass().getSimpleName());
             throw e;
         }
     }
 
     /**
-     * 统计该课程下未结束的预约数量（跨模块调用，§6.1.5）
+     * 统计该课程下未结束的预约数量（跨模块调用）
      */
     private long countUnfinishedBookings(Long courseId)
     {
@@ -231,14 +194,10 @@ public class CourseServiceImpl implements CourseService
         try
         {
             long count = bookingQueryService.countUnfinishedByCourseId(courseId);
-            BusinessLog.debug(ACTION_REFERENCE_CHECK, "course:" + courseId, "module=booking count=" + count,
-                    System.currentTimeMillis() - start);
             return count;
         }
         catch (RuntimeException e)
         {
-            BusinessLog.warn(ACTION_REFERENCE_CHECK, "course:" + courseId,
-                    "module=booking 调用失败：" + e.getClass().getSimpleName());
             throw e;
         }
     }
@@ -251,25 +210,6 @@ public class CourseServiceImpl implements CourseService
     private ServiceException notFound()
     {
         return new ServiceException("课程不存在或已被删除", NOT_FOUND);
-    }
-
-    /**
-     * 修改前快照：只复制日志与差异比较需要的字段
-     */
-    private CourseDO copyOf(CourseDO course)
-    {
-        CourseDO copy = new CourseDO();
-        copy.setId(course.getId());
-        copy.setStoreId(course.getStoreId());
-        copy.setName(course.getName());
-        copy.setType(course.getType());
-        copy.setDifficulty(course.getDifficulty());
-        copy.setCoverUrl(course.getCoverUrl());
-        copy.setIntro(course.getIntro());
-        copy.setDurationMin(course.getDurationMin());
-        copy.setSortNo(course.getSortNo());
-        copy.setStatus(course.getStatus());
-        return copy;
     }
 
     private boolean hasText(String value)

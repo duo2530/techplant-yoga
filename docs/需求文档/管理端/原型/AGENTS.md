@@ -1,6 +1,6 @@
 # AGENTS.md — frontend/pc（管理端）
 
-> 作用域：`frontend/pc/` 及其所有子目录。后端接口与业务口径见 `backend/AGENTS.md` 和 `docs/详细设计/详细设计.md`。
+> 作用域：`frontend/pc/` 及其所有子目录。后端接口与业务口径见 `backend/AGENTS.md` 和 `docs/详细设计/` 下的各模块详细设计。
 
 ## 1. 这是什么
 

@@ -106,28 +106,6 @@ public final class CoachConverter
         return new CoachIdVO(id);
     }
 
-    public static String snapshot(CoachDO coach)
-    {
-        if (coach == null)
-        {
-            return "-";
-        }
-        return String.format("name=%s title=%s avatar=%s albumCount=%d intro=%s", coach.getName(), coach.getTitle(),
-                hasText(coach.getAvatarUrl()) ? "有" : "无", parseAlbumJson(coach.getAlbumUrlsJson()).size(),
-                hasText(coach.getIntro()) ? "有" : "无");
-    }
-
-    public static String diff(CoachDO before, CoachDO after)
-    {
-        List<String> changes = new ArrayList<String>();
-        if (!same(before.getName(), after.getName())) changes.add("name");
-        if (!same(before.getTitle(), after.getTitle())) changes.add("title");
-        if (!same(before.getAvatarUrl(), after.getAvatarUrl())) changes.add("avatarUrl");
-        if (!same(before.getIntro(), after.getIntro())) changes.add("intro");
-        if (!same(before.getAlbumUrlsJson(), after.getAlbumUrlsJson())) changes.add("albumUrls");
-        return changes.isEmpty() ? "无字段变化" : String.join(", ", changes);
-    }
-
     public static List<String> parseAlbumJson(String json)
     {
         if (!hasText(json))
@@ -141,11 +119,6 @@ public final class CoachConverter
     private static String toAlbumJson(List<String> albumUrls)
     {
         return albumUrls == null || albumUrls.isEmpty() ? null : JSON.toJSONString(albumUrls);
-    }
-
-    private static boolean same(Object left, Object right)
-    {
-        return left == null ? right == null : left.equals(right);
     }
 
     private static boolean hasText(String value)

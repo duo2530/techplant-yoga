@@ -1,10 +1,10 @@
 # AGENTS.md — frontend/pc（管理端）
 
-> 作用域：`frontend/pc/` 及其所有子目录。后端接口与业务口径见 `backend/AGENTS.md` 和 `docs/详细设计/详细设计.md`。
+> 作用域：`frontend/pc/` 及其所有子目录。后端接口与业务口径见 `backend/AGENTS.md` 和 `docs/详细设计/` 下的各模块详细设计（总纲已删除，按模块查阅）。
 
 ## 1. 这是什么
 
-管理端（运营后台）Web 应用，基于 **RuoYi-Vue3 3.9.2 原样脚手架**：目前只有若依自带的系统管理 / 系统监控 / 系统工具页面，**没有任何瑜伽业务页面**（课程、门店、教练、排班、预约等都要新增）。
+管理端（运营后台）Web 应用，基于 **RuoYi-Vue3 3.9.2 脚手架**。除若依自带的系统管理 / 系统监控 / 系统工具页面外，**已有 5 个瑜伽业务页面**（`views/course`、`views/coach`、`views/store`、`views/schedule`、`views/booking`，对应 `sys_menu` 2001~2005，路由前缀 `/operation`）；**教室管理页面待新增**（菜单建议 2006，见《教室管理详细设计》3.6）。
 
 ## 2. 技术栈（已核对 package.json）
 

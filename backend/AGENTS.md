@@ -1,12 +1,14 @@
 # AGENTS.md — backend（若依后端）
 
-> 作用域：`backend/` 及其所有子目录。项目背景与业务口径见仓库根目录 `docs/`（需求分析 / 概要设计 / 详细设计 / 原型）。
+> 作用域：`backend/` 及其所有子目录。
+> **业务口径的依据是 `docs/需求文档/业务规则.md`（业务规则）与 `docs/产品分析/`（对标真实 App 的用户端截图、页面与跳转记录）**；功能结构与用例见 `docs/需求分析/`。
+> ⚠️ `docs/详细设计/`、`docs/概要设计/` 描述的是**旧设计**（含会员、会员卡、预约、数据范围等已不在本期范围的能力），**不作为业务口径依据**；需要时只作历史参考。
 
 ## 1. 这是什么
 
-瑜伽普拉提项目的后端 Web 服务。底座是 **RuoYi-Vue 3.9.2 脚手架**（`com.ruoyi.*` 框架代码 + `sys_*` 系统表，尽量与上游保持一致），在此之上已有独立业务模块 **`ruoyi-yoga`**（包名 `com.techplant.yoga`，目前只有「课程管理」一个业务模块，详见第 3、6 节）。
+瑜伽普拉提项目的后端 Web 服务。底座是 **RuoYi-Vue 3.9.2 脚手架**（`com.ruoyi.*` 框架代码 + `sys_*` 系统表，尽量与上游保持一致），在此之上已有独立业务模块 **`ruoyi-yoga`**（包名 `com.techplant.yoga`，目前已有课程、门店、教练、教室、排班五个业务模块，预约仅有设计未实施，详见第 3、6 节）。
 
-**业务代码一律写进 `ruoyi-yoga`，不要写进 `ruoyi-*` 框架模块。** 统一响应、统一异常、ID 序列化、审计字段填充、业务日志、MyBatis-Plus 装配这些横切能力**已经有统一实现**，动手前先看 **第 8 节「全局体系」**，不要再造第二套。
+**业务代码一律写进 `ruoyi-yoga`，不要写进 `ruoyi-*` 框架模块。** 统一响应、统一异常、ID 序列化、审计字段填充、链路标识、MyBatis-Plus 装配这些横切能力**已经有统一实现**，动手前先看 **第 8 节「全局体系」**，不要再造第二套。
 
 ## 2. 技术栈（已核对 pom）
 
@@ -34,7 +36,7 @@
 | `ruoyi-common` | 工具类、注解、常量、`AjaxResult`/`R`/`TableDataInfo`/`BaseController`、`BaseEntity` |
 | `ruoyi-quartz` | 定时任务（`SysJob*`，任务目标写法 `ryTask.ryParams('ry')`） |
 | `ruoyi-generator` | 代码生成器（表结构 → 后端 CRUD + vue 页面） |
-| **`ruoyi-yoga`** | **业务模块（本项目自己的代码都在这）**：包名 `com.techplant.yoga`（**不是 `com.ruoyi`**），ORM 用 MyBatis-Plus。当前内容：`course` 模块（controller / service / service.impl / dao / mapper / domain / dto / vo / query / convert）+ `common` 横切基础设施（`config` / `mybatis` / `log` / `response` / `util`）+ `schedule`、`booking` 的跨模块查询接口（接口先行，临时占位实现）。已在父 `pom.xml` 的 `<modules>` 与 `ruoyi-admin/pom.xml` 中注册 |
+| **`ruoyi-yoga`** | **业务模块（本项目自己的代码都在这）**：包名 `com.techplant.yoga`（**不是 `com.ruoyi`**），ORM 用 MyBatis-Plus。当前内容：`course` / `coach` / `store` / `schedule` / `booking` 五个业务模块（每个含 controller / service / service.impl / dao / mapper / domain / dto / vo / query / convert）+ `common` 横切基础设施（`config` / `mybatis` / `log` / `response` / `util`）。已在父 `pom.xml` 的 `<modules>` 与 `ruoyi-admin/pom.xml` 中注册 |
 
 ## 4. 常用命令
 
@@ -65,7 +67,7 @@ java -jar backend/ruoyi-admin/target/ruoyi-admin.jar
 
 ## 6. 项目专属约束（**最重要**）
 
-`docs/详细设计/详细设计.md` §1.1.1 已评审确认的口径，写代码时必须遵守：
+以下建模口径（包名 / 表名 / 主键 / 逻辑删除 / 审计字段）**以本节为准**（原先挂在 `docs/详细设计/` 各模块的 §1.1.1 上）：
 
 - 业务包名 `com.techplant.yoga.<模块>`；表名 `t_` + 业务名（如 `t_course`）；主键 `bigint` 雪花 ID，不用数据库自增；逻辑删除字段 `deleted`（0 正常/1 删除）；审计字段 `create_by/create_time/update_by/update_time`。
 - ORM 用 **MyBatis-Plus**（`IdType.ASSIGN_ID`、`@TableLogic`、`MetaObjectHandler`）—— **已经引入**（父 pom `mybatis-plus.version=3.5.5`），装配方式与易踩的坑见 §8.9。
@@ -102,7 +104,8 @@ java -jar backend/ruoyi-admin/target/ruoyi-admin.jar
 
 ## 8. 全局体系（横切能力）—— **写业务代码前先看这一节**
 
-> 这一节回答「轮子在哪、口径是什么、不要做什么」。权威出处是 `docs/详细设计/详细设计.md`；响应体系与异常体系的拍板过程见 `docs/详细设计/详细设计记录.md` 的 **R11（2026-09-22）**。
+> 这一节回答「轮子在哪、口径是什么、不要做什么」。**本节列的横切能力（统一响应、统一异常、ID 序列化、审计填充、链路标识、事务与跨模块调用、分页、MyBatis-Plus 装配）以本节内容为准**；**业务规则以 `docs/需求文档/业务规则.md` 为准**。
+> ⚠️ 本节提到的 `docs/详细设计/*`（课程 / 门店 / 教练 / 教室 / 排班 / 会员 / 会员卡 / 预约）属于**旧设计**，**不作为业务口径依据**；`docs/详细设计/详细设计记录.md` 的 **R11（2026-09-22）** 只作响应体系与异常体系的历史留痕。
 > 判断标准：**凡是「所有接口都该这么做」的事，这里都已经有统一实现，不要另起一套。**
 
 ### 8.1 统一响应（对外契约）
@@ -127,7 +130,7 @@ java -jar backend/ruoyi-admin/target/ruoyi-admin.jar
 | **唯一的处理器** | `ruoyi-framework/.../web/exception/GlobalExceptionHandler.java` | `@RestControllerAdvice`，把所有异常统一转成 `AjaxResult`； |
 | 抛业务异常 | `com.ruoyi.common.exception.ServiceException` | `throw new ServiceException("课程不存在或已被删除", 404)`；不带码时默认 500 |
 | 401 未登录 / 登录态失效 | `framework/security/handle/AuthenticationEntryPointImpl` | 用 `ServletUtils.renderString` 手工写 `AjaxResult.error(401, ...)`，**HTTP 仍是 200** |
-| 403 无权限 | `GlobalExceptionHandler#handleAccessDeniedException` | 固定文案「没有权限，请联系管理员授权」；本版 RBAC 未启用，暂不返回 |
+| 403 无权限 | `GlobalExceptionHandler#handleAccessDeniedException` | 固定文案「没有权限，请联系管理员授权」；**一期不做 RBAC**，暂不返回 |
 | 参数校验失败 | 同一个处理器里的 `MethodArgumentNotValidException` / `BindException` 分支 | 业务码是 **500（不是 400）**，`msg` 是具体字段提示（如「课程名称不能为空」） |
 | 兜底 | `RuntimeException` / `Exception` 分支 | 会把 `e.getMessage()` 直接放进 `msg` —— 所以**不要往异常提示语里塞内部细节**（数据库异常会带出表名与语句片段） |
 
@@ -137,7 +140,7 @@ java -jar backend/ruoyi-admin/target/ruoyi-admin.jar
 |---|---|---|
 | 200 | 成功 | 所有接口 |
 | 401 | 未登录 / 登录态失效 | 框架返回 |
-| 403 | 无权限 | RBAC 未确认，暂不返回 |
+| 403 | 无权限 | 一期不做 RBAC，暂不返回 |
 | 404 | 资源不存在 | 「课程不存在或已被删除」 |
 | 409 | 状态冲突 | 「该课程下仍有 N 个未完成排班、M 条未结束预约，无法停用」 |
 | 500 | 参数校验失败 / 系统异常 | `@Valid` 校验失败也走这里 |
@@ -148,7 +151,7 @@ java -jar backend/ruoyi-admin/target/ruoyi-admin.jar
 2. **`@Valid` 校验失败返回 500**，与直觉里的 400 不一样；要改成 400 同样得动框架处理器 —— **不要顺手改**。
 3. **跨模块调用失败不许降级放行**：引用检查（排班/预约统计）抛异常时，停用操作必须跟着失败（fail-closed），否则统计服务一抖动课程就会被误停用。范例见 `CourseServiceImpl#countUnfinishedSchedules`。
 
-范例：`ruoyi-yoga/.../course/service/impl/CourseServiceImpl.java`（404 / 409 的抛法、哪些分支按 WARN 记日志）、以及 `src/test/.../CourseControllerTest.java`（挂真实 `GlobalExceptionHandler` 验证转换链路）。
+范例：`ruoyi-yoga/.../course/service/impl/CourseServiceImpl.java`（404 / 409 的抛法、fail-closed 的写法）、以及 `src/test/.../CourseControllerTest.java`（挂真实 `GlobalExceptionHandler` 验证转换链路）。
 
 ### 8.3 ID 序列化：64 位整数一律返回字符串
 
@@ -167,22 +170,16 @@ java -jar backend/ruoyi-admin/target/ruoyi-admin.jar
 | 取当前登录人 | `com.techplant.yoga.common.util.CurrentUserUtils` | `getUserIdOrNull()` / `getUserIdText()`；**直接用 `SecurityUtils.getUserId()` 未登录会抛异常**，所以才包了这一层 |
 | 逻辑删除 | DO 上的 `@TableLogic` | 标注 `deleted` 后，MP 自动给查询追加 `deleted = 0`、删除变 `UPDATE`；**不要手写 `deleted = 0` 条件** |
 
-### 8.5 链路标识与业务日志
+### 8.5 链路标识
 
-- `com.techplant.yoga.common.log.TraceIdFilter`：生成/透传 `traceId` 写入 MDC，并回写响应头 **`X-Trace-Id`**（前端与运维按它排查）。
-- `com.techplant.yoga.common.log.BusinessLog`：专用 logger `com.techplant.yoga.business`，输出固定字段行 `traceId= operator= source= target= action= result= detail= cost=`。
-- 方法语义：`start()`（进入，结果记 START）/ `success()` / `blocked()`（被业务规则拦截，如停用被引用）/ `warn()`（可预期失败）/ `error()` / `debug()`（跨模块调用细节，默认关）。
-- 级别口径：INFO = 写操作成功；WARN = 可预期的业务失败（参数校验失败、对象不存在、被引用拦截、跨模块调用失败）；ERROR = 非预期异常；DEBUG = 细节。
-- **查询类接口不写业务日志**（高频只读会把审计日志淹掉），例外是慢查询（> 500ms）打 WARN。
-- **不写进日志**：长文本（课程介绍）、完整封面图地址（只记有/无）、请求全量报文。
-- 注意区分：框架的 `@Log(title=..., businessType=...)` + `LogAspect` 是**另一套**（写 `sys_oper_log` 操作日志，`sys_*` 在用），业务模块目前用的是 `BusinessLog`。
+- `com.techplant.yoga.common.log.TraceIdFilter`：生成/透传 `traceId` 写入 MDC，并回写响应头 **`X-Trace-Id`**。
 
 ### 8.6 认证与鉴权
 
 - `SecurityConfig` 里是 `anyRequest().authenticated()`：**除 `/login`、`/register`、`/captchaImage`、swagger/druid/静态资源外，一律需要登录态**；业务接口（如 `/admin/courses`）都在其中。
 - Token：JWT（jjwt），登录态存 Redis（`TokenService`，key 前缀 `login_tokens:`），过期时间看 `token.expireTime`。
 - 细粒度权限：`@PreAuthorize("@ss.hasPermi('模块:实体:动作')")`；放行接口用 `@Anonymous`（由 `PermitAllUrlProperties` 收集进 permitAll 列表）。
-- **现状**：管理端 RBAC 尚未确认（需求分析 E09），`CourseController` 上**没有任何 `@PreAuthorize`**，即「登录即可调用」。等权限矩阵定了再补，别自己发明权限串。
+- **现状**：**一期明确不做菜单、按钮与数据范围权限**（见 `docs/需求文档/业务规则.md`），`CourseController` 上**没有任何 `@PreAuthorize`**，即「登录即可调用」。**别无中生有发明权限串**。
 
 ### 8.7 事务与跨模块调用
 
@@ -228,8 +225,8 @@ java -jar backend/ruoyi-admin/target/ruoyi-admin.jar
 - **XSS 过滤器没覆盖业务接口**：`application.yml` 的 `xss.urlPatterns` 是 `/system/*,/monitor/*,/tool/*`，`/admin/**` **不在其中**。是否补齐待定，**不要擅自扩大**（会改变现有请求体行为）。
 - **参数校验失败业务码是 500 而不是 400**，`RuntimeException` 分支会把异常 message 原样给前端 —— 都是框架既有行为，改动会波及 `sys_*` 接口。
 - **409 没有结构化明细**（明细拼在 `msg` 里），R11 遗留。
-- **管理端 RBAC 未启用**（E09 未确认），业务接口目前只要求登录。
-- **详细设计 §3.2.1 提到的 `exception` 包实际不存在**：R11 删掉了自定义异常类，业务侧统一用框架的 `ServiceException`，文档那句是遗留。
+- **管理端不做 RBAC**（一期范围外），业务接口只要求登录。
+- **`exception` 包不存在**：R11 删掉了自定义异常类，业务侧统一用框架的 `ServiceException`。横切能力的口径以本文件**第 8 节**为准。
 
 ## 9. 不要做的事
 
@@ -246,3 +243,7 @@ java -jar backend/ruoyi-admin/target/ruoyi-admin.jar
 4. 涉及菜单/页面：登录后 `GET /getRouters` 能看到新菜单。
 5. 涉及接口：确认方法上有 `@ApiOperation`，然后看 swagger UI（`http://localhost:8080/swagger-ui/index.html`，被 Security 拦截时参考 `SecurityConfig` 的 permitAll 列表）。
 6. 涉及响应/异常口径：确认返回体仍是 `{code,msg,data}` / `{total,rows,code,msg}`，业务失败走的是 `ServiceException` 而不是自拼响应。
+
+## 编码手册
+
+参考 docs/编码开发/AI Agent开发手册.md

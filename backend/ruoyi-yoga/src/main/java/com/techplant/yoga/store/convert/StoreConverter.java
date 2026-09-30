@@ -111,35 +111,6 @@ public final class StoreConverter
         return vo;
     }
 
-    public static String snapshot(StoreDO store)
-    {
-        if (store == null)
-        {
-            return "-";
-        }
-        // 电话和地址不写入业务日志，避免把联系方式与详细地址扩散到日志文件。
-        return String.format("name=%s region=%s businessType=%s storeType=%s phone=%s address=%s hours=%s",
-                store.getName(), store.getRegion(), store.getBusinessType(), store.getStoreType(),
-                hasText(store.getPhone()) ? "有" : "无", hasText(store.getAddress()) ? "有" : "无",
-                hasText(store.getBusinessHours()) ? "有" : "无");
-    }
-
-    public static String diff(StoreDO before, StoreDO after)
-    {
-        List<String> changes = new ArrayList<String>();
-        addChange(changes, "name", before.getName(), after.getName());
-        addChange(changes, "region", before.getRegion(), after.getRegion());
-        addChange(changes, "provinceCode", before.getProvinceCode(), after.getProvinceCode());
-        addChange(changes, "cityCode", before.getCityCode(), after.getCityCode());
-        addChange(changes, "districtCode", before.getDistrictCode(), after.getDistrictCode());
-        addChange(changes, "address", presence(before.getAddress()), presence(after.getAddress()));
-        addChange(changes, "phone", presence(before.getPhone()), presence(after.getPhone()));
-        addChange(changes, "businessType", before.getBusinessType(), after.getBusinessType());
-        addChange(changes, "storeType", before.getStoreType(), after.getStoreType());
-        addChange(changes, "businessHours", before.getBusinessHours(), after.getBusinessHours());
-        return changes.isEmpty() ? "无字段变化" : String.join(", ", changes);
-    }
-
     private static void copyCommon(StoreDO store, StoreListItemVO vo)
     {
         vo.setId(store.getId());
@@ -172,26 +143,8 @@ public final class StoreConverter
         vo.setStatus(store.getStatus());
     }
 
-    private static void addChange(List<String> changes, String field, Object before, Object after)
-    {
-        if (!Objects.equals(before, after))
-        {
-            changes.add(field);
-        }
-    }
-
-    private static String presence(String value)
-    {
-        return hasText(value) ? "有" : "无";
-    }
-
     private static String trim(String value)
     {
         return value == null ? null : value.trim();
-    }
-
-    private static boolean hasText(String value)
-    {
-        return value != null && !value.trim().isEmpty();
     }
 }

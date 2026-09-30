@@ -117,24 +117,6 @@ class CourseConverterTest
         assertFalse(hasField(CourseDetailVO.class, "updateBy"));
     }
 
-    @Test
-    @DisplayName("补充：修改前后差异只记录发生变化的字段，且不记长文本")
-    void diff_shouldOnlyRecordChangedFields()
-    {
-        CourseDO before = fullCourse();
-        CourseDO after = fullCourse();
-        after.setName("哈他瑜伽（初级）");
-        after.setDurationMin(75);
-        after.setIntro(null);
-
-        String diff = CourseConverter.diff(before, after);
-
-        assertTrue(diff.contains("name: 哈他瑜伽 -> 哈他瑜伽（初级）"), diff);
-        assertTrue(diff.contains("durationMin: 60 -> 75"), diff);
-        assertTrue(diff.contains("intro: 有 -> 无"), diff);
-        assertFalse(diff.contains("type"), diff);
-        assertFalse(diff.contains("sortNo"), diff);
-    }
 
     private CourseDO fullCourse()
     {

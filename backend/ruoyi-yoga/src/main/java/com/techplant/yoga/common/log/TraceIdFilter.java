@@ -14,9 +14,9 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import com.ruoyi.common.utils.StringUtils;
 
 /**
- * 链路标识过滤器（详细设计第 6 章「统一格式」的「链路标识」字段）。
+ * 链路标识过滤器：为每个请求生成或透传一个链路标识。
  *
- * <p>由它生成/透传 traceId 并写入 MDC，业务日志通过 {@link BusinessLog} 自动带上；
+ * <p>生成/透传的 traceId 写入 MDC 并回写响应头 {@code X-Trace-Id}，便于前端与运维按标识排查。</p>
  * 同时回写响应头 {@code X-Trace-Id}，便于前端与运维按标识排查。</p>
  *
  * <p>说明：设计里链路标识属于「统一的请求过滤器」（公共模块职责）。本模块先自带一个最小实现，
