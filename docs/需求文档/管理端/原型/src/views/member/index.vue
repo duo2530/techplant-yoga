@@ -57,7 +57,7 @@
         <el-table-column label="开卡门店" prop="storeName" min-width="150" />
         <el-table-column label="卡片名称" prop="cardName" min-width="160" />
         <el-table-column label="卡片类型" width="100"><template #default="scope">{{ cardType(scope.row.cardType) }}</template></el-table-column>
-        <el-table-column label="适用范围" prop="courseScope" min-width="140" />
+        <el-table-column label="适用课种" min-width="140"><template #default="scope">{{ courseScope(scope.row.courseScope) }}</template></el-table-column>
         <el-table-column label="剩余次数" width="100" align="center"><template #default="scope">{{ scope.row.cardType === 1 ? scope.row.remainingCount : '-' }}</template></el-table-column>
         <el-table-column label="状态" width="100"><template #default="scope">{{ cardStatus(scope.row.status) }}</template></el-table-column>
       </el-table>
@@ -80,6 +80,7 @@ const queryParams = reactive({ pageNum: 1, pageSize: 10, nickname: undefined, ph
 
 function memberStatus(status) { return Number(status) === 1 ? '正常' : '停用' }
 function cardType(type) { return Number(type) === 1 ? '次数卡' : '期限卡' }
+function courseScope(value) { return ({ 1: '团课', 2: '精品课', 3: '特色课', 4: '私教课' })[Number(value)] || '-' }
 function cardStatus(status) { return ['未激活', '已激活', '停用'][Number(status)] || '-' }
 function getList() {
   loading.value = true

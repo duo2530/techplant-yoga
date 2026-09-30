@@ -26,7 +26,7 @@
       <el-table-column label="手机号" prop="phone" width="140" />
       <el-table-column label="卡片名称" prop="cardName" min-width="150" />
       <el-table-column label="类型" width="90" align="center"><template #default="scope">{{ cardTypeLabel(scope.row.cardType) }}</template></el-table-column>
-      <el-table-column label="适用范围" prop="courseScope" min-width="130" />
+      <el-table-column label="适用课种" min-width="130"><template #default="scope">{{ courseScopeLabel(scope.row.courseScope) }}</template></el-table-column>
       <el-table-column label="次数" width="110" align="center"><template #default="scope">{{ countText(scope.row) }}</template></el-table-column>
       <el-table-column label="有效期" min-width="180"><template #default="scope">{{ validityText(scope.row) }}</template></el-table-column>
       <el-table-column label="状态" width="100" align="center"><template #default="scope"><el-tag :type="statusType(scope.row.status)">{{ statusLabel(scope.row.status) }}</el-tag></template></el-table-column>
@@ -46,7 +46,7 @@
         <el-form-item label="开卡门店" prop="storeId"><el-select v-model="form.storeId" filterable placeholder="请选择门店" style="width:100%"><el-option v-for="item in storeOptions" :key="item.id" :label="`${item.name}（${item.storeNo}）`" :value="item.id" /></el-select></el-form-item>
         <el-form-item label="卡片名称" prop="cardName"><el-input v-model="form.cardName" placeholder="例如：普拉提 20 次卡" /></el-form-item>
         <el-form-item label="卡片类型" prop="cardType"><el-radio-group v-model="form.cardType" @change="handleCardTypeChange"><el-radio :value="1">次数卡</el-radio><el-radio :value="2">期限卡</el-radio></el-radio-group></el-form-item>
-        <el-form-item label="适用范围" prop="courseScope"><el-select v-model="form.courseScope" style="width:100%"><el-option label="团课、精品课" value="团课、精品课" /><el-option label="私教课" value="私教课" /></el-select></el-form-item>
+        <el-form-item label="适用课种" prop="courseScope"><el-select v-model="form.courseScope" style="width:100%"><el-option v-for="item in COURSE_SCOPES" :key="item.value" :label="item.label" :value="item.value" /></el-select></el-form-item>
         <el-form-item v-if="form.cardType === 1" label="初始次数" prop="initialCount"><el-input-number v-model="form.initialCount" :min="1" :max="999" /></el-form-item>
         <el-form-item label="有效天数" prop="validDays"><el-select v-model="form.validDays" style="width:100%"><el-option label="30 天（月卡）" :value="30" /><el-option label="365 天（年卡）" :value="365" /></el-select></el-form-item>
       </el-form>
@@ -58,7 +58,7 @@
         <el-descriptions-item label="卡号">{{ detail.cardNo }}</el-descriptions-item><el-descriptions-item label="开卡门店">{{ detail.storeName }}（{{ detail.storeNo }}）</el-descriptions-item>
         <el-descriptions-item label="会员">{{ detail.memberName }}</el-descriptions-item><el-descriptions-item label="手机号">{{ detail.phone }}</el-descriptions-item>
         <el-descriptions-item label="卡片名称">{{ detail.cardName }}</el-descriptions-item><el-descriptions-item label="卡片类型">{{ cardTypeLabel(detail.cardType) }}</el-descriptions-item>
-        <el-descriptions-item label="适用范围">{{ detail.courseScope }}</el-descriptions-item><el-descriptions-item label="卡片状态">{{ statusLabel(detail.status) }}</el-descriptions-item>
+        <el-descriptions-item label="适用课种">{{ courseScopeLabel(detail.courseScope) }}</el-descriptions-item><el-descriptions-item label="卡片状态">{{ statusLabel(detail.status) }}</el-descriptions-item>
         <el-descriptions-item label="初始次数">{{ detail.cardType === 1 ? detail.initialCount : '-' }}</el-descriptions-item><el-descriptions-item label="剩余次数">{{ detail.cardType === 1 ? detail.remainingCount : '-' }}</el-descriptions-item>
         <el-descriptions-item label="激活时间">{{ detail.activateTime || '-' }}</el-descriptions-item><el-descriptions-item label="有效期">{{ validityText(detail) }}</el-descriptions-item>
       </el-descriptions>
@@ -75,12 +75,14 @@ import { listStore } from '@/api/store/store'
 const { proxy } = getCurrentInstance()
 const loading = ref(false), showSearch = ref(true), open = ref(false), openView = ref(false)
 const cardList = ref([]), memberOptions = ref([]), storeOptions = ref([]), total = ref(0), detail = ref({})
+const COURSE_SCOPES = [{ value: 1, label: '团课' }, { value: 2, label: '精品课' }, { value: 3, label: '特色课' }, { value: 4, label: '私教课' }]
 const queryParams = reactive({ pageNum: 1, pageSize: 10, memberName: undefined, phone: undefined, cardName: undefined, cardNo: undefined, cardType: undefined, status: undefined })
-const emptyForm = () => ({ memberId: undefined, storeId: undefined, cardName: '', cardType: 1, courseScope: '团课、精品课', initialCount: 10, validDays: 365 })
+const emptyForm = () => ({ memberId: undefined, storeId: undefined, cardName: '', cardType: 1, courseScope: 1, initialCount: 10, validDays: 365 })
 const form = ref(emptyForm())
-const rules = { memberId: [{ required: true, message: '请选择会员', trigger: 'change' }], storeId: [{ required: true, message: '请选择开卡门店', trigger: 'change' }], cardName: [{ required: true, message: '请输入卡片名称', trigger: 'blur' }], cardType: [{ required: true, message: '请选择卡片类型', trigger: 'change' }], courseScope: [{ required: true, message: '请选择适用范围', trigger: 'change' }], initialCount: [{ required: true, message: '请输入初始次数', trigger: 'change' }], validDays: [{ required: true, message: '请选择有效天数', trigger: 'change' }] }
+const rules = { memberId: [{ required: true, message: '请选择会员', trigger: 'change' }], storeId: [{ required: true, message: '请选择开卡门店', trigger: 'change' }], cardName: [{ required: true, message: '请输入卡片名称', trigger: 'blur' }], cardType: [{ required: true, message: '请选择卡片类型', trigger: 'change' }], courseScope: [{ required: true, message: '请选择适用课种', trigger: 'change' }], initialCount: [{ required: true, message: '请输入初始次数', trigger: 'change' }], validDays: [{ required: true, message: '请选择有效天数', trigger: 'change' }] }
 
 function cardTypeLabel(value) { return Number(value) === 1 ? '次数卡' : '期限卡' }
+function courseScopeLabel(value) { return COURSE_SCOPES.find(item => item.value === Number(value))?.label || '-' }
 function statusLabel(value) { return ['未激活', '已激活', '停用'][Number(value)] || '-' }
 function statusType(value) { return Number(value) === 1 ? 'success' : Number(value) === 0 ? 'warning' : 'info' }
 function countText(row) { return Number(row.cardType) === 1 ? `${row.remainingCount} / ${row.initialCount}` : '-' }

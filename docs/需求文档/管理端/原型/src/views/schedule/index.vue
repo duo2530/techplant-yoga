@@ -2,6 +2,7 @@
   <div class="app-container">
     <el-form ref="queryRef" :model="queryParams" :inline="true" v-show="showSearch">
       <el-form-item label="上课日期" prop="date"><el-date-picker v-model="queryParams.date" type="date" value-format="YYYY-MM-DD" placeholder="请选择日期" /></el-form-item>
+      <el-form-item label="课种" prop="courseType"><el-select v-model="queryParams.courseType" clearable placeholder="全部课种" style="width:150px"><el-option v-for="item in courseTypeOptions" :key="item.value" :label="item.label" :value="item.value" /></el-select></el-form-item>
       <el-form-item label="门店" prop="storeId"><el-select v-model="queryParams.storeId" filterable clearable placeholder="全部门店" style="width:180px"><el-option v-for="item in storeOptions" :key="item.id" :label="item.name" :value="item.id" /></el-select></el-form-item>
       <el-form-item label="课程" prop="courseId"><el-select v-model="queryParams.courseId" filterable clearable placeholder="全部课程" style="width:180px"><el-option v-for="item in courseOptions" :key="item.id" :label="item.name" :value="item.id" /></el-select></el-form-item>
       <el-form-item label="教练" prop="coachId"><el-select v-model="queryParams.coachId" filterable clearable placeholder="全部教练" style="width:160px"><el-option v-for="item in coachOptions" :key="item.id" :label="item.name" :value="item.id" /></el-select></el-form-item>
@@ -16,6 +17,7 @@
 
     <el-table v-loading="loading" :data="scheduleList">
       <el-table-column label="课程" prop="courseName" min-width="150" />
+      <el-table-column label="课种" width="110"><template #default="scope">{{ courseTypeLabel(scope.row.courseType) }}</template></el-table-column>
       <el-table-column label="门店" prop="storeName" min-width="150" />
       <el-table-column label="教练" prop="coachName" width="110" />
       <el-table-column label="开始时间" prop="startTime" width="175" />
@@ -36,7 +38,7 @@
     <el-dialog v-model="open" :title="title" width="680px" append-to-body>
       <el-form ref="scheduleRef" :model="form" :rules="rules" label-width="100px">
         <el-form-item label="门店" prop="storeId"><el-select v-model="form.storeId" filterable style="width:100%" @change="handleStoreChange"><el-option v-for="item in storeOptions" :key="item.id" :label="item.name" :value="item.id" /></el-select></el-form-item>
-        <el-form-item label="课程" prop="courseId"><el-select v-model="form.courseId" filterable style="width:100%"><el-option v-for="item in courseOptions" :key="item.id" :label="`${item.name}（${courseTypeLabel(item.type)}）`" :value="item.id" /></el-select></el-form-item>
+        <el-form-item label="课程" prop="courseId"><el-select v-model="form.courseId" filterable style="width:100%"><el-option v-for="item in courseOptions" :key="item.id" :label="`${item.name}（${courseTypeLabel(item.type)}）`" :value="item.id" /></el-select><span class="form-tip">排班课种由服务端从所选课程复制并保存，用于课种与日期筛选</span></el-form-item>
         <el-form-item label="授课教练" prop="coachId"><el-select v-model="form.coachId" filterable style="width:100%"><el-option v-for="item in coachOptions" :key="item.id" :label="item.name" :value="item.id" /></el-select></el-form-item>
         <el-form-item label="开始时间" prop="startTime"><el-date-picker v-model="form.startTime" type="datetime" value-format="YYYY-MM-DD HH:mm:ss" placeholder="请选择开始时间" style="width:100%" /></el-form-item>
         <el-form-item label="结束时间" prop="endTime"><el-date-picker v-model="form.endTime" type="datetime" value-format="YYYY-MM-DD HH:mm:ss" placeholder="请选择结束时间" style="width:100%" /></el-form-item>
@@ -48,7 +50,7 @@
 
     <el-dialog v-model="openView" title="排班详情" width="720px" append-to-body>
       <el-descriptions :column="2" border>
-        <el-descriptions-item label="课程">{{ detail.courseName }}</el-descriptions-item><el-descriptions-item label="课种">{{ courseTypeLabel(detail.courseType) }}</el-descriptions-item>
+        <el-descriptions-item label="课程">{{ detail.courseName }}</el-descriptions-item><el-descriptions-item label="排班课种">{{ courseTypeLabel(detail.courseType) }}</el-descriptions-item>
         <el-descriptions-item label="门店">{{ detail.storeName }}</el-descriptions-item><el-descriptions-item label="教练">{{ detail.coachName }}</el-descriptions-item>
         <el-descriptions-item label="开始时间">{{ detail.startTime }}</el-descriptions-item><el-descriptions-item label="结束时间">{{ detail.endTime }}</el-descriptions-item>
         <el-descriptions-item label="教室名称">{{ detail.classroomName }}</el-descriptions-item><el-descriptions-item label="排班状态">{{ statusLabel(detail.status) }}</el-descriptions-item>
@@ -69,7 +71,7 @@ import { listClassroom } from '@/api/classroom/classroom'
 const { proxy } = getCurrentInstance()
 const loading=ref(false), showSearch=ref(true), open=ref(false), openView=ref(false)
 const scheduleList=ref([]), storeOptions=ref([]), courseOptions=ref([]), coachOptions=ref([]), classroomOptions=ref([]), total=ref(0), title=ref(''), detail=ref({})
-const queryParams=reactive({ pageNum:1, pageSize:10, date:undefined, storeId:undefined, courseId:undefined, coachId:undefined, status:undefined })
+const queryParams=reactive({ pageNum:1, pageSize:10, date:undefined, courseType:undefined, storeId:undefined, courseId:undefined, coachId:undefined, status:undefined })
 const emptyForm=()=>({ id:undefined, storeId:undefined, courseId:undefined, coachId:undefined, classroomId:undefined, startTime:undefined, endTime:undefined, capacity:12, bookingCount:0 })
 const form=ref(emptyForm())
 const rules={ storeId:[{required:true,message:'请选择门店',trigger:'change'}], courseId:[{required:true,message:'请选择课程',trigger:'change'}], coachId:[{required:true,message:'请选择教练',trigger:'change'}], classroomId:[{required:true,message:'请选择教室',trigger:'change'}], startTime:[{required:true,message:'请选择开始时间',trigger:'change'}], endTime:[{required:true,message:'请选择结束时间',trigger:'change'}], capacity:[{required:true,message:'请输入总容量',trigger:'change'}] }
@@ -77,6 +79,7 @@ const rules={ storeId:[{required:true,message:'请选择门店',trigger:'change'
 function statusLabel(value){ return {1:'待上课',2:'已取消',3:'已完成'}[Number(value)] || '-' }
 function statusType(value){ return Number(value)===1?'success':Number(value)===2?'danger':'info' }
 function courseTypeLabel(value){ return {1:'团课',2:'精品课',3:'私教课',4:'特色课'}[Number(value)] || '-' }
+const courseTypeOptions=[{value:1,label:'团课'},{value:2,label:'精品课'},{value:3,label:'私教课'},{value:4,label:'特色课'}]
 function getList(){ loading.value=true; listSchedule(queryParams).then(res=>{scheduleList.value=res.rows;total.value=res.total}).finally(()=>{loading.value=false}) }
 function loadOptions(){ Promise.all([listStore({pageNum:1,pageSize:100,status:1}),listCourse({pageNum:1,pageSize:100,status:1}),listCoach({pageNum:1,pageSize:100,status:1})]).then(([stores,courses,coaches])=>{storeOptions.value=stores.rows;courseOptions.value=courses.rows;coachOptions.value=coaches.rows}) }
 function loadClassrooms(storeId){ classroomOptions.value=[];form.value.classroomId=undefined;if(!storeId)return;listClassroom({pageNum:1,pageSize:100,storeId,status:1}).then(res=>{classroomOptions.value=res.rows}) }

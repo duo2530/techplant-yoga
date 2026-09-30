@@ -25,20 +25,20 @@ const initialData = {
     { id: 5003, nickname: '王可', phone: '13800001003', level: 0, status: 0, joinTime: '2026-09-23 18:00:00', lastActiveTime: '2026-09-25 11:20:00' }
   ],
   memberCards: [
-    { id: 6001, cardNo: '20260920001105000', storeId: 3001, storeNo: '001', memberId: 5001, memberName: '陈小满', phone: '13800001001', cardName: '普拉提 20 次卡', cardType: 1, courseScope: '团课、精品课', initialCount: 20, remainingCount: 16, validDays: 365, status: 1, activateTime: '2026-09-20 11:00:00', startDate: '2026-09-20', endDate: '2027-09-19', createTime: '2026-09-20 10:50:00' },
-    { id: 6002, cardNo: '20260920001105500', storeId: 3001, storeNo: '001', memberId: 5001, memberName: '陈小满', phone: '13800001001', cardName: '私教 10 次卡', cardType: 1, courseScope: '私教课', initialCount: 10, remainingCount: 8, validDays: 365, status: 1, activateTime: '2026-09-20 11:05:00', startDate: '2026-09-20', endDate: '2027-09-19', createTime: '2026-09-20 10:55:00' },
-    { id: 6003, cardNo: '20260922002145000', storeId: 3002, storeNo: '002', memberId: 5002, memberName: '李思雨', phone: '13800001002', cardName: '普拉提月卡', cardType: 2, courseScope: '团课、精品课', initialCount: null, remainingCount: null, validDays: 30, status: 1, activateTime: '2026-09-22 15:00:00', startDate: '2026-09-22', endDate: '2026-10-21', createTime: '2026-09-22 14:50:00' },
-    { id: 6004, cardNo: '20260924001090000', storeId: 3001, storeNo: '001', memberId: 5003, memberName: '王可', phone: '13800001003', cardName: '普拉提 10 次卡', cardType: 1, courseScope: '团课、精品课', initialCount: 10, remainingCount: 10, validDays: 365, status: 0, activateTime: null, startDate: null, endDate: null, createTime: '2026-09-24 09:00:00' }
+    { id: 6001, cardNo: '20260920001105000', storeId: 3001, storeNo: '001', memberId: 5001, memberName: '陈小满', phone: '13800001001', cardName: '普拉提 20 次卡', cardType: 1, courseScope: 1, initialCount: 20, remainingCount: 16, validDays: 365, status: 1, activateTime: '2026-09-20 11:00:00', startDate: '2026-09-20', endDate: '2027-09-19', createTime: '2026-09-20 10:50:00' },
+    { id: 6002, cardNo: '20260920001105500', storeId: 3001, storeNo: '001', memberId: 5001, memberName: '陈小满', phone: '13800001001', cardName: '私教 10 次卡', cardType: 1, courseScope: 4, initialCount: 10, remainingCount: 8, validDays: 365, status: 1, activateTime: '2026-09-20 11:05:00', startDate: '2026-09-20', endDate: '2027-09-19', createTime: '2026-09-20 10:55:00' },
+    { id: 6003, cardNo: '20260922002145000', storeId: 3002, storeNo: '002', memberId: 5002, memberName: '李思雨', phone: '13800001002', cardName: '普拉提月卡', cardType: 2, courseScope: 1, initialCount: null, remainingCount: null, validDays: 30, status: 1, activateTime: '2026-09-22 15:00:00', startDate: '2026-09-22', endDate: '2026-10-21', createTime: '2026-09-22 14:50:00' },
+    { id: 6004, cardNo: '20260924001090000', storeId: 3001, storeNo: '001', memberId: 5003, memberName: '王可', phone: '13800001003', cardName: '普拉提 10 次卡', cardType: 1, courseScope: 1, initialCount: 10, remainingCount: 10, validDays: 365, status: 0, activateTime: null, startDate: null, endDate: null, createTime: '2026-09-24 09:00:00' }
   ],
   schedules: [
-    { id: 4001, storeId: 3001, storeName: '一水瑜伽·徐汇店', courseId: 1001, courseName: '普拉提核心塑形', courseType: 2, coachId: 2001, coachName: '林晓瑜', classroomId: 8001, classroomName: '普拉提教室', startTime: '2026-10-05 10:00:00', endTime: '2026-10-05 11:00:00', capacity: 12, bookingCount: 2, location: '普拉提教室', status: 1, createTime: '2026-09-25 10:00:00', updateTime: '2026-09-29 09:00:00' },
-    { id: 4002, storeId: 3002, storeName: '一水瑜伽·静安店', courseId: 1002, courseName: '流瑜伽基础', courseType: 1, coachId: 2002, coachName: '周然', classroomId: 8003, classroomName: '瑜伽教室', startTime: '2026-10-05 19:00:00', endTime: '2026-10-05 20:00:00', capacity: 16, bookingCount: 1, location: '瑜伽教室', status: 1, createTime: '2026-09-25 10:10:00', updateTime: '2026-09-29 09:10:00' },
-    { id: 4003, storeId: 3001, storeName: '一水瑜伽·徐汇店', courseId: 1003, courseName: '一对一体态评估', courseType: 3, coachId: 2001, coachName: '林晓瑜', classroomId: 8002, classroomName: '私教室', startTime: '2026-09-28 14:00:00', endTime: '2026-09-28 15:15:00', capacity: 2, bookingCount: 2, location: '私教室', status: 3, createTime: '2026-09-20 12:00:00', updateTime: '2026-09-28 16:00:00' }
+    { id: 4001, storeId: 3001, storeName: '一水瑜伽·徐汇店', courseId: 1001, courseType: 2, courseName: '普拉提核心塑形', coachId: 2001, coachName: '林晓瑜', classroomId: 8001, classroomName: '普拉提教室', startTime: '2026-10-05 10:00:00', endTime: '2026-10-05 11:00:00', capacity: 12, bookingCount: 2, location: '普拉提教室', status: 1, createTime: '2026-09-25 10:00:00', updateTime: '2026-09-29 09:00:00' },
+    { id: 4002, storeId: 3002, storeName: '一水瑜伽·静安店', courseId: 1002, courseType: 1, courseName: '流瑜伽基础', coachId: 2002, coachName: '周然', classroomId: 8003, classroomName: '瑜伽教室', startTime: '2026-10-05 19:00:00', endTime: '2026-10-05 20:00:00', capacity: 16, bookingCount: 1, location: '瑜伽教室', status: 1, createTime: '2026-09-25 10:10:00', updateTime: '2026-09-29 09:10:00' },
+    { id: 4003, storeId: 3001, storeName: '一水瑜伽·徐汇店', courseId: 1003, courseType: 3, courseName: '一对一体态评估', coachId: 2001, coachName: '林晓瑜', classroomId: 8002, classroomName: '私教室', startTime: '2026-09-28 14:00:00', endTime: '2026-09-28 15:15:00', capacity: 2, bookingCount: 2, location: '私教室', status: 3, createTime: '2026-09-20 12:00:00', updateTime: '2026-09-28 16:00:00' }
   ],
   reservations: [
-    { id: 7001, memberId: 5001, memberName: '陈小满', phone: '13800001001', scheduleId: 4001, courseName: '普拉提核心塑形', courseType: 2, storeName: '一水瑜伽·徐汇店', coachName: '林晓瑜', classroomName: '普拉提教室', startTime: '2026-10-05 10:00:00', endTime: '2026-10-05 11:00:00', cardId: 6001, cardName: '普拉提 20 次卡', cardType: 1, deductionResult: '已扣 2 次', bookingCount: 2, status: 1, cancelReason: null, cancelSource: null, bookingTime: '2026-09-29 09:20:00', checkInTime: null },
-    { id: 7002, memberId: 5002, memberName: '李思雨', phone: '13800001002', scheduleId: 4002, courseName: '流瑜伽基础', courseType: 1, storeName: '一水瑜伽·静安店', coachName: '周然', classroomName: '瑜伽教室', startTime: '2026-10-05 19:00:00', endTime: '2026-10-05 20:00:00', cardId: 6003, cardName: '普拉提月卡', cardType: 2, deductionResult: '期限内有效', bookingCount: 1, status: 1, cancelReason: null, cancelSource: null, bookingTime: '2026-09-28 19:30:00', checkInTime: null },
-    { id: 7003, memberId: 5001, memberName: '陈小满', phone: '13800001001', scheduleId: 4003, courseName: '一对一体态评估', courseType: 3, storeName: '一水瑜伽·徐汇店', coachName: '林晓瑜', classroomName: '私教室', startTime: '2026-09-28 14:00:00', endTime: '2026-09-28 15:15:00', cardId: 6002, cardName: '私教 10 次卡', cardType: 1, deductionResult: '已扣 2 次', bookingCount: 2, status: 3, cancelReason: null, cancelSource: null, bookingTime: '2026-09-25 12:00:00', checkInTime: '2026-09-28 13:52:00' }
+    { id: 7001, memberId: 5001, memberName: '陈小满', phone: '13800001001', scheduleId: 4001, courseName: '普拉提核心塑形', storeName: '一水瑜伽·徐汇店', coachName: '林晓瑜', classroomName: '普拉提教室', startTime: '2026-10-05 10:00:00', endTime: '2026-10-05 11:00:00', cardId: 6001, cardName: '普拉提 20 次卡', cardType: 1, deductionResult: '已扣 2 次', bookingCount: 2, status: 1, cancelReason: null, cancelSource: null, bookingTime: '2026-09-29 09:20:00', checkInTime: null },
+    { id: 7002, memberId: 5002, memberName: '李思雨', phone: '13800001002', scheduleId: 4002, courseName: '流瑜伽基础', storeName: '一水瑜伽·静安店', coachName: '周然', classroomName: '瑜伽教室', startTime: '2026-10-05 19:00:00', endTime: '2026-10-05 20:00:00', cardId: 6003, cardName: '普拉提月卡', cardType: 2, deductionResult: '期限内有效', bookingCount: 1, status: 1, cancelReason: null, cancelSource: null, bookingTime: '2026-09-28 19:30:00', checkInTime: null },
+    { id: 7003, memberId: 5001, memberName: '陈小满', phone: '13800001001', scheduleId: 4003, courseName: '一对一体态评估', storeName: '一水瑜伽·徐汇店', coachName: '林晓瑜', classroomName: '私教室', startTime: '2026-09-28 14:00:00', endTime: '2026-09-28 15:15:00', cardId: 6002, cardName: '私教 10 次卡', cardType: 1, deductionResult: '已扣 2 次', bookingCount: 2, status: 3, cancelReason: null, cancelSource: null, bookingTime: '2026-09-25 12:00:00', checkInTime: '2026-09-28 13:52:00' }
   ]
 }
 
@@ -58,11 +58,16 @@ function loadData() {
     merged.stores.forEach((store, index) => { if (!store.storeNo) store.storeNo = String(index + 1).padStart(3, '0') })
     merged.memberCards.forEach(card => {
       if (!card.storeId) card.storeId = 3001
+      const courseScopeCodes = { '团课、精品课': 1, 团课: 1, 精品课: 2, 特色课: 3, 私教课: 4 }
+      card.courseScope = courseScopeCodes[card.courseScope] || Number(card.courseScope)
       const store = merged.stores.find(item => String(item.id) === String(card.storeId)) || merged.stores[0]
       card.storeNo = card.storeNo || store?.storeNo || '001'
       if (!card.cardNo) card.cardNo = `${String(card.createTime || now()).replace(/\D/g, '').slice(0, 8)}${card.storeNo}${String(card.createTime || now()).replace(/\D/g, '').slice(8, 14)}`
     })
     merged.schedules.forEach(schedule => {
+      if (schedule.courseType === undefined || schedule.courseType === null) {
+        schedule.courseType = merged.courses.find(course => String(course.id) === String(schedule.courseId))?.type
+      }
       if (!schedule.classroomId) {
         const classroom = merged.classrooms.find(item => String(item.storeId) === String(schedule.storeId))
         schedule.classroomId = classroom?.id
@@ -71,6 +76,7 @@ function loadData() {
       }
     })
     merged.reservations.forEach(reservation => {
+      delete reservation.courseType
       if (!reservation.classroomName) reservation.classroomName = merged.schedules.find(item => String(item.id) === String(reservation.scheduleId))?.classroomName || ''
     })
     return merged
@@ -130,11 +136,17 @@ function list(resource, params = {}) {
     if (resource === 'classrooms') return equals(item.storeId, params.storeId) && contains(item.name, params.name) && equals(item.status, params.status)
     if (resource === 'members') return contains(item.nickname, params.nickname) && contains(item.phone, params.phone) && equals(item.status, params.status)
     if (resource === 'memberCards') return contains(item.memberName, params.memberName) && contains(item.phone, params.phone) && contains(item.cardName, params.cardName) && contains(item.cardNo, params.cardNo) && equals(item.cardType, params.cardType) && equals(item.status, params.status)
-    if (resource === 'schedules') return (!params.date || item.startTime.startsWith(params.date)) && equals(item.storeId, params.storeId) && equals(item.courseId, params.courseId) && equals(item.coachId, params.coachId) && equals(item.status, params.status)
+    if (resource === 'schedules') return (!params.date || item.startTime.startsWith(params.date)) && equals(item.courseType, params.courseType) && equals(item.storeId, params.storeId) && equals(item.courseId, params.courseId) && equals(item.coachId, params.coachId) && equals(item.status, params.status)
     if (resource === 'reservations') return contains(item.memberName, params.memberName) && contains(item.phone, params.phone) && contains(item.courseName, params.courseName) && contains(item.storeName, params.storeName) && (!params.date || item.startTime.startsWith(params.date)) && equals(item.status, params.status)
     return true
   })
-  return page(items, params)
+  const rows = resource === 'schedules' ? items.map(scheduleView) : items
+  return page(rows, params)
+}
+
+function scheduleView(schedule) {
+  const course = database.courses.find(item => String(item.id) === String(schedule.courseId))
+  return { ...clone(schedule), courseName: course?.name || schedule.courseName, courseType: schedule.courseType ?? course?.type }
 }
 
 function detail(resource, id) {
@@ -142,6 +154,7 @@ function detail(resource, id) {
   if (!item) throw new Error('未找到对应数据')
   const data = clone(item)
   if (resource === 'members') data.cards = clone(database.memberCards.filter(card => String(card.memberId) === String(id)))
+  if (resource === 'schedules') return { code: 200, data: scheduleView(item) }
   return { code: 200, data }
 }
 
@@ -172,13 +185,15 @@ function update(resource, id, payload) {
 }
 
 function createMemberCard(payload) {
+  const courseScope = Number(payload.courseScope)
+  if (!Number.isInteger(courseScope) || courseScope < 1 || courseScope > 4) throw new Error('请选择有效适用课种')
   const member = database.members.find(item => String(item.id) === String(payload.memberId))
   if (!member) throw new Error('请选择有效会员')
   const store = database.stores.find(item => String(item.id) === String(payload.storeId))
   if (!store) throw new Error('请选择开卡门店')
   const stamp = now().replace(/\D/g, '')
   const item = {
-    ...clone(payload), id: nextId(database.memberCards), cardNo: `${stamp.slice(0, 8)}${store.storeNo}${stamp.slice(8, 14)}`, storeNo: store.storeNo, storeId: store.id, storeName: store.name, memberId: member.id, memberName: member.nickname, phone: member.phone,
+    ...clone(payload), courseScope, id: nextId(database.memberCards), cardNo: `${stamp.slice(0, 8)}${store.storeNo}${stamp.slice(8, 14)}`, storeNo: store.storeNo, storeId: store.id, storeName: store.name, memberId: member.id, memberName: member.nickname, phone: member.phone,
     initialCount: Number(payload.cardType) === 1 ? Number(payload.initialCount) : null,
     remainingCount: Number(payload.cardType) === 1 ? Number(payload.initialCount) : null,
     status: 0, activateTime: null, startDate: null, endDate: null, createTime: now()
