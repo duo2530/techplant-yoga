@@ -1,2 +1,4 @@
 * text=auto
 *.java text eol=lf
+*.tsv text eol=lf
+*.md text eol=lf
