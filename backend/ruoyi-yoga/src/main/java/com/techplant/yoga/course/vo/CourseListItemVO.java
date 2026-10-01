@@ -6,36 +6,31 @@ import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 
 /**
- * 课程列表项（详细设计 §2.3.3）。
+ * 课程列表项（课程管理详细设计 §2.3.1）。
  *
- * <p>列表项**不含** {@code intro}、{@code durationMin} —— 避免列表接口返回长字段（§4.1.3.1）。</p>
+ * <p><b>不返回 {@code intro}</b>（大字段，列表接口不查）；<b>课种成对返回</b>
+ * {@code courseType} ＋ {@code courseTypeName}（详细设计总览 §2「枚举返回」）。</p>
  */
 @ApiModel("课程列表项")
 public class CourseListItemVO
 {
-    @ApiModelProperty(value = "课程ID（雪花ID，字符串）", example = "1856739201475235840")
+    @ApiModelProperty(value = "课程ID（雪花ID，字符串）", example = "1856739201475235801")
     private Long id;
-
-    @ApiModelProperty(value = "所属门店ID", example = "1856739201475235901")
-    private Long storeId;
 
     @ApiModelProperty(value = "课程名称", example = "哈他瑜伽")
     private String name;
 
-    @ApiModelProperty(value = "课程类型：1团课 2精品课 3私教课 4特色课", example = "1")
-    private Integer type;
+    @ApiModelProperty(value = "课种：1团课 2精品课 3私教课 4特色课", example = "1")
+    private Integer courseType;
+
+    @ApiModelProperty(value = "课种名称（由 CourseTypeEnum 翻译）", example = "团课")
+    private String courseTypeName;
+
+    @ApiModelProperty(value = "课程封面URL（单图，可空）")
+    private String coverUrl;
 
     @ApiModelProperty(value = "课程难度：1~5 星", example = "2")
     private Integer difficulty;
-
-    @ApiModelProperty(value = "课程封面图URL")
-    private String coverUrl;
-
-    @ApiModelProperty(value = "课程状态：1启用 0停用", example = "1")
-    private Integer status;
-
-    @ApiModelProperty(value = "展示排序，值越小越靠前", example = "10")
-    private Integer sortNo;
 
     @ApiModelProperty(value = "创建时间", example = "2026-09-20 10:12:33")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
@@ -60,39 +55,29 @@ public class CourseListItemVO
         return name;
     }
 
-    public Long getStoreId()
-    {
-        return storeId;
-    }
-
-    public void setStoreId(Long storeId)
-    {
-        this.storeId = storeId;
-    }
-
     public void setName(String name)
     {
         this.name = name;
     }
 
-    public Integer getType()
+    public Integer getCourseType()
     {
-        return type;
+        return courseType;
     }
 
-    public void setType(Integer type)
+    public void setCourseType(Integer courseType)
     {
-        this.type = type;
+        this.courseType = courseType;
     }
 
-    public Integer getDifficulty()
+    public String getCourseTypeName()
     {
-        return difficulty;
+        return courseTypeName;
     }
 
-    public void setDifficulty(Integer difficulty)
+    public void setCourseTypeName(String courseTypeName)
     {
-        this.difficulty = difficulty;
+        this.courseTypeName = courseTypeName;
     }
 
     public String getCoverUrl()
@@ -105,24 +90,14 @@ public class CourseListItemVO
         this.coverUrl = coverUrl;
     }
 
-    public Integer getStatus()
+    public Integer getDifficulty()
     {
-        return status;
+        return difficulty;
     }
 
-    public void setStatus(Integer status)
+    public void setDifficulty(Integer difficulty)
     {
-        this.status = status;
-    }
-
-    public Integer getSortNo()
-    {
-        return sortNo;
-    }
-
-    public void setSortNo(Integer sortNo)
-    {
-        this.sortNo = sortNo;
+        this.difficulty = difficulty;
     }
 
     public LocalDateTime getCreateTime()

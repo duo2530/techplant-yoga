@@ -1,6 +1,6 @@
 <template>
   <div class="app-container">
-    <!-- 查询条件：课程名称 / 课程类型 / 课程状态（管理端页面结构图「课程列表 · 查询条件」） -->
+    <!-- 查询条件：课程名称 / 课种（课程没有门店与状态） -->
     <el-form :model="queryParams" ref="queryRef" :inline="true" v-show="showSearch">
       <el-form-item label="课程名称" prop="name">
         <el-input
@@ -11,19 +11,9 @@
           @keyup.enter="handleQuery"
         />
       </el-form-item>
-      <el-form-item label="所属门店" prop="storeId">
-        <el-select v-model="queryParams.storeId" placeholder="请选择所属门店" clearable filterable style="width: 200px">
-          <el-option v-for="item in storeOptions" :key="item.id" :label="item.name" :value="item.id" />
-        </el-select>
-      </el-form-item>
-      <el-form-item label="课程类型" prop="type">
-        <el-select v-model="queryParams.type" placeholder="请选择课程类型" clearable style="width: 200px">
-          <el-option v-for="item in COURSE_TYPES" :key="item.value" :label="item.label" :value="item.value" />
-        </el-select>
-      </el-form-item>
-      <el-form-item label="课程状态" prop="status">
-        <el-select v-model="queryParams.status" placeholder="请选择课程状态" clearable style="width: 200px">
-          <el-option v-for="item in COURSE_STATUSES" :key="item.value" :label="item.label" :value="item.value" />
+      <el-form-item label="课种" prop="courseType">
+        <el-select v-model="queryParams.courseType" placeholder="请选择课种" clearable style="width: 200px">
+          <el-option v-for="item in COURSE_TYPE_OPTIONS" :key="item.value" :label="item.label" :value="item.value" />
         </el-select>
       </el-form-item>
       <el-form-item>
@@ -34,22 +24,13 @@
 
     <el-row :gutter="10" class="mb8">
       <el-col :span="1.5">
-        <!-- 权限：本次只挂菜单、不做按钮鉴权（2026-09-22 决策），
-             后续启用 RBAC 时补 v-hasPermi="['course:course:add']" 并放开菜单 SQL 里的按钮权限串 -->
+        <!-- 一期不做 RBAC（BR-全局-003）：不挂 v-hasPermi，业务接口只要求登录 -->
         <el-button type="primary" plain icon="Plus" @click="handleAdd">新增课程</el-button>
       </el-col>
       <right-toolbar v-model:showSearch="showSearch" @queryTable="getList"></right-toolbar>
     </el-row>
 
     <el-table v-loading="loading" :data="courseList">
-      <el-table-column label="所属门店" min-width="130"><template #default="scope">{{ storeLabel(scope.row.storeId) }}</template></el-table-column>
-      <el-table-column label="课程名称" prop="name" :show-overflow-tooltip="true" min-width="160" />
-      <el-table-column label="课程类型" align="center" prop="type" width="100">
-        <template #default="scope">{{ labelOf(COURSE_TYPES, scope.row.type) }}</template>
-      </el-table-column>
-      <el-table-column label="课程难度" align="center" prop="difficulty" width="120">
-        <template #default="scope">{{ difficultyLabel(scope.row.difficulty) }}</template>
-      </el-table-column>
       <el-table-column label="封面" align="center" prop="coverUrl" width="90">
         <template #default="scope">
           <el-image
@@ -63,24 +44,20 @@
           <span v-else>-</span>
         </template>
       </el-table-column>
-      <el-table-column label="排序" align="center" prop="sortNo" width="80" />
-      <el-table-column label="状态" align="center" prop="status" width="90">
-        <template #default="scope">
-          <el-tag :type="scope.row.status === 1 ? 'success' : 'info'">
-            {{ labelOf(COURSE_STATUSES, scope.row.status) }}
-          </el-tag>
-        </template>
+      <el-table-column label="课程名称" prop="name" :show-overflow-tooltip="true" min-width="160" />
+      <!-- 课种名称用后端成对返回的 courseTypeName（不前端硬编码码→名） -->
+      <el-table-column label="课种" align="center" prop="courseTypeName" width="110">
+        <template #default="scope">{{ scope.row.courseTypeName || '-' }}</template>
+      </el-table-column>
+      <el-table-column label="课程难度" align="center" prop="difficulty" width="110">
+        <template #default="scope">{{ difficultyLabel(scope.row.difficulty) }}</template>
       </el-table-column>
       <el-table-column label="更新时间" align="center" prop="updateTime" width="170" />
       <el-table-column label="操作" align="center" width="220" fixed="right" class-name="small-padding fixed-width">
         <template #default="scope">
           <el-button link type="primary" icon="View" @click="handleView(scope.row)">查看</el-button>
           <el-button link type="primary" icon="Edit" @click="handleUpdate(scope.row)">编辑</el-button>
-          <el-button
-            link
-            :type="scope.row.status === 1 ? 'danger' : 'success'"
-            @click="handleStatusChange(scope.row)"
-          >{{ scope.row.status === 1 ? '停用' : '启用' }}</el-button>
+          <el-button link type="primary" icon="Delete" @click="handleDelete(scope.row)">删除</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -93,38 +70,34 @@
       @pagination="getList"
     />
 
-    <!-- 新增 / 编辑课程：请求体不含 status（状态只走列表上的启用/停用），见 §2.2.3、§2.2.4 -->
+    <!-- 新增 / 编辑课程：课程无状态，表单里没有状态开关、没有门店 -->
     <el-dialog :title="title" v-model="open" width="680px" append-to-body>
+      <el-alert
+        type="info"
+        :closable="false"
+        show-icon
+        class="mb8"
+        title="改课种不影响既有排课（已快照），改难度会影响既有排课展示"
+      />
       <el-form ref="courseRef" :model="form" :rules="rules" label-width="100px">
-        <el-form-item label="所属门店" prop="storeId">
-          <el-select v-model="form.storeId" placeholder="请选择所属门店" filterable style="width: 100%">
-            <el-option v-for="item in storeOptions" :key="item.id" :label="item.name" :value="item.id" />
-          </el-select>
-        </el-form-item>
         <el-form-item label="课程名称" prop="name">
           <el-input v-model="form.name" placeholder="请输入课程名称" maxlength="64" show-word-limit />
         </el-form-item>
-        <el-form-item label="课程类型" prop="type">
-          <el-select v-model="form.type" placeholder="请选择课程类型" style="width: 100%">
-            <el-option v-for="item in COURSE_TYPES" :key="item.value" :label="item.label" :value="item.value" />
+        <el-form-item label="课种" prop="courseType">
+          <el-select v-model="form.courseType" placeholder="请选择课种" style="width: 100%">
+            <el-option v-for="item in COURSE_TYPE_OPTIONS" :key="item.value" :label="item.label" :value="item.value" />
           </el-select>
         </el-form-item>
         <el-form-item label="课程难度" prop="difficulty">
-          <el-rate v-model="form.difficulty" :max="5" show-score score-template="{value} 星" />
-        </el-form-item>
-        <el-form-item label="单节时长" prop="durationMin">
-          <el-input-number v-model="form.durationMin" :min="1" controls-position="right" placeholder="分钟" />
-          <span class="form-tip">单位：分钟，可留空</span>
-        </el-form-item>
-        <el-form-item label="展示排序" prop="sortNo">
-          <el-input-number v-model="form.sortNo" :min="0" controls-position="right" />
-          <span class="form-tip">值越小越靠前</span>
+          <el-select v-model="form.difficulty" placeholder="请选择课程难度" style="width: 100%">
+            <el-option v-for="item in difficultyOptions" :key="item.value" :label="item.label" :value="item.value" />
+          </el-select>
         </el-form-item>
         <el-form-item label="课程封面" prop="coverUrl">
           <image-upload v-model="form.coverUrl" :limit="1" />
         </el-form-item>
         <el-form-item label="课程介绍" prop="intro">
-          <el-input v-model="form.intro" type="textarea" :rows="4" placeholder="请输入课程介绍" />
+          <el-input v-model="form.intro" type="textarea" :rows="4" placeholder="请输入课程介绍" maxlength="1024" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -135,22 +108,13 @@
       </template>
     </el-dialog>
 
-    <!-- 查看课程详情：管理端页面结构图「课程详情 · 基本信息」 -->
+    <!-- 查看课程详情：课种名称同样取后端返回的 courseTypeName -->
     <el-dialog title="课程详情" v-model="openView" width="680px" append-to-body>
       <el-descriptions :column="2" border>
         <el-descriptions-item label="课程名称">{{ viewForm.name }}</el-descriptions-item>
-        <el-descriptions-item label="所属门店">{{ storeLabel(viewForm.storeId) }}</el-descriptions-item>
-        <el-descriptions-item label="课程类型">{{ labelOf(COURSE_TYPES, viewForm.type) }}</el-descriptions-item>
+        <el-descriptions-item label="课种">{{ viewForm.courseTypeName || '-' }}</el-descriptions-item>
         <el-descriptions-item label="课程难度">{{ difficultyLabel(viewForm.difficulty) }}</el-descriptions-item>
-        <el-descriptions-item label="课程状态">
-          {{ labelOf(COURSE_STATUSES, viewForm.status) }}
-        </el-descriptions-item>
-        <el-descriptions-item label="单节时长">
-          {{ viewForm.durationMin ? viewForm.durationMin + ' 分钟' : '-' }}
-        </el-descriptions-item>
-        <el-descriptions-item label="展示排序">{{ viewForm.sortNo }}</el-descriptions-item>
-        <el-descriptions-item label="创建时间">{{ viewForm.createTime }}</el-descriptions-item>
-        <el-descriptions-item label="更新时间">{{ viewForm.updateTime }}</el-descriptions-item>
+        <el-descriptions-item label="更新时间">{{ viewForm.updateTime || '-' }}</el-descriptions-item>
         <el-descriptions-item label="课程封面" :span="2">
           <el-image
             v-if="viewForm.coverUrl"
@@ -176,30 +140,32 @@
 </template>
 
 <script setup name="Course">
-import { listCourse, getCourse, addCourse, updateCourse, changeCourseStatus } from "@/api/course/course"
-import { listStore } from "@/api/store/store"
+import { listCourse, getCourse, addCourse, updateCourse, delCourse } from "@/api/course/course"
 
 const { proxy } = getCurrentInstance()
 
 /**
- * 枚举映射：接口只返回 code，中文由前端按详细设计 §1.2.2 的映射表展示
- * （§2.1.5：后端不返回翻译文案，避免耦合展示层）
+ * 课种下拉选项：只用于「表单控件」本身。
+ * 列表与详情的课种名称一律用后端成对返回的 courseTypeName，前端不承担码→名翻译
+ * （详细设计总览 §2「枚举返回」）。
  */
-const COURSE_TYPES = [
+const COURSE_TYPE_OPTIONS = [
   { value: 1, label: "团课" },
   { value: 2, label: "精品课" },
   { value: 3, label: "私教课" },
   { value: 4, label: "特色课" }
 ]
-const COURSE_STATUSES = [
-  { value: 1, label: "启用" },
-  { value: 0, label: "停用" }
+
+/** 难度下拉 1~5 星 */
+const difficultyOptions = [
+  { value: 1, label: "1 星" },
+  { value: 2, label: "2 星" },
+  { value: 3, label: "3 星" },
+  { value: 4, label: "4 星" },
+  { value: 5, label: "5 星" }
 ]
-/** 难度 1~5 星（§1.2.2） */
-const DIFFICULTY_LABELS = ["", "1 星", "2 星", "3 星", "4 星", "5 星"]
 
 const courseList = ref([])
-const storeOptions = ref([])
 const open = ref(false)
 const openView = ref(false)
 const loading = ref(true)
@@ -212,39 +178,26 @@ const data = reactive({
   viewForm: {},
   queryParams: {
     pageNum: 1,
-      pageSize: 10,
-      name: undefined,
-      storeId: undefined,
-    type: undefined,
-    status: undefined
+    pageSize: 10,
+    name: undefined,
+    courseType: undefined
   },
   rules: {
     name: [
       { required: true, message: "课程名称不能为空", trigger: "blur" },
       { max: 64, message: "课程名称长度不能超过 64", trigger: "blur" }
     ],
-    storeId: [{ required: true, message: "请选择所属门店", trigger: "change" }],
-    type: [{ required: true, message: "课程类型不能为空", trigger: "change" }],
-    difficulty: [{ required: true, type: "number", min: 1, message: "请选择课程难度（1~5 星）", trigger: "change" }]
+    courseType: [{ required: true, message: "课种不能为空", trigger: "change" }],
+    difficulty: [{ required: true, type: "number", message: "请选择课程难度（1~5 星）", trigger: "change" }]
   }
 })
 
 const { form, viewForm, queryParams, rules } = toRefs(data)
 
-/** 枚举取标签 */
-function labelOf(options, value) {
-  const hit = options.find(item => item.value === value)
-  return hit ? hit.label : "-"
-}
-
-/** 难度取标签 */
+/** 难度取标签（纯展示，不涉及课种码→名） */
 function difficultyLabel(difficulty) {
-  return DIFFICULTY_LABELS[difficulty] || "-"
-}
-
-function storeLabel(storeId) {
-  const item = storeOptions.value.find(item => String(item.id) === String(storeId))
-  return item ? item.name : "-"
+  const hit = difficultyOptions.find(item => item.value === difficulty)
+  return hit ? hit.label : "-"
 }
 
 /** 查询课程列表 */
@@ -256,12 +209,6 @@ function getList() {
     loading.value = false
   }).catch(() => {
     loading.value = false
-  })
-}
-
-function getStoreOptions() {
-  listStore({ pageNum: 1, pageSize: 100, status: 1 }).then(response => {
-    storeOptions.value = response.rows || []
   })
 }
 
@@ -281,14 +228,11 @@ function resetQuery() {
 function reset() {
   form.value = {
     id: undefined,
-    storeId: undefined,
     name: undefined,
-    type: undefined,
-    difficulty: 1,
+    courseType: undefined,
+    difficulty: undefined,
     coverUrl: undefined,
-    intro: undefined,
-    durationMin: undefined,
-    sortNo: 0
+    intro: undefined
   }
   proxy.resetForm("courseRef")
 }
@@ -300,21 +244,18 @@ function handleAdd() {
   title.value = "新增课程"
 }
 
-/** 编辑按钮操作：详情回显（status 不参与编辑，故不放进表单） */
+/** 编辑按钮操作：详情回显（课程无状态，不放进表单） */
 function handleUpdate(row) {
   reset()
   getCourse(row.id).then(response => {
     const detail = response.data
     form.value = {
       id: detail.id,
-      storeId: detail.storeId,
       name: detail.name,
-      type: detail.type,
+      courseType: detail.courseType,
       difficulty: detail.difficulty,
       coverUrl: detail.coverUrl,
-      intro: detail.intro,
-      durationMin: detail.durationMin,
-      sortNo: detail.sortNo
+      intro: detail.intro
     }
     open.value = true
     title.value = "修改课程"
@@ -329,7 +270,7 @@ function handleView(row) {
   })
 }
 
-/** 提交按钮：新增与修改都只提交设计约定的字段（不含 status） */
+/** 提交按钮：只提交设计约定的字段（无门店、无状态） */
 function submitForm() {
   proxy.$refs["courseRef"].validate(valid => {
     if (!valid) {
@@ -337,13 +278,10 @@ function submitForm() {
     }
     const payload = {
       name: form.value.name,
-      storeId: form.value.storeId,
-      type: form.value.type,
+      courseType: form.value.courseType,
       difficulty: form.value.difficulty,
       coverUrl: form.value.coverUrl || null,
-      intro: form.value.intro || null,
-      durationMin: form.value.durationMin === undefined || form.value.durationMin === null ? null : form.value.durationMin,
-      sortNo: form.value.sortNo === undefined || form.value.sortNo === null ? 0 : form.value.sortNo
+      intro: form.value.intro || null
     }
     const request = form.value.id ? updateCourse(form.value.id, payload) : addCourse(payload)
     request.then(() => {
@@ -354,14 +292,12 @@ function submitForm() {
   })
 }
 
-/** 启用 / 停用：停用被排班或预约引用时，后端返回业务码 409，提示语由统一错误提示弹出 */
-function handleStatusChange(row) {
-  const targetStatus = row.status === 1 ? 0 : 1
-  const actionText = targetStatus === 0 ? "停用" : "启用"
-  proxy.$modal.confirm('确认要' + actionText + '课程"' + row.name + '"吗？').then(() => {
-    return changeCourseStatus(row.id, targetStatus)
+/** 删除按钮操作：被未结束排课引用时后端返回 409，提示语由 axios 拦截器统一弹出 */
+function handleDelete(row) {
+  proxy.$modal.confirm('确认要删除课程"' + row.name + '"吗？').then(() => {
+    return delCourse(row.id)
   }).then(() => {
-    proxy.$modal.msgSuccess(actionText + "成功")
+    proxy.$modal.msgSuccess("删除成功")
     getList()
   }).catch(() => {})
 }
@@ -372,14 +308,5 @@ function cancel() {
   reset()
 }
 
-getStoreOptions()
 getList()
 </script>
-
-<style scoped>
-.form-tip {
-  margin-left: 8px;
-  color: var(--el-text-color-secondary);
-  font-size: 12px;
-}
-</style>

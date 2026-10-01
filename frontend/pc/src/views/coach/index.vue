@@ -1,20 +1,14 @@
 <template>
   <div class="app-container">
     <el-form :model="queryParams" ref="queryRef" :inline="true" v-show="showSearch">
-      <el-form-item label="教练名称" prop="name">
+      <el-form-item label="教练姓名" prop="name">
         <el-input
           v-model="queryParams.name"
-          placeholder="请输入教练名称"
+          placeholder="请输入教练姓名"
           clearable
           style="width: 200px"
           @keyup.enter="handleQuery"
         />
-      </el-form-item>
-      <el-form-item label="教练状态" prop="status">
-        <el-select v-model="queryParams.status" placeholder="请选择教练状态" clearable style="width: 160px">
-          <el-option label="启用" :value="1" />
-          <el-option label="停用" :value="0" />
-        </el-select>
       </el-form-item>
       <el-form-item>
         <el-button type="primary" icon="Search" @click="handleQuery">搜索</el-button>
@@ -43,24 +37,17 @@
           <span v-else>-</span>
         </template>
       </el-table-column>
-      <el-table-column label="教练名称" prop="name" min-width="140" show-overflow-tooltip />
-      <el-table-column label="教练头衔" prop="title" min-width="140" show-overflow-tooltip />
-      <el-table-column label="状态" align="center" width="90">
+      <el-table-column label="姓名" prop="name" min-width="140" show-overflow-tooltip />
+      <el-table-column label="联系电话" prop="phone" min-width="140" show-overflow-tooltip />
+      <el-table-column label="更新时间" align="center" prop="updateTime" width="180">
         <template #default="scope">
-          <el-tag :type="scope.row.status === 1 ? 'success' : 'info'">
-            {{ scope.row.status === 1 ? '启用' : '停用' }}
-          </el-tag>
+          <span>{{ parseTime(scope.row.updateTime) }}</span>
         </template>
       </el-table-column>
-      <el-table-column label="操作" align="center" width="230" fixed="right" class-name="small-padding fixed-width">
+      <el-table-column label="操作" align="center" width="180" fixed="right" class-name="small-padding fixed-width">
         <template #default="scope">
-          <el-button link type="primary" icon="View" @click="handleView(scope.row)">查看</el-button>
-          <el-button link type="primary" icon="Edit" @click="handleUpdate(scope.row)">编辑</el-button>
-          <el-button
-            link
-            :type="scope.row.status === 1 ? 'danger' : 'success'"
-            @click="handleStatusChange(scope.row)"
-          >{{ scope.row.status === 1 ? '停用' : '启用' }}</el-button>
+          <el-button link type="primary" icon="Edit" @click="handleUpdate(scope.row)">修改</el-button>
+          <el-button link type="primary" icon="Delete" @click="handleDelete(scope.row)">删除</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -75,20 +62,27 @@
 
     <el-dialog :title="title" v-model="open" width="680px" append-to-body>
       <el-form ref="coachRef" :model="form" :rules="rules" label-width="100px">
-        <el-form-item label="教练名称" prop="name">
-          <el-input v-model="form.name" placeholder="请输入教练名称" maxlength="64" show-word-limit />
+        <el-form-item label="姓名" prop="name">
+          <el-input v-model="form.name" placeholder="请输入教练姓名" maxlength="32" show-word-limit />
         </el-form-item>
-        <el-form-item label="教练头衔" prop="title">
-          <el-input v-model="form.title" placeholder="例如：金牌教练" maxlength="64" show-word-limit />
-        </el-form-item>
-        <el-form-item label="教练头像" prop="avatarUrl">
+        <el-form-item label="头像" prop="avatarUrl">
           <image-upload v-model="form.avatarUrl" :limit="1" />
         </el-form-item>
-        <el-form-item label="教练相册" prop="albumUrls">
-          <image-upload v-model="form.albumUrls" :limit="5" />
+        <el-form-item label="联系电话" prop="phone">
+          <el-input v-model="form.phone" placeholder="请输入联系电话" maxlength="32" show-word-limit />
         </el-form-item>
-        <el-form-item label="教练简介" prop="intro">
-          <el-input v-model="form.intro" type="textarea" :rows="5" maxlength="5000" show-word-limit placeholder="请输入教练简介" />
+        <el-form-item label="简介" prop="intro">
+          <el-input
+            v-model="form.intro"
+            type="textarea"
+            :rows="4"
+            maxlength="512"
+            show-word-limit
+            placeholder="请输入教练简介"
+          />
+        </el-form-item>
+        <el-form-item label="相册" prop="gallery">
+          <image-upload v-model="form.gallery" :limit="5" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -98,58 +92,16 @@
         </div>
       </template>
     </el-dialog>
-
-    <el-dialog title="教练详情" v-model="openView" width="720px" append-to-body>
-      <el-descriptions :column="2" border>
-        <el-descriptions-item label="教练名称">{{ viewForm.name }}</el-descriptions-item>
-        <el-descriptions-item label="教练头衔">{{ viewForm.title || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="状态">{{ viewForm.status === 1 ? '启用' : '停用' }}</el-descriptions-item>
-        <el-descriptions-item label="教练头像">
-          <el-image
-            v-if="viewForm.avatarUrl"
-            :src="viewForm.avatarUrl"
-            :preview-src-list="[viewForm.avatarUrl]"
-            preview-teleported
-            fit="cover"
-            style="width: 80px; height: 80px"
-          />
-          <span v-else>-</span>
-        </el-descriptions-item>
-        <el-descriptions-item label="教练简介" :span="2">
-          <span style="white-space: pre-wrap">{{ viewForm.intro || '-' }}</span>
-        </el-descriptions-item>
-        <el-descriptions-item label="教练相册" :span="2">
-          <div v-if="viewForm.albumUrls && viewForm.albumUrls.length" class="album-list">
-            <el-image
-              v-for="url in viewForm.albumUrls"
-              :key="url"
-              :src="url"
-              :preview-src-list="viewForm.albumUrls"
-              preview-teleported
-              fit="cover"
-              style="width: 90px; height: 90px; margin-right: 8px"
-            />
-          </div>
-          <span v-else>-</span>
-        </el-descriptions-item>
-      </el-descriptions>
-      <template #footer>
-        <div class="dialog-footer">
-          <el-button @click="openView = false">关 闭</el-button>
-        </div>
-      </template>
-    </el-dialog>
   </div>
 </template>
 
 <script setup name="Coach">
-import { listCoach, getCoach, addCoach, updateCoach, changeCoachStatus } from "@/api/coach/coach"
+import { listCoach, getCoach, addCoach, updateCoach, delCoach } from "@/api/coach/coach"
 
 const { proxy } = getCurrentInstance()
 
 const coachList = ref([])
 const open = ref(false)
-const openView = ref(false)
 const loading = ref(true)
 const showSearch = ref(true)
 const total = ref(0)
@@ -157,24 +109,24 @@ const title = ref("")
 
 const data = reactive({
   form: {},
-  viewForm: {},
   queryParams: {
     pageNum: 1,
     pageSize: 10,
-    name: undefined,
-    status: undefined
+    name: undefined
   },
   rules: {
     name: [
-      { required: true, message: "教练名称不能为空", trigger: "blur" },
-      { max: 64, message: "教练名称长度不能超过 64", trigger: "blur" }
+      { required: true, message: "教练姓名不能为空", trigger: "blur" },
+      { max: 32, message: "教练姓名长度不能超过 32", trigger: "blur" }
     ],
-    title: [{ max: 64, message: "教练头衔长度不能超过 64", trigger: "blur" }]
+    phone: [{ max: 32, message: "教练联系电话长度不能超过 32", trigger: "blur" }],
+    intro: [{ max: 512, message: "教练简介长度不能超过 512", trigger: "blur" }]
   }
 })
 
-const { form, viewForm, queryParams, rules } = toRefs(data)
+const { form, queryParams, rules } = toRefs(data)
 
+/** 查询教练列表 */
 function getList() {
   loading.value = true
   listCoach(queryParams.value).then(response => {
@@ -186,69 +138,68 @@ function getList() {
   })
 }
 
+/** 搜索按钮操作 */
 function handleQuery() {
   queryParams.value.pageNum = 1
   getList()
 }
 
+/** 重置按钮操作 */
 function resetQuery() {
   proxy.resetForm("queryRef")
   handleQuery()
 }
 
+/** 表单重置 */
 function reset() {
   form.value = {
     id: undefined,
-    intro: undefined,
     name: undefined,
-    title: undefined,
     avatarUrl: undefined,
-    albumUrls: []
+    phone: undefined,
+    intro: undefined,
+    gallery: []
   }
   proxy.resetForm("coachRef")
 }
 
+/** 新增按钮操作 */
 function handleAdd() {
   reset()
   open.value = true
   title.value = "新增教练"
 }
 
+/** 修改按钮操作 */
 function handleUpdate(row) {
   reset()
   getCoach(row.id).then(response => {
     const detail = response.data
     form.value = {
       id: detail.id,
-      intro: detail.intro,
       name: detail.name,
-      title: detail.title,
       avatarUrl: detail.avatarUrl,
-      albumUrls: detail.albumUrls || []
+      phone: detail.phone,
+      intro: detail.intro,
+      gallery: Array.isArray(detail.gallery) ? detail.gallery : []
     }
     open.value = true
     title.value = "修改教练"
   })
 }
 
-function handleView(row) {
-  getCoach(row.id).then(response => {
-    viewForm.value = response.data
-    openView.value = true
-  })
-}
-
+/** 提交按钮 */
 function submitForm() {
   proxy.$refs["coachRef"].validate(valid => {
     if (!valid) {
       return
     }
     const payload = {
-      intro: form.value.intro || null,
       name: form.value.name,
-      title: form.value.title || null,
       avatarUrl: form.value.avatarUrl || null,
-      albumUrls: normalizeAlbumUrls(form.value.albumUrls)
+      phone: form.value.phone || null,
+      intro: form.value.intro || null,
+      gallery: normalizeGallery(form.value.gallery)
     }
     const request = form.value.id ? updateCoach(form.value.id, payload) : addCoach(payload)
     request.then(() => {
@@ -259,7 +210,11 @@ function submitForm() {
   })
 }
 
-function normalizeAlbumUrls(value) {
+/**
+ * image-upload 回传的是逗号分隔字符串，详情接口返回的是数组；
+ * 统一收敛为后端要的 List<String>。
+ */
+function normalizeGallery(value) {
   if (Array.isArray(value)) {
     return value.filter(item => item)
   }
@@ -269,17 +224,17 @@ function normalizeAlbumUrls(value) {
   return []
 }
 
-function handleStatusChange(row) {
-  const targetStatus = row.status === 1 ? 0 : 1
-  const actionText = targetStatus === 0 ? "停用" : "启用"
-  proxy.$modal.confirm('确认要' + actionText + '教练"' + row.name + '"吗？').then(() => {
-    return changeCoachStatus(row.id, targetStatus)
+/** 删除按钮操作（删除被拒时由响应拦截器统一提示服务端 msg，如「该教练仍有 N 节未结束的排课，无法删除」） */
+function handleDelete(row) {
+  proxy.$modal.confirm('是否确认删除教练"' + row.name + '"？').then(() => {
+    return delCoach(row.id)
   }).then(() => {
-    proxy.$modal.msgSuccess(actionText + "成功")
     getList()
+    proxy.$modal.msgSuccess("删除成功")
   }).catch(() => {})
 }
 
+/** 取消按钮 */
 function cancel() {
   open.value = false
   reset()

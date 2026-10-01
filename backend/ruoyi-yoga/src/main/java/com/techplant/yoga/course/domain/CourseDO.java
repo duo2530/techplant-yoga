@@ -5,20 +5,23 @@ import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
 
 /**
- * 课程数据对象，与 {@code t_course} 一一对应（详细设计 §1.2.1）。
+ * 课程数据对象，与 {@code t_course} 一一对应（课程管理详细设计 §1.2.1）。
  *
- * <p>只在 mapper 与 service 之间传递，不出现在接口契约里（§2.1.6）。</p>
+ * <p>只在 mapper 与 service 之间传递，不出现在接口契约里（§3.2）。</p>
  *
  * <p><b>三点约定：</b></p>
  * <ul>
- *   <li>主键：雪花ID，由 MyBatis-Plus 的 {@link IdType#ASSIGN_ID} 在应用侧生成，插入时不赋值（§1.4）；</li>
- *   <li>逻辑删除：{@link TableLogic} 标注 {@code deleted}，框架自动给查询追加 {@code deleted = 0}；</li>
- *   <li>审计字段：由 {@code MetaObjectHandler} 自动填充（§3.1.4）。</li>
+ *   <li>主键：雪花ID，由 MyBatis-Plus 的 {@link IdType#ASSIGN_ID} 在应用侧生成，插入时不赋值；</li>
+ *   <li><b>物理删除</b>：本表没有 {@code deleted} 字段，<b>不加</b> {@code @TableLogic}
+ *       （详细设计总览 §2、BR-课程-008）；</li>
+ *   <li>审计字段：由 {@code AuditMetaObjectHandler} 自动填充（§1.1.1）。</li>
  * </ul>
+ *
+ * <p><b>本表刻意不建的字段</b>（§1.2.1）：{@code store_id}（课程是平台级，不归属门店）、
+ * {@code status}（课程无状态，下架靠删除）、{@code sort_no}（一期不设展示排序）、{@code deleted}。</p>
  */
 @TableName("t_course")
 public class CourseDO
@@ -27,36 +30,20 @@ public class CourseDO
     @TableId(value = "id", type = IdType.ASSIGN_ID)
     private Long id;
 
-    /** 所属门店ID */
-    private Long storeId;
-
-    /** 课程名称 */
+    /** 课程名称（全平台唯一） */
     private String name;
 
-    /** 课程类型：1团课 2精品课 3私教课 4特色课 */
-    private Integer type;
+    /** 课种：1团课 2精品课 3私教课 4特色课（列名 course_type） */
+    private Integer courseType;
+
+    /** 课程封面URL（单图，可空） */
+    private String coverUrl;
+
+    /** 课程介绍（纯文本，可空） */
+    private String intro;
 
     /** 课程难度：1~5 星 */
     private Integer difficulty;
-
-    /** 课程封面图URL */
-    private String coverUrl;
-
-    /** 课程介绍 */
-    private String intro;
-
-    /** 单节时长（分钟） */
-    private Integer durationMin;
-
-    /** 展示排序，值越小越靠前 */
-    private Integer sortNo;
-
-    /** 课程状态：1启用 0停用 */
-    private Integer status;
-
-    /** 逻辑删除：0正常 1已删除 */
-    @TableLogic
-    private Integer deleted;
 
     /** 创建人ID */
     @TableField(fill = FieldFill.INSERT)
@@ -84,16 +71,6 @@ public class CourseDO
         this.id = id;
     }
 
-    public Long getStoreId()
-    {
-        return storeId;
-    }
-
-    public void setStoreId(Long storeId)
-    {
-        this.storeId = storeId;
-    }
-
     public String getName()
     {
         return name;
@@ -104,24 +81,14 @@ public class CourseDO
         this.name = name;
     }
 
-    public Integer getType()
+    public Integer getCourseType()
     {
-        return type;
+        return courseType;
     }
 
-    public void setType(Integer type)
+    public void setCourseType(Integer courseType)
     {
-        this.type = type;
-    }
-
-    public Integer getDifficulty()
-    {
-        return difficulty;
-    }
-
-    public void setDifficulty(Integer difficulty)
-    {
-        this.difficulty = difficulty;
+        this.courseType = courseType;
     }
 
     public String getCoverUrl()
@@ -144,44 +111,14 @@ public class CourseDO
         this.intro = intro;
     }
 
-    public Integer getDurationMin()
+    public Integer getDifficulty()
     {
-        return durationMin;
+        return difficulty;
     }
 
-    public void setDurationMin(Integer durationMin)
+    public void setDifficulty(Integer difficulty)
     {
-        this.durationMin = durationMin;
-    }
-
-    public Integer getSortNo()
-    {
-        return sortNo;
-    }
-
-    public void setSortNo(Integer sortNo)
-    {
-        this.sortNo = sortNo;
-    }
-
-    public Integer getStatus()
-    {
-        return status;
-    }
-
-    public void setStatus(Integer status)
-    {
-        this.status = status;
-    }
-
-    public Integer getDeleted()
-    {
-        return deleted;
-    }
-
-    public void setDeleted(Integer deleted)
-    {
-        this.deleted = deleted;
+        this.difficulty = difficulty;
     }
 
     public Long getCreateBy()

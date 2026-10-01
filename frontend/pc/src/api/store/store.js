@@ -17,7 +17,7 @@ export function getStore(storeId) {
   })
 }
 
-// 新增门店
+// 新增门店（一期门店没有状态字段，没有 updateStoreStatus）
 export function addStore(data) {
   return request({
     url: '/admin/stores',
@@ -26,7 +26,7 @@ export function addStore(data) {
   })
 }
 
-// 修改门店
+// 修改门店（全量编辑）
 export function updateStore(storeId, data) {
   return request({
     url: '/admin/stores/' + storeId,
@@ -35,11 +35,10 @@ export function updateStore(storeId, data) {
   })
 }
 
-// 设置门店状态
-export function updateStoreStatus(storeId, status) {
+// 删除门店（物理删除；名下有教室或未结束排课会被 409 拒绝）
+export function delStore(storeId) {
   return request({
-    url: '/admin/stores/' + storeId + '/status',
-    method: 'put',
-    params: { status: status }
+    url: '/admin/stores/' + storeId,
+    method: 'delete'
   })
 }

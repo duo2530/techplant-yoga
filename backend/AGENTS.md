@@ -1,8 +1,8 @@
 # AGENTS.md — backend（若依后端）
 
 > 作用域：`backend/` 及其所有子目录。
-> **业务口径的依据是 `docs/需求文档/业务规则.md`（业务规则）与 `docs/产品分析/`（对标真实 App 的用户端截图、页面与跳转记录）**；功能结构与用例见 `docs/需求分析/`。
-> ⚠️ `docs/详细设计/`、`docs/概要设计/` 描述的是**旧设计**（含会员、会员卡、预约、数据范围等已不在本期范围的能力），**不作为业务口径依据**；需要时只作历史参考。
+> **一期（瑜伽普拉提）的唯一业务口径依据是 `docs/详细设计/` 下的 7 份详细设计**（总览 / 门店 / 教室 / 教练 / 课程 / 排课 / 用户端接口），需求背景见 `docs/需求文档/业务规则.md`（`BR-*` 编号）与 `docs/产品分析/`；功能结构与用例见 `docs/需求分析/`。
+> ⚠️ `docs/概要设计/` 是 v2.0 重置版、可用；**旧设计（会员／会员卡／预约／私教排班／数据范围那一套）已整体作废**，只在归档分支 `archive/pre-reset` 与 git 历史中可查。
 
 ## 1. 这是什么
 
@@ -36,7 +36,7 @@
 | `ruoyi-common` | 工具类、注解、常量、`AjaxResult`/`R`/`TableDataInfo`/`BaseController`、`BaseEntity` |
 | `ruoyi-quartz` | 定时任务（`SysJob*`，任务目标写法 `ryTask.ryParams('ry')`） |
 | `ruoyi-generator` | 代码生成器（表结构 → 后端 CRUD + vue 页面） |
-| **`ruoyi-yoga`** | **业务模块（本项目自己的代码都在这）**：包名 `com.techplant.yoga`（**不是 `com.ruoyi`**），ORM 用 MyBatis-Plus。当前内容：`course` / `coach` / `store` / `schedule` / `booking` 五个业务模块（每个含 controller / service / service.impl / dao / mapper / domain / dto / vo / query / convert）+ `common` 横切基础设施（`config` / `mybatis` / `log` / `response` / `util`）。已在父 `pom.xml` 的 `<modules>` 与 `ruoyi-admin/pom.xml` 中注册 |
+| **`ruoyi-yoga`** | **业务模块（本项目自己的代码都在这）**：包名 `com.techplant.yoga`（**不是 `com.ruoyi`**），ORM 用 MyBatis-Plus。一期内容：`store` / `classroom` / `coach` / `course` / `schedule` 五个业务模块（每个含 controller / service / service.impl / dao / mapper / domain / dto / vo / query / convert，部分模块含 enums）+ `common` 横切基础设施（`config` / `mybatis` / `log` / `response` / `util`）。另有 `booking` 模块——**一期不启用、保留不删**（`yoga.sql` 不建 `t_booking`、不建预约菜单），它内部仍有旧设计的 `@TableLogic`，**不要照它抄**。已在父 `pom.xml` 的 `<modules>` 与 `ruoyi-admin/pom.xml` 中注册。 |
 
 ## 4. 常用命令
 
@@ -52,7 +52,7 @@ java -jar backend/ruoyi-admin/target/ruoyi-admin.jar
 - Windows 下也有 `backend/bin/*.bat`（clean/package/run）和 `backend/ry.bat`；Linux 用 `backend/ry.sh {start|stop|restart|status}`。**这些 .bat 是 GBK 编码，别用 UTF-8 工具直接改写。**
 - **JDK 必须是 8**：本机 `JAVA_HOME=D:\Develop\Java\jdk1.8.0_202`，命令行/IDEA 都用这个 SDK。
 - 测试：`ruoyi-yoga/src/test` 已有用例（JUnit 5 + Mockito + MockMvc，另有 H2 装配自检）。`ruoyi-yoga/pom.xml` 显式锁定 `maven-surefire-plugin` 2.22.2 —— 本机 Maven 3.3.9 默认绑的 2.12.4 不认识 JUnit 5，去掉就会**静默跑不到用例**。`ruoyi-*` 框架模块仍没有 `src/test`。
-- 启动前置条件：**MySQL 和 Redis 都必须可用**，且 `backend/sql/ry_20260417.sql`、`backend/sql/quartz.sql` 两个脚本都已导入目标库。这两个 SQL 里没有 `CREATE DATABASE`/`use`，必须先自己建库（当前工作区用的是默认库名 `ry-vue`，带横线，命令行/SQL 里记得转义）再导入。
+- 启动前置条件：**MySQL 和 Redis 都必须可用**，且 `backend/sql/ry_20260417.sql`、`backend/sql/quartz.sql`、`backend/sql/yoga.sql` 三个脚本都已导入目标库。前两个 SQL 里没有 `CREATE DATABASE`/`use`，必须先自己建库（当前工作区的库名是 `yoga`，见 `application-druid.yml`）再导入；`yoga.sql` 在已有基础库上执行，建 5 张业务表 + `store_region` 字典 16 条 + 业务菜单 2000~2005。
 - 业务模块的表的脚本：`backend/sql/yoga.sql`
 - 默认端口 8080，默认账号 `admin / admin123`。
 
@@ -61,16 +61,17 @@ java -jar backend/ruoyi-admin/target/ruoyi-admin.jar
 | 文件 | 内容 |
 |---|---|
 | `ruoyi-admin/src/main/resources/application.yml` | 应用名、端口、`spring.profiles.active: druid`、**Redis 连接**（当前已填云实例 host/port/password，未提交）、token 密钥与有效期、MyBatis/PageHelper、swagger、XSS/防盗链 |
-| `ruoyi-admin/src/main/resources/application-druid.yml` | **数据源在这里，不在 application.yml**：`master.url/username/password`（当前已填云实例，库名仍为默认 `ry-vue`）、Druid 池参数、监控台账号、`/druid/*` 白名单 |
+| `ruoyi-admin/src/main/resources/application-druid.yml` | **数据源在这里，不在 application.yml**：`master.url/username/password`（当前指向本机 `localhost:3306/yoga`，字符集 utf8、时区 GMT+8）、Druid 池参数、监控台账号、`/druid/*` 白名单 |
 | `ruoyi-admin/src/main/resources/logback.xml` | 日志级别与输出路径（上游默认 `/home/ruoyi/logs`） |
 | `ruoyi-admin/src/main/resources/mybatis/mybatis-config.xml` | MyBatis 全局设置 |
 
 ## 6. 项目专属约束（**最重要**）
 
-以下建模口径（包名 / 表名 / 主键 / 逻辑删除 / 审计字段）**以本节为准**（原先挂在 `docs/详细设计/` 各模块的 §1.1.1 上）：
+以下建模口径（包名 / 表名 / 主键 / 删除方式 / 审计字段）**以本节为准**（原先挂在 `docs/详细设计/` 各模块的 §1.1.1 上）：
 
-- 业务包名 `com.techplant.yoga.<模块>`；表名 `t_` + 业务名（如 `t_course`）；主键 `bigint` 雪花 ID，不用数据库自增；逻辑删除字段 `deleted`（0 正常/1 删除）；审计字段 `create_by/create_time/update_by/update_time`。
-- ORM 用 **MyBatis-Plus**（`IdType.ASSIGN_ID`、`@TableLogic`、`MetaObjectHandler`）—— **已经引入**（父 pom `mybatis-plus.version=3.5.5`），装配方式与易踩的坑见 §8.9。
+- 业务包名 `com.techplant.yoga.<模块>`；表名 `t_` + 业务名（如 `t_course`）；主键 `bigint` 雪花 ID，不用数据库自增；审计字段 `create_by/create_time/update_by/update_time`。
+- **删除一律【物理删除】（2026-10-01 一期口径，见 `docs/详细设计/详细设计总览.md` §5 决策 1）**：一期 5 张业务表（`t_store` / `t_classroom` / `t_coach` / `t_course` / `t_schedule`）**不建 `deleted` 字段、不使用 `@TableLogic`**，删除就是对行执行 `DELETE`。若依 `sys_*` 表沿用其原有做法，不受本条影响。
+- ORM 用 **MyBatis-Plus**（`IdType.ASSIGN_ID`、`MetaObjectHandler`）—— **已经引入**（父 pom `mybatis-plus.version=3.5.5`），装配方式与易踩的坑见 §8.9。
 - 主键返回前端时**必须序列化成字符串**（Long → String），因为小程序 `Number` 只有 53 位精度（已有统一实现，见 §8.3）。
 
 因此：
@@ -105,7 +106,6 @@ java -jar backend/ruoyi-admin/target/ruoyi-admin.jar
 ## 8. 全局体系（横切能力）—— **写业务代码前先看这一节**
 
 > 这一节回答「轮子在哪、口径是什么、不要做什么」。**本节列的横切能力（统一响应、统一异常、ID 序列化、审计填充、链路标识、事务与跨模块调用、分页、MyBatis-Plus 装配）以本节内容为准**；**业务规则以 `docs/需求文档/业务规则.md` 为准**。
-> ⚠️ 本节提到的 `docs/详细设计/*`（课程 / 门店 / 教练 / 教室 / 排班 / 会员 / 会员卡 / 预约）属于**旧设计**，**不作为业务口径依据**；`docs/详细设计/详细设计记录.md` 的 **R11（2026-09-22）** 只作响应体系与异常体系的历史留痕。
 > 判断标准：**凡是「所有接口都该这么做」的事，这里都已经有统一实现，不要另起一套。**
 
 ### 8.1 统一响应（对外契约）
@@ -142,16 +142,16 @@ java -jar backend/ruoyi-admin/target/ruoyi-admin.jar
 | 401 | 未登录 / 登录态失效 | 框架返回 |
 | 403 | 无权限 | 一期不做 RBAC，暂不返回 |
 | 404 | 资源不存在 | 「课程不存在或已被删除」 |
-| 409 | 状态冲突 | 「该课程下仍有 N 个未完成排班、M 条未结束预约，无法停用」 |
+| 409 | 状态冲突 | 「该门店仍有 N 节未结束的排课，无法删除」（数量拼在 msg 里） |
 | 500 | 参数校验失败 / 系统异常 | `@Valid` 校验失败也走这里 |
 
 三条容易写错的：
 
 1. **409 的结构化明细放不进 `data`**：`AjaxResult` 只有 `code/msg/data`，而框架处理器不会附带 `data`，所以阻塞明细（几个排班、几条预约）现在是**拼进 `msg`** 的。这是 R11 的已知遗留，要结构化明细就得改框架处理器（会同时影响 `sys_*` 接口）。
 2. **`@Valid` 校验失败返回 500**，与直觉里的 400 不一样；要改成 400 同样得动框架处理器 —— **不要顺手改**。
-3. **跨模块调用失败不许降级放行**：引用检查（排班/预约统计）抛异常时，停用操作必须跟着失败（fail-closed），否则统计服务一抖动课程就会被误停用。范例见 `CourseServiceImpl#countUnfinishedSchedules`。
+3. **跨模块调用失败不许降级放行**：引用检查（排课统计）抛异常时，删除操作必须跟着失败（fail-closed），否则统计服务一抖动主数据就会被误删。范例见 `StoreServiceImpl#delete`（四分支门禁），以及 `ScheduleServiceImpl` 的四个 `countActiveByXxx`。
 
-范例：`ruoyi-yoga/.../course/service/impl/CourseServiceImpl.java`（404 / 409 的抛法、fail-closed 的写法）、以及 `src/test/.../CourseControllerTest.java`（挂真实 `GlobalExceptionHandler` 验证转换链路）。
+范例：`ruoyi-yoga/.../store/service/impl/StoreServiceImpl.java`（404 / 409 的抛法、门禁 fail-closed 的写法）、`ruoyi-yoga/.../course/service/impl/CourseServiceImpl.java`、以及 `src/test/.../course/controller/CourseControllerTest.java`（挂真实 `GlobalExceptionHandler` 验证转换链路）。
 
 ### 8.3 ID 序列化：64 位整数一律返回字符串
 
@@ -168,7 +168,7 @@ java -jar backend/ruoyi-admin/target/ruoyi-admin.jar
 |---|---|---|
 | 审计字段 | `com.techplant.yoga.common.mybatis.AuditMetaObjectHandler`（MyBatis-Plus `MetaObjectHandler`） | DO 字段上标 `@TableField(fill = FieldFill.INSERT)`（`createBy/createTime`）/ `INSERT_UPDATE`（`updateBy/updateTime`），**不要手写 set**；拿不到登录人时只填时间不填人，不让写操作失败 |
 | 取当前登录人 | `com.techplant.yoga.common.util.CurrentUserUtils` | `getUserIdOrNull()` / `getUserIdText()`；**直接用 `SecurityUtils.getUserId()` 未登录会抛异常**，所以才包了这一层 |
-| 逻辑删除 | DO 上的 `@TableLogic` | 标注 `deleted` 后，MP 自动给查询追加 `deleted = 0`、删除变 `UPDATE`；**不要手写 `deleted = 0` 条件** |
+| 逻辑删除 | ~~DO 上的 `@TableLogic`~~ | **一期业务表不使用**：5 张业务表一律物理删除（§6）。`@TableLogic` 仅存在于一期不启用的 `booking` 模块，属旧设计遗留 |
 
 ### 8.5 链路标识
 
@@ -184,14 +184,16 @@ java -jar backend/ruoyi-admin/target/ruoyi-admin.jar
 ### 8.7 事务与跨模块调用
 
 - 写操作在 **service 层**加 `@Transactional(rollbackFor = Exception.class)`（三个写接口都是这么写的）；controller 不加事务。
-- **不跨模块读表**：课程模块不直接查 `t_schedule` / `t_booking`，只依赖对方模块暴露的 service 接口（`ScheduleQueryService` / `BookingQueryService`，本版为「接口先行」+ 临时占位实现）。直接读表会把两个模块的库结构绑死。
+- **不跨模块读表**：排课模块需要门店/教室/教练/课程的信息时，只依赖对方模块暴露的 **Service**（`StoreService` / `ClassroomService` / `CoachService` / `CourseService`），**不直接查对方的表、也不另立 QueryService**（`docs/详细设计/详细设计总览.md` §6）。反向同理：四个主数据的删除门禁只调 `ScheduleService` 的 `countActiveByXxx(...)`。
+  > 历史：旧的 `ScheduleQueryService` / `BookingQueryService`「接口先行 + 占位实现」写法**已废弃并删除**，别再照抄。
+- **构造器注入环要用 `@Lazy` 打断**：`Store ↔ Schedule`、`Classroom ↔ Schedule`、`Schedule → 四个主数据` 之间形成闭环，构造器注入无法自解，**跨模块注入的参数上必须加 `@Lazy`**（`org.springframework.context.annotation.Lazy`），否则启动即 `BeanCurrentlyInCreationException`。
 - **fail-closed**：跨模块引用检查失败 → 当前操作失败，不降级放行（见 §8.2 第 3 条）。
 
 ### 8.8 分页
 
 - 业务模块的路径：`Query` 对象（`pageNum`/`pageSize` + 默认值与上限校验，如 `CourseQuery.MAX_PAGE_SIZE = 100`）→ service 用 MP 的 `IPage` 查询 → 转成 `PageResult` → controller 装配 `TableDataInfo`。
 - **不要用框架那套 `BaseController.startPage()` + PageHelper** —— 那是 `sys_*` 的写法，两套分页混用会互相干扰。
-- 分页必须有**稳定排序**，否则翻页会重复/漏项（课程列表是 `sort_no ASC, id DESC`）。
+- 分页必须有**稳定排序**，否则翻页会重复/漏项。一期各列表的固定排序：门店 `store_type ASC, id DESC`、教室 `store_id ASC, name ASC, id DESC`、教练 `id DESC`、课程 `course_type ASC, id DESC`、排课 `start_time ASC, id ASC`（用户端 `/api/stores` 是 `region_code ASC, name ASC, id DESC`）。
 - 兜底：MP 分页插件设了 `maxLimit = 100`。
 
 ### 8.9 MyBatis-Plus 的装配方式
@@ -204,7 +206,17 @@ java -jar backend/ruoyi-admin/target/ruoyi-admin.jar
 4. 父 `pom.xml` 把 **`jsqlparser` 锁在 4.6**：PageHelper 5.3.3 需要 `SelectBody`（4.7 起被删），MP 3.5.5 是最后一个用 4.6 的版本。**不要顺手升级 MyBatis-Plus 或 jsqlparser**，升级会让 PageHelper 直接启动报错。
 5. `com.techplant.yoga.common.config.MybatisPlusConfig` 只负责 `@MapperScan("com.techplant.yoga.**.mapper")` 与提供分页插件 Bean。
 
-装配类问题**读代码看不出来**，验证方式是跑 `MyBatisWiringTest`（H2 内存库，验证雪花 ID / 逻辑删除 / 审计填充真的生效）。
+装配类问题**读代码看不出来**，验证方式是跑 `MyBatisWiringTest`（H2 内存库，验证雪花 ID / 物理删除 / 审计填充真的生效）。
+
+> ⚠️ **写「只加载业务类的切片测试」时注意（2026-10-01 踩过）**：如果 `@ContextConfiguration` 里只挂
+> `MyBatisConfig` + `MybatisPlusConfig` + `AuditMetaObjectHandler` 这种**切片**组合，映射器拿不到
+> MyBatis-Plus 注入的 `BaseMapper` CRUD 语句，报
+> `BindingException: Invalid bound statement (not found): ...CourseMapper.insert`。原因是切片里缺少真实应用
+> 由 `MybatisPlusAutoConfiguration` 提供的 MP 装配上下文（**生产全量启动不受影响**）。
+> **正确写法**：让测试自己声明 `MybatisSqlSessionFactoryBean`（显式
+> `setConfiguration(new MybatisConfiguration())`，打开 `mapUnderscoreToCamelCase`，挂 `MybatisPlusInterceptor`
+> 与 `GlobalConfig.setMetaObjectHandler(...)`），并在 `TestConfig` 上写 `@MapperScan("<模块>.mapper")`。
+> 现成范例：`MyBatisWiringTest` 与 `ScheduleDaoTest`（都是 H2 真跑 SQL）。
 
 ### 8.10 其他框架能力（按需取用，别重复实现）
 

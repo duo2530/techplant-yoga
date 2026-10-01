@@ -7,6 +7,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -31,25 +32,23 @@ import com.ruoyi.framework.web.exception.GlobalExceptionHandler;
 import com.techplant.yoga.common.config.JacksonConfig;
 import com.techplant.yoga.common.response.PageResult;
 import com.techplant.yoga.course.service.CourseService;
-import com.techplant.yoga.course.vo.CourseCreatedVO;
+import com.techplant.yoga.course.vo.CourseDetailVO;
 import com.techplant.yoga.course.vo.CourseListItemVO;
 
 /**
- * 课程接口层的单元测试（详细设计 §5.1.1，用例 5.1.1.15 ~ 5.1.1.21）。
+ * 课程接口层的单元测试（课程管理详细设计 §2.2）。
  *
  * <p>业务服务用模拟对象隔离；用 MockMvc 走真实的参数绑定、校验与异常转换链路。
- * <b>响应口径（2026-09-22 决策）：</b>统一若依体系 —— 单条操作用 {@code AjaxResult}
- * （{@code {code, msg, data}}，成功 {@code code = 200}），列表用 {@code TableDataInfo}
- * （{@code {total, rows, code, msg}}）；失败由框架自带的 {@link GlobalExceptionHandler} 转换，
- * HTTP 状态码固定 200，业务结果看 {@code code}。</p>
+ * 序列化用 {@link JacksonConfig} 的 ObjectMapper，保证「课程编号返回字符串」这条契约被测到。</p>
  *
- * <p>序列化用 {@link JacksonConfig} 的 ObjectMapper，保证「课程编号返回字符串」这条契约被测到。</p>
+ * <p><b>5 个接口：</b>列表 / 详情 / 新增（<b>不返回新 ID</b>）/ 修改（返回详情）/ 删除（物理，带门禁）。
+ * <b>没有状态接口</b>，也没有 {@code PUT /{courseId}/status}。</p>
  */
 @DisplayName("CourseController 单元测试")
 class CourseControllerTest
 {
     /** 接口示例里的课程编号 */
-    private static final String COURSE_ID = "1856739201475235840";
+    private static final String COURSE_ID = "1856739201475235801";
 
     private CourseService courseService;
 
@@ -71,142 +70,349 @@ class CourseControllerTest
     }
 
     @Test
-    @DisplayName("5.1.1.15 停用课程接口：参数合法 → 返回成功")
-    void updateStatus_shouldReturnSuccess() throws Exception
-    {
-        mockMvc.perform(put("/admin/courses/{courseId}/status", COURSE_ID)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"status\":0}"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(200))
-                .andExpect(jsonPath("$.msg").value("操作成功"));
-
-        // 业务服务收到的是数值型课程编号
-        verify(courseService).updateStatus(eq(1856739201475235840L), eq(0));
-    }
-
-    @Test
-    @DisplayName("5.1.1.16 停用课程接口：课程编号不是数字 → 返回参数错误")
-    void updateStatus_withInvalidId_shouldReturnError() throws Exception
-    {
-        mockMvc.perform(put("/admin/courses/{courseId}/status", "abc")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"status\":0}"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(500))
-                .andExpect(jsonPath("$.msg").value(Matchers.containsString("courseId")));
-
-        verifyNoInteractions(courseService);
-    }
-
-    @Test
-    @DisplayName("5.1.1.17 停用课程接口：状态取值非法 → 返回参数错误")
-    void updateStatus_withInvalidStatus_shouldReturnError() throws Exception
-    {
-        mockMvc.perform(put("/admin/courses/{courseId}/status", COURSE_ID)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"status\":2}"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(500))
-                .andExpect(jsonPath("$.msg").value(Matchers.containsString("课程状态取值")));
-
-        verifyNoInteractions(courseService);
-    }
-
-    @Test
-    @DisplayName("5.1.1.18 新增课程接口：必填项缺失 → 返回参数错误")
-    void createCourse_withoutName_shouldReturnError() throws Exception
-    {
-        mockMvc.perform(post("/admin/courses")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"storeId\":1,\"type\":1,\"difficulty\":2}"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(500))
-                .andExpect(jsonPath("$.msg").value("课程名称不能为空"));
-
-        verifyNoInteractions(courseService);
-    }
-
-    @Test
-    @DisplayName("5.1.1.19 新增课程接口：难度超出 1~5 星 → 返回参数错误")
-    void createCourse_withInvalidDifficulty_shouldReturnError() throws Exception
-    {
-        mockMvc.perform(post("/admin/courses")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"storeId\":1,\"name\":\"哈他瑜伽\",\"type\":1,\"difficulty\":6}"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(500))
-                .andExpect(jsonPath("$.msg").value("课程难度取值为 1~5"));
-
-        verifyNoInteractions(courseService);
-    }
-
-    @Test
-    @DisplayName("5.1.1.20 接口返回中的课程编号是字符串")
-    void createCourse_shouldReturnIdAsString() throws Exception
-    {
-        when(courseService.create(any())).thenReturn(new CourseCreatedVO(1856739201475235840L));
-
-        mockMvc.perform(post("/admin/courses")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"storeId\":1,\"name\":\"哈他瑜伽\",\"type\":1,\"difficulty\":2,\"sortNo\":10}"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(200))
-                // 带引号的字符串，不是数字（雪花ID 超出 JS 53 位精度）
-                .andExpect(jsonPath("$.data.id").value("1856739201475235840"));
-    }
-
-    @Test
-    @DisplayName("5.1.1.21 业务异常被框架统一转换成响应（业务码 409 + 阻塞明细在提示语里）")
-    void updateStatus_withReference_shouldReturnConflictCode() throws Exception
-    {
-        doThrow(new ServiceException("该课程下仍有 3 个未完成排班、5 条未结束预约，无法停用", 409))
-                .when(courseService).updateStatus(eq(1856739201475235840L), eq(0));
-
-        mockMvc.perform(put("/admin/courses/{courseId}/status", COURSE_ID)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"status\":0}"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(409))
-                .andExpect(jsonPath("$.msg").value(Matchers.containsString("3 个未完成排班")))
-                .andExpect(jsonPath("$.msg").value(Matchers.containsString("5 条未结束预约")));
-    }
-
-    @Test
-    @DisplayName("补充：列表接口返回若依标准的 TableDataInfo（total / rows / code / msg）")
-    void list_shouldReturnTableDataInfo() throws Exception
+    @DisplayName("列表：返回若依标准 TableDataInfo，课种成对返回且不含 intro")
+    void list_shouldReturnTableDataInfoWithTypePair()
     {
         List<CourseListItemVO> rows = new ArrayList<CourseListItemVO>();
         CourseListItemVO vo = new CourseListItemVO();
-        vo.setId(1856739201475235840L);
+        vo.setId(1856739201475235801L);
         vo.setName("哈他瑜伽");
-        vo.setType(1);
+        vo.setCourseType(1);
+        vo.setCourseTypeName("团课");
         vo.setDifficulty(2);
-        vo.setStatus(1);
-        vo.setSortNo(10);
         vo.setCreateTime(LocalDateTime.of(2026, 9, 20, 10, 12, 33));
         rows.add(vo);
         when(courseService.page(any())).thenReturn(PageResult.of(2L, 1, 10, rows));
 
-        mockMvc.perform(get("/admin/courses").param("pageNum", "1").param("pageSize", "10"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(200))
-                .andExpect(jsonPath("$.msg").value("查询成功"))
-                .andExpect(jsonPath("$.total").value(2))
-                .andExpect(jsonPath("$.rows[0].id").value("1856739201475235840"))
-                .andExpect(jsonPath("$.rows[0].name").value("哈他瑜伽"))
-                .andExpect(jsonPath("$.rows[0].intro").doesNotExist());
+        try
+        {
+            mockMvc.perform(get("/admin/courses").param("pageNum", "1").param("pageSize", "10"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.code").value(200))
+                    .andExpect(jsonPath("$.msg").value("查询成功"))
+                    .andExpect(jsonPath("$.total").value(2))
+                    .andExpect(jsonPath("$.rows[0].id").value(COURSE_ID))
+                    .andExpect(jsonPath("$.rows[0].name").value("哈他瑜伽"))
+                    .andExpect(jsonPath("$.rows[0].courseType").value(1))
+                    .andExpect(jsonPath("$.rows[0].courseTypeName").value("团课"))
+                    .andExpect(jsonPath("$.rows[0].intro").doesNotExist());
+        }
+        catch (Exception e)
+        {
+            throw new AssertionError(e);
+        }
     }
 
     @Test
-    @DisplayName("补充：课程不存在时详情接口返回业务码 404")
-    void detail_notExists_shouldReturn404Code() throws Exception
+    @DisplayName("列表：课种越界 → 500「课程类型取值为 1~4」（枚举校验经 @Valid 生效）")
+    void list_withInvalidCourseType_shouldReturnError()
+    {
+        try
+        {
+            mockMvc.perform(get("/admin/courses").param("courseType", "9"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.code").value(500))
+                    .andExpect(jsonPath("$.msg").value("课程类型取值为 1~4"));
+        }
+        catch (Exception e)
+        {
+            throw new AssertionError(e);
+        }
+        verifyNoInteractions(courseService);
+    }
+
+    @Test
+    @DisplayName("详情：返回 CourseDetailVO（含 intro，课种成对）")
+    void detail_shouldReturnDetail()
+    {
+        CourseDetailVO detail = new CourseDetailVO();
+        detail.setId(1856739201475235801L);
+        detail.setName("哈他瑜伽");
+        detail.setCourseType(1);
+        detail.setCourseTypeName("团课");
+        detail.setDifficulty(2);
+        detail.setIntro("以体式与呼吸配合为主的经典课程");
+        when(courseService.getById(1856739201475235801L)).thenReturn(detail);
+
+        try
+        {
+            mockMvc.perform(get("/admin/courses/{courseId}", COURSE_ID))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.code").value(200))
+                    .andExpect(jsonPath("$.data.id").value(COURSE_ID))
+                    .andExpect(jsonPath("$.data.courseType").value(1))
+                    .andExpect(jsonPath("$.data.courseTypeName").value("团课"))
+                    .andExpect(jsonPath("$.data.intro").value("以体式与呼吸配合为主的经典课程"));
+        }
+        catch (Exception e)
+        {
+            throw new AssertionError(e);
+        }
+    }
+
+    @Test
+    @DisplayName("详情：课程不存在 → 业务码 404「课程不存在或已被删除」")
+    void detail_notExists_shouldReturn404Code()
     {
         doThrow(new ServiceException("课程不存在或已被删除", 404)).when(courseService).getById(1L);
 
-        mockMvc.perform(get("/admin/courses/{courseId}", "1"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(404))
-                .andExpect(jsonPath("$.msg").value("课程不存在或已被删除"));
+        try
+        {
+            mockMvc.perform(get("/admin/courses/{courseId}", "1"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.code").value(404))
+                    .andExpect(jsonPath("$.msg").value("课程不存在或已被删除"));
+        }
+        catch (Exception e)
+        {
+            throw new AssertionError(e);
+        }
+    }
+
+    @Test
+    @DisplayName("新增：成功只返回 code/msg，不返回新 ID")
+    void create_shouldReturnSuccessWithoutId()
+    {
+        try
+        {
+            mockMvc.perform(post("/admin/courses")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"name\":\"哈他瑜伽\",\"courseType\":1,\"difficulty\":2,"
+                                    + "\"coverUrl\":\"https://cdn.example.com/course/hata.jpg\",\"intro\":\"经典课程\"}"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.code").value(200))
+                    .andExpect(jsonPath("$.msg").value("操作成功"))
+                    .andExpect(jsonPath("$.data").doesNotExist());
+        }
+        catch (Exception e)
+        {
+            throw new AssertionError(e);
+        }
+        verify(courseService).create(any());
+    }
+
+    @Test
+    @DisplayName("新增：名称缺失 → 500「课程名称不能为空」")
+    void create_withoutName_shouldReturnError()
+    {
+        try
+        {
+            mockMvc.perform(post("/admin/courses")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"courseType\":1,\"difficulty\":2}"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.code").value(500))
+                    .andExpect(jsonPath("$.msg").value("课程名称不能为空"));
+        }
+        catch (Exception e)
+        {
+            throw new AssertionError(e);
+        }
+        verifyNoInteractions(courseService);
+    }
+
+    @Test
+    @DisplayName("新增：课种不在 1~4 → 500「课程类型取值为 1~4」")
+    void create_withInvalidCourseType_shouldReturnError()
+    {
+        try
+        {
+            mockMvc.perform(post("/admin/courses")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"name\":\"哈他瑜伽\",\"courseType\":5,\"difficulty\":2}"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.code").value(500))
+                    .andExpect(jsonPath("$.msg").value("课程类型取值为 1~4"));
+        }
+        catch (Exception e)
+        {
+            throw new AssertionError(e);
+        }
+        verifyNoInteractions(courseService);
+    }
+
+    @Test
+    @DisplayName("新增：难度超出 1~5 星 → 500「课程难度取值为 1~5」")
+    void create_withInvalidDifficulty_shouldReturnError()
+    {
+        try
+        {
+            mockMvc.perform(post("/admin/courses")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"name\":\"哈他瑜伽\",\"courseType\":1,\"difficulty\":6}"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.code").value(500))
+                    .andExpect(jsonPath("$.msg").value("课程难度取值为 1~5"));
+        }
+        catch (Exception e)
+        {
+            throw new AssertionError(e);
+        }
+        verifyNoInteractions(courseService);
+    }
+
+    @Test
+    @DisplayName("新增：课程名称已存在 → 409「课程名称已存在」")
+    void create_withDuplicateName_shouldReturn409()
+    {
+        doThrow(new ServiceException("课程名称已存在", 409)).when(courseService).create(any());
+
+        try
+        {
+            mockMvc.perform(post("/admin/courses")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"name\":\"哈他瑜伽\",\"courseType\":1,\"difficulty\":2}"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.code").value(409))
+                    .andExpect(jsonPath("$.msg").value("课程名称已存在"));
+        }
+        catch (Exception e)
+        {
+            throw new AssertionError(e);
+        }
+    }
+
+    @Test
+    @DisplayName("修改：返回更新后的 CourseDetailVO（课种成对）")
+    void update_shouldReturnUpdatedDetail()
+    {
+        CourseDetailVO detail = new CourseDetailVO();
+        detail.setId(1856739201475235801L);
+        detail.setName("哈他瑜伽（初级）");
+        detail.setCourseType(2);
+        detail.setCourseTypeName("精品课");
+        detail.setDifficulty(3);
+        when(courseService.update(eq(1856739201475235801L), any())).thenReturn(detail);
+
+        try
+        {
+            mockMvc.perform(put("/admin/courses/{courseId}", COURSE_ID)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"name\":\"哈他瑜伽（初级）\",\"courseType\":2,\"difficulty\":3}"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.code").value(200))
+                    .andExpect(jsonPath("$.data.name").value("哈他瑜伽（初级）"))
+                    .andExpect(jsonPath("$.data.courseTypeName").value("精品课"));
+        }
+        catch (Exception e)
+        {
+            throw new AssertionError(e);
+        }
+    }
+
+    @Test
+    @DisplayName("修改：课程不存在 → 404（业务异常经全局处理器转换）")
+    void update_notExists_shouldReturn404()
+    {
+        doThrow(new ServiceException("课程不存在或已被删除", 404))
+                .when(courseService).update(eq(1L), any());
+
+        try
+        {
+            mockMvc.perform(put("/admin/courses/{courseId}", "1")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"name\":\"哈他瑜伽\",\"courseType\":1,\"difficulty\":2}"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.code").value(404));
+        }
+        catch (Exception e)
+        {
+            throw new AssertionError(e);
+        }
+    }
+
+    @Test
+    @DisplayName("删除：成功只返回 code/msg")
+    void delete_shouldReturnSuccess()
+    {
+        try
+        {
+            mockMvc.perform(delete("/admin/courses/{courseId}", COURSE_ID))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.code").value(200))
+                    .andExpect(jsonPath("$.msg").value("操作成功"));
+        }
+        catch (Exception e)
+        {
+            throw new AssertionError(e);
+        }
+        verify(courseService).delete(1856739201475235801L);
+    }
+
+    @Test
+    @DisplayName("删除：仍有未结束排课 → 409，提示语带数量")
+    void delete_withActiveSchedule_shouldReturn409()
+    {
+        doThrow(new ServiceException("该课程仍有 3 节未结束的排课，无法删除", 409))
+                .when(courseService).delete(1856739201475235801L);
+
+        try
+        {
+            mockMvc.perform(delete("/admin/courses/{courseId}", COURSE_ID))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.code").value(409))
+                    .andExpect(jsonPath("$.msg").value(Matchers.containsString("3 节未结束的排课")));
+        }
+        catch (Exception e)
+        {
+            throw new AssertionError(e);
+        }
+    }
+
+    @Test
+    @DisplayName("删除：引用统计失败 → fail-closed，409「引用检查未完成，已拒绝本次删除」")
+    void delete_whenReferenceCheckFails_shouldReturn409()
+    {
+        doThrow(new ServiceException("引用检查未完成，已拒绝本次删除", 409))
+                .when(courseService).delete(1856739201475235801L);
+
+        try
+        {
+            mockMvc.perform(delete("/admin/courses/{courseId}", COURSE_ID))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.code").value(409))
+                    .andExpect(jsonPath("$.msg").value("引用检查未完成，已拒绝本次删除"));
+        }
+        catch (Exception e)
+        {
+            throw new AssertionError(e);
+        }
+    }
+
+    @Test
+    @DisplayName("路径参数不是数字 → 500（框架参数类型不匹配处理）")
+    void detail_withNonNumericId_shouldReturnError()
+    {
+        try
+        {
+            mockMvc.perform(get("/admin/courses/{courseId}", "abc"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.code").value(500))
+                    .andExpect(jsonPath("$.msg").value(Matchers.containsString("courseId")));
+        }
+        catch (Exception e)
+        {
+            throw new AssertionError(e);
+        }
+        verifyNoInteractions(courseService);
+    }
+
+    @Test
+    @DisplayName("状态接口已下线：PUT /admin/courses/{courseId}/status 不再存在")
+    void statusEndpoint_shouldNotExist()
+    {
+        try
+        {
+            mockMvc.perform(put("/admin/courses/{courseId}/status", COURSE_ID)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"status\":0}"));
+        }
+        catch (Exception e)
+        {
+            // standalone MockMvc 对未映射路径直接抛异常，这里只要求它确实没有落到 controller 上
+            verifyNoInteractions(courseService);
+            return;
+        }
+        verifyNoInteractions(courseService);
     }
 }

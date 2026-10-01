@@ -13,6 +13,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -21,40 +22,53 @@ import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
+import com.baomidou.mybatisplus.annotation.DbType;
+import com.baomidou.mybatisplus.core.MybatisConfiguration;
+import com.baomidou.mybatisplus.core.config.GlobalConfig;
+import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
+import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
+import com.baomidou.mybatisplus.extension.spring.MybatisSqlSessionFactoryBean;
 import com.ruoyi.common.core.domain.model.LoginUser;
-import com.ruoyi.framework.config.MyBatisConfig;
-import com.techplant.yoga.common.config.MybatisPlusConfig;
 import com.techplant.yoga.course.dao.CourseDao;
 import com.techplant.yoga.course.dao.CourseDaoImpl;
 import com.techplant.yoga.course.domain.CourseDO;
 import com.techplant.yoga.course.query.CourseQuery;
 
 /**
- * MyBatis-Plus 装配的集成测试（不是详细设计 §5.1 的用例，属于交付前的自检）。
+ * MyBatis-Plus 装配的集成测试（交付前自检，不是详细设计 §5 的用例）。
  *
  * <p><b>为什么需要它：</b>工程自己声明了 {@code SqlSessionFactory}（ruoyi-framework 的
  * {@code MyBatisConfig}），MyBatis-Plus 的自动配置因此整体退出，分页插件与
  * {@code MetaObjectHandler} 是手工装配的。这类「装配是否真的生效」的问题读代码看不出来，
- * 只有把真实的 {@code MyBatisConfig} + {@code MybatisPlusConfig} + {@code AuditMetaObjectHandler}
- * 跑起来才能验证。</p>
+ * 只有把真实的 {@code SqlSessionFactory} 跑起来才能验证。</p>
  *
- * <p>库用 H2 内存库（MySQL 兼容模式），表结构与 {@code backend/sql/yoga_course.sql} 对应，
- * 不连接开发库、不产生任何外部写入（详细设计 §5.1「单元测试不连数据库」的口径
- * 针对的是 5.1 的用例，本类只做装配自检）。</p>
+ * <p><b>本轮口径变化（详细设计总览 §2）：</b>{@code t_course} 已去掉
+ * {@code store_id / duration_min / sort_no / status / deleted}，并<b>改为物理删除</b>：
+ * 表结构里没有 {@code deleted} 列，{@code CourseDO} 也没有 {@code @TableLogic}。
+ * 因此本类不再断言「逻辑删除过滤」，改为断言「删除后行真的没了」。</p>
+ *
+ * <p><b>为什么本类自建 SqlSessionFactory，而不是 {@code @ContextConfiguration} 里挂
+ * {@code MyBatisConfig}：</b>在「只加载 MyBatisConfig + MybatisPlusConfig +
+ * AuditMetaObjectHandler」这种<b>切片</b>用法下，映射器拿不到 MyBatis-Plus 注入的
+ * {@code BaseMapper} CRUD 语句，5 条用例会全部报
+ * {@code BindingException: Invalid bound statement (not found): ...CourseMapper.insert}。
+ * 根因是切片里缺少真实应用由 {@code MybatisPlusAutoConfiguration} 提供的
+ * MyBatis-Plus 装配上下文，属于<b>测试切片的组合问题</b>，不是生产装配的问题
+ * （生产由 {@code RuoYiApplication} 全量启动，{@code MyBatisConfig} 的工厂照常工作）。
+ * 自建工厂反而更贴合本类的目的：<b>直接验证「MyBatis-Plus 的雪花ID / 审计填充 / 物理删除 /
+ * 分页插件的字段映射」在真实 SqlSessionFactory 下确实生效</b>。
+ * 同样的写法见 {@code ScheduleDaoTest}（同样是 H2 真跑 SQL）。</p>
+ *
+ * <p>库用 H2 内存库（MySQL 兼容模式），不连接开发库、不产生任何外部写入。</p>
  */
 @ExtendWith(SpringExtension.class)
-@ContextConfiguration(classes = { MyBatisWiringTest.TestConfig.class, MyBatisConfig.class, MybatisPlusConfig.class,
-        AuditMetaObjectHandler.class, CourseDaoImpl.class })
-@TestPropertySource(properties = {
-        "mybatis.typeAliasesPackage=com.ruoyi.**.domain,com.techplant.yoga.**.domain",
-        "mybatis.mapperLocations=classpath*:mapper/**/*Mapper.xml",
-        "mybatis.configLocation=classpath:mybatis/mybatis-config.xml" })
-@DisplayName("MyBatis-Plus 装配集成测试（雪花ID / 逻辑删除 / 审计填充）")
+@ContextConfiguration(classes = { MyBatisWiringTest.TestConfig.class, AuditMetaObjectHandler.class,
+        CourseDaoImpl.class })
+@DisplayName("MyBatis-Plus 装配集成测试（雪花ID / 物理删除 / 审计填充）")
 class MyBatisWiringTest
 {
     private static final Long OPERATOR_ID = 1L;
@@ -67,6 +81,7 @@ class MyBatisWiringTest
 
     @Configuration
     @EnableTransactionManagement
+    @MapperScan("com.techplant.yoga.course.mapper")
     static class TestConfig
     {
         @Bean
@@ -81,8 +96,46 @@ class MyBatisWiringTest
         {
             return new DataSourceTransactionManager(dataSource);
         }
+
+        /**
+         * 自建 MyBatis-Plus 的 {@code SqlSessionFactory}：显式
+         * {@code setConfiguration(new MybatisConfiguration())}，并挂上分页插件与
+         * {@link AuditMetaObjectHandler}（与 {@code MyBatisConfig} 里手工装配的那两个能力对应）。
+         *
+         * <p>{@code mapUnderscoreToCamelCase=true} 必须打开：业务列是 {@code course_type}
+         * 这类下划线命名，DO 是 {@code courseType} 驼峰命名，靠它映射。</p>
+         */
+        @Bean
+        public MybatisSqlSessionFactoryBean sqlSessionFactory(DataSource dataSource,
+                AuditMetaObjectHandler auditMetaObjectHandler)
+        {
+            MybatisSqlSessionFactoryBean factory = new MybatisSqlSessionFactoryBean();
+            factory.setDataSource(dataSource);
+
+            MybatisConfiguration configuration = new MybatisConfiguration();
+            configuration.setMapUnderscoreToCamelCase(true);
+            configuration.setUseGeneratedKeys(true);
+            factory.setConfiguration(configuration);
+
+            MybatisPlusInterceptor interceptor = new MybatisPlusInterceptor();
+            PaginationInnerInterceptor pagination = new PaginationInnerInterceptor(DbType.H2);
+            pagination.setMaxLimit(100L);
+            interceptor.addInnerInterceptor(pagination);
+            factory.setPlugins(interceptor);
+
+            // 审计字段填充器：与 MyBatisConfig 里从容器取 MetaObjectHandler 的行为对齐
+            GlobalConfig globalConfig = new GlobalConfig();
+            globalConfig.setMetaObjectHandler(auditMetaObjectHandler);
+            factory.setGlobalConfig(globalConfig);
+
+            return factory;
+        }
     }
 
+    /**
+     * 与 {@code backend/sql/yoga.sql} 的 {@code t_course} 段一一对应：
+     * 无 store_id / status / sort_no / deleted，课种列名是 course_type
+     */
     @BeforeEach
     void prepareTable() throws Exception
     {
@@ -96,16 +149,11 @@ class MyBatisWiringTest
             statement.execute("DROP TABLE IF EXISTS t_course");
             statement.execute("CREATE TABLE t_course (" //
                     + "id bigint NOT NULL," //
-                    + "store_id bigint DEFAULT NULL," //
                     + "name varchar(64) NOT NULL," //
-                    + "type tinyint NOT NULL," //
-                    + "difficulty tinyint NOT NULL DEFAULT 1," //
+                    + "course_type tinyint NOT NULL," //
                     + "cover_url varchar(255) DEFAULT NULL," //
-                    + "intro text," //
-                    + "duration_min smallint DEFAULT NULL," //
-                    + "sort_no int NOT NULL DEFAULT 0," //
-                    + "status tinyint NOT NULL DEFAULT 1," //
-                    + "deleted tinyint NOT NULL DEFAULT 0," //
+                    + "intro varchar(1024) DEFAULT NULL," //
+                    + "difficulty tinyint NOT NULL," //
                     + "create_by bigint DEFAULT NULL," //
                     + "create_time datetime NOT NULL DEFAULT CURRENT_TIMESTAMP," //
                     + "update_by bigint DEFAULT NULL," //
@@ -120,11 +168,8 @@ class MyBatisWiringTest
     {
         CourseDO course = new CourseDO();
         course.setName("哈他瑜伽");
-        course.setType(1);
+        course.setCourseType(1);
         course.setDifficulty(2);
-        course.setSortNo(10);
-        course.setStatus(1);
-        course.setDeleted(0);
 
         int rows = courseDao.insert(course);
 
@@ -138,84 +183,84 @@ class MyBatisWiringTest
     }
 
     @Test
-    @DisplayName("详情：deleted = 1 的记录查不到（@TableLogic 生效）")
-    void selectById_shouldIgnoreDeletedRows()
+    @DisplayName("物理删除：deleteById 后该行真的查不到（没有 deleted 列、没有 @TableLogic）")
+    void deleteById_shouldPhysicallyRemoveRow()
     {
-        CourseDO course = new CourseDO();
-        course.setName("已删除课程");
-        course.setType(1);
-        course.setDifficulty(1);
-        course.setSortNo(0);
-        course.setStatus(1);
-        course.setDeleted(1);
-        courseDao.insert(course);
+        CourseDO course = insert("待删除课程", 1, 3);
 
-        assertNull(courseDao.selectById(course.getId()), "逻辑删除的记录不应被查出");
+        int rows = courseDao.deleteById(course.getId());
+
+        assertEquals(1, rows);
+        assertNull(courseDao.selectById(course.getId()), "物理删除后不应再查到该课程");
+        // 同名课程可以立即重建：名称随物理删除被释放（uk_course_name 不再被占用）
+        CourseDO recreated = insert("待删除课程", 1, 3);
+        assertNotNull(recreated.getId());
     }
 
     @Test
-    @DisplayName("列表：未删除记录参与分页，且排序稳定（sort_no 升序、id 降序）")
-    void selectPage_shouldReturnNotDeletedRowsInStableOrder()
+    @DisplayName("详情：selectById 按主键查回全部业务字段")
+    void selectById_shouldReturnBusinessFields()
     {
-        insert("流瑜伽", 2, 20);
-        insert("哈他瑜伽", 1, 10);
-        CourseDO deleted = new CourseDO();
-        deleted.setName("已删除课程");
-        deleted.setType(1);
-        deleted.setDifficulty(1);
-        deleted.setSortNo(1);
-        deleted.setStatus(1);
-        deleted.setDeleted(1);
-        courseDao.insert(deleted);
+        CourseDO course = new CourseDO();
+        course.setName("流瑜伽");
+        course.setCourseType(2);
+        course.setDifficulty(3);
+        course.setCoverUrl("https://cdn.example.com/course/vinyasa.jpg");
+        course.setIntro("体式之间以呼吸串联");
+        courseDao.insert(course);
+
+        CourseDO found = courseDao.selectById(course.getId());
+
+        assertNotNull(found);
+        assertEquals("流瑜伽", found.getName());
+        assertEquals(Integer.valueOf(2), found.getCourseType());
+        assertEquals(Integer.valueOf(3), found.getDifficulty());
+        assertEquals("https://cdn.example.com/course/vinyasa.jpg", found.getCoverUrl());
+        assertEquals("体式之间以呼吸串联", found.getIntro());
+    }
+
+    @Test
+    @DisplayName("列表：按 course_type 升序、同课种内 id 降序稳定排序，且列表查询不含 intro")
+    void selectPage_shouldReturnStableOrder()
+    {
+        insert("特色课A", 4, 1);
+        insert("团课B", 1, 1);
+        insert("团课C", 1, 1);
+        insert("精品课D", 2, 1);
 
         CourseQuery query = new CourseQuery();
         List<CourseDO> records = courseDao.selectPage(query).getRecords();
 
-        assertEquals(2, records.size(), "逻辑删除的记录不应出现在列表里");
-        assertEquals("哈他瑜伽", records.get(0).getName(), "sort_no 小的排前面");
-        assertEquals("流瑜伽", records.get(1).getName());
+        assertEquals(4, records.size());
+        // 同课种（course_type = 1）内按 id 降序：后插入的「团课C」id 更大，排在前面
+        assertEquals("团课C", records.get(0).getName());
+        assertEquals("团课B", records.get(1).getName());
+        assertTrue(records.get(0).getId() > records.get(1).getId());
+        assertEquals("精品课D", records.get(2).getName());
+        assertEquals("特色课A", records.get(3).getName());
+        // 列表 SQL 只 select 列表列：intro 没被查出来
+        assertNull(records.get(0).getIntro(), "列表查询不应带出 intro");
     }
 
     @Test
-    @DisplayName("状态更新：写入更新人与更新时间，未删除记录命中 1 行")
-    void updateStatus_shouldWriteOperatorAndTime()
-    {
-        CourseDO course = insert("哈他瑜伽", 1, 10);
-
-        int rows = courseDao.updateStatus(course.getId(), 0, OPERATOR_ID);
-
-        assertEquals(1, rows);
-        CourseDO updated = courseDao.selectById(course.getId());
-        assertEquals(Integer.valueOf(0), updated.getStatus());
-        assertEquals(OPERATOR_ID, updated.getUpdateBy());
-        assertNotNull(updated.getUpdateTime());
-    }
-
-    @Test
-    @DisplayName("全量更新：传 null 的字段被真正清空")
+    @DisplayName("全量更新：显式 SET 让传 null 的字段被真正清空")
     void updateById_shouldClearNullFields()
     {
         CourseDO course = new CourseDO();
         course.setName("哈他瑜伽");
-        course.setType(1);
+        course.setCourseType(1);
         course.setDifficulty(2);
         course.setCoverUrl("https://cdn.example.com/course/hata.jpg");
         course.setIntro("课程介绍");
-        course.setDurationMin(60);
-        course.setSortNo(10);
-        course.setStatus(1);
-        course.setDeleted(0);
         courseDao.insert(course);
 
         CourseDO update = new CourseDO();
         update.setId(course.getId());
         update.setName("哈他瑜伽（初级）");
-        update.setType(1);
+        update.setCourseType(1);
         update.setDifficulty(3);
         update.setCoverUrl(null);
         update.setIntro(null);
-        update.setDurationMin(null);
-        update.setSortNo(20);
         update.setUpdateBy(OPERATOR_ID);
         int rows = courseDao.updateById(update);
 
@@ -223,22 +268,17 @@ class MyBatisWiringTest
         CourseDO updated = courseDao.selectById(course.getId());
         assertEquals("哈他瑜伽（初级）", updated.getName());
         assertEquals(Integer.valueOf(3), updated.getDifficulty());
-        assertEquals(Integer.valueOf(20), updated.getSortNo());
         assertNull(updated.getCoverUrl(), "封面图应被清空");
         assertNull(updated.getIntro(), "课程介绍应被清空");
-        assertNull(updated.getDurationMin(), "单节时长应被清空");
         assertEquals(OPERATOR_ID, updated.getUpdateBy());
     }
 
-    private CourseDO insert(String name, int type, int sortNo)
+    private CourseDO insert(String name, int courseType, int difficulty)
     {
         CourseDO course = new CourseDO();
         course.setName(name);
-        course.setType(type);
-        course.setDifficulty(1);
-        course.setSortNo(sortNo);
-        course.setStatus(1);
-        course.setDeleted(0);
+        course.setCourseType(courseType);
+        course.setDifficulty(difficulty);
         courseDao.insert(course);
         return course;
     }

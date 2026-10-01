@@ -1,6 +1,6 @@
 import request from '@/utils/request'
 
-// 查询教练列表（管理端）
+// 查询教练列表（管理端，支持按姓名模糊查询）
 export function listCoach(query) {
   return request({
     url: '/admin/coaches',
@@ -35,11 +35,10 @@ export function updateCoach(coachId, data) {
   })
 }
 
-// 设置教练状态
-export function changeCoachStatus(coachId, status) {
+// 删除教练（物理删除，服务端带排课删除门禁）
+export function delCoach(coachId) {
   return request({
-    url: '/admin/coaches/' + coachId + '/status',
-    method: 'put',
-    data: { status: status }
+    url: '/admin/coaches/' + coachId,
+    method: 'delete'
   })
 }

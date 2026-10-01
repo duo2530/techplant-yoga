@@ -3,7 +3,6 @@ package com.techplant.yoga.course.dao;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -12,6 +11,7 @@ import static org.mockito.Mockito.when;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import org.apache.ibatis.builder.MapperBuilderAssistant;
 import org.junit.jupiter.api.BeforeAll;
@@ -33,10 +33,14 @@ import com.techplant.yoga.course.mapper.CourseMapper;
 import com.techplant.yoga.course.query.CourseQuery;
 
 /**
- * 课程数据访问的单元测试（详细设计 §5.1.1，用例 5.1.1.22 ~ 5.1.1.26）。
+ * 课程数据访问的单元测试。
  *
- * <p>课程映射器用模拟对象隔离，<b>不连数据库</b>：断言的是「交给映射器的条件与 SQL 片段」，
- * 真实 SQL 由 §5.2 的冒烟测试覆盖。</p>
+ * <p>映射器用模拟对象隔离，<b>不连数据库</b>：断言的是「交给映射器的条件与 SQL 片段」，
+ * 真实 SQL 由 {@code MyBatisWiringTest}（H2）覆盖。</p>
+ *
+ * <p><b>本轮口径：</b>{@code t_course} 只有
+ * {@code id / name / course_type / cover_url / intro / difficulty} ＋ 审计四列；
+ * 没有 {@code store_id / status / sort_no / deleted}，<b>物理删除</b>（不加 {@code @TableLogic}）。</p>
  */
 @ExtendWith(MockitoExtension.class)
 @DisplayName("CourseDao 单元测试")
@@ -51,7 +55,7 @@ class CourseDaoTest
     private CourseDaoImpl courseDao;
 
     /**
-     * 初始化实体的表信息：Lambda 包装器要靠它把属性名解析成列名（coverUrl → cover_url）
+     * 初始化实体的表信息：Lambda 包装器要靠它把属性名解析成列名（courseType → course_type）
      */
     @BeforeAll
     static void initTableInfo()
@@ -60,13 +64,12 @@ class CourseDaoTest
     }
 
     @Test
-    @DisplayName("5.1.1.22 分页查询：返回记录与总数（且未删除条件不由业务代码拼接）")
+    @DisplayName("分页查询：返回记录与总数，页码/每页条数来自 Query（默认 1 / 10）")
     void selectPage_shouldReturnRecordsAndTotal()
     {
         when(courseMapper.selectPage(any(), any())).thenReturn(pageOf(course(1L, "哈他瑜伽"), course(2L, "流瑜伽")));
 
-        CourseQuery query = new CourseQuery();
-        IPage<CourseDO> page = courseDao.selectPage(query);
+        IPage<CourseDO> page = courseDao.selectPage(new CourseQuery());
 
         assertEquals(2L, page.getTotal());
         assertEquals(2, page.getRecords().size());
@@ -76,25 +79,22 @@ class CourseDaoTest
         ArgumentCaptor<LambdaQueryWrapper<CourseDO>> wrapperCaptor = ArgumentCaptor.forClass(LambdaQueryWrapper.class);
         verify(courseMapper).selectPage(pageCaptor.capture(), wrapperCaptor.capture());
 
-        // 页码与每页条数来自查询条件（未传时取默认值 1 / 10）
         assertEquals(1L, pageCaptor.getValue().getCurrent());
         assertEquals(10L, pageCaptor.getValue().getSize());
-
-        // 用例 5.1.1.8 第（3）条：未删除条件由框架的逻辑删除能力附加，业务代码不手写
+        // 物理删除：没有 @TableLogic，SQL 里不应出现任何 deleted 条件
         assertFalse(wrapperCaptor.getValue().getSqlSegment().contains("deleted"),
-                "逻辑删除条件不应由业务代码拼接");
+                "本表没有逻辑删除列，业务代码也不该拼 deleted 条件");
     }
 
     @Test
-    @DisplayName("5.1.1.8（数据访问层落点）筛选条件与稳定排序正确落到 SQL")
+    @DisplayName("筛选条件与稳定排序正确落到 SQL：name 模糊 + course_type + ORDER BY，列表列不含 intro")
     void selectPage_shouldApplyConditionsAndStableOrder()
     {
         when(courseMapper.selectPage(any(), any())).thenReturn(pageOf());
 
         CourseQuery query = new CourseQuery();
         query.setName("瑜伽");
-        query.setType(2);
-        query.setStatus(1);
+        query.setCourseType(2);
         query.setPageNum(2);
         query.setPageSize(20);
         courseDao.selectPage(query);
@@ -106,21 +106,38 @@ class CourseDaoTest
 
         String segment = wrapperCaptor.getValue().getSqlSegment();
         assertTrue(segment.contains("name"), segment);
-        assertTrue(segment.contains("type"), segment);
-        assertTrue(segment.contains("status"), segment);
-        // 稳定排序：sort_no 升序 + id 降序兜底（§4.1.3.1、用例 5.2.1.9）
-        assertTrue(segment.contains("sort_no"), segment);
+        assertTrue(segment.contains("course_type"), segment);
         assertTrue(segment.contains("ORDER BY"), segment);
-        // 列表只取列表列，不含 intro / duration_min（§4.1.3.1）
+        // 稳定排序：course_type 升序 + id 降序兜底
+        assertTrue(segment.contains("id DESC"), segment);
+        // 列表只取列表列，不含大字段 intro
         String selectColumns = wrapperCaptor.getValue().getSqlSelect();
+        assertNotNull(selectColumns);
+        assertTrue(selectColumns.contains("course_type"), selectColumns);
         assertFalse(selectColumns.contains("intro"), selectColumns);
-        assertFalse(selectColumns.contains("duration_min"), selectColumns);
         assertEquals(2L, pageCaptor.getValue().getCurrent());
         assertEquals(20L, pageCaptor.getValue().getSize());
     }
 
     @Test
-    @DisplayName("5.1.1.23 按编号查询：自动附加未删除条件")
+    @DisplayName("列表查询不拼店/状态条件：Query 里已没有 storeId / status 字段")
+    void selectPage_shouldNotFilterByRemovedFields()
+    {
+        when(courseMapper.selectPage(any(), any())).thenReturn(pageOf());
+
+        courseDao.selectPage(new CourseQuery());
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<LambdaQueryWrapper<CourseDO>> wrapperCaptor = ArgumentCaptor.forClass(LambdaQueryWrapper.class);
+        verify(courseMapper).selectPage(any(), wrapperCaptor.capture());
+        String segment = wrapperCaptor.getValue().getSqlSegment();
+        assertFalse(segment.contains("store_id"), segment);
+        assertFalse(segment.contains("status"), segment);
+        assertFalse(segment.contains("sort_no"), segment);
+    }
+
+    @Test
+    @DisplayName("按编号查询：走 BaseMapper 内置方法，按主键查回一条")
     void selectById_shouldQueryByPrimaryKey()
     {
         CourseDO course = course(COURSE_ID, "哈他瑜伽");
@@ -130,69 +147,89 @@ class CourseDaoTest
 
         assertNotNull(found);
         assertEquals("哈他瑜伽", found.getName());
-        // 走 BaseMapper 内置方法：deleted = 0 由 @TableLogic 自动附加，业务代码不手写
         verify(courseMapper).selectById(COURSE_ID);
     }
 
     @Test
-    @DisplayName("5.1.1.24 新增课程数据：回填生成的课程编号")
+    @DisplayName("按名称查重：只按 name 精确匹配，不分课种、不带任何删除条件")
+    void selectByName_shouldMatchNameOnly()
+    {
+        when(courseMapper.selectOne(any())).thenReturn(course(COURSE_ID, "哈他瑜伽"));
+
+        CourseDO found = courseDao.selectByName("哈他瑜伽");
+
+        assertNotNull(found);
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<LambdaQueryWrapper<CourseDO>> captor = ArgumentCaptor.forClass(LambdaQueryWrapper.class);
+        verify(courseMapper).selectOne(captor.capture());
+        String segment = captor.getValue().getSqlSegment();
+        assertTrue(segment.contains("name"), segment);
+        assertFalse(segment.contains("course_type"), segment);
+        assertFalse(segment.contains("deleted"), segment);
+    }
+
+    @Test
+    @DisplayName("修改查重：按名称匹配并排除自身 id")
+    void selectByNameExcludeId_shouldExcludeSelf()
+    {
+        when(courseMapper.selectOne(any())).thenReturn(null);
+
+        courseDao.selectByNameExcludeId("哈他瑜伽（初级）", COURSE_ID);
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<LambdaQueryWrapper<CourseDO>> captor = ArgumentCaptor.forClass(LambdaQueryWrapper.class);
+        verify(courseMapper).selectOne(captor.capture());
+        LambdaQueryWrapper<CourseDO> wrapper = captor.getValue();
+        assertTrue(wrapper.getSqlSegment().contains("name"), wrapper.getSqlSegment());
+        assertTrue(wrapper.getSqlSegment().contains("id"), wrapper.getSqlSegment());
+        assertTrue(wrapper.getParamNameValuePairs().containsValue(COURSE_ID), "应把自身 id 作为排除条件");
+    }
+
+    @Test
+    @DisplayName("批量查询：按编号集合一次查回（名称补齐用，避免 N+1）")
+    void selectByIds_shouldQueryInBatch()
+    {
+        when(courseMapper.selectBatchIds(any())).thenReturn(Arrays.asList(course(1L, "哈他瑜伽"), course(2L, "流瑜伽")));
+
+        List<CourseDO> list = courseDao.selectByIds(Arrays.asList(1L, 2L));
+
+        assertEquals(2, list.size());
+        verify(courseMapper).selectBatchIds(eq(Arrays.asList(1L, 2L)));
+    }
+
+    @Test
+    @DisplayName("新增：回填生成的课程编号")
     void insert_shouldFillGeneratedId()
     {
         when(courseMapper.insert(any(CourseDO.class))).thenAnswer(invocation -> {
             CourseDO course = invocation.getArgument(0);
-            course.setId(1856739201475235840L);
+            course.setId(1856739201475235801L);
             return 1;
         });
 
         CourseDO course = new CourseDO();
         course.setName("哈他瑜伽");
-        course.setStatus(1);
-        course.setDeleted(0);
-        course.setSortNo(0);
+        course.setCourseType(1);
+        course.setDifficulty(2);
         int rows = courseDao.insert(course);
 
         assertEquals(1, rows);
-        assertEquals(1856739201475235840L, course.getId());
+        assertEquals(1856739201475235801L, course.getId());
     }
 
     @Test
-    @DisplayName("5.1.1.25 按编号更新状态：返回影响行数并写入操作人与更新时间")
-    void updateStatus_shouldWriteOperatorAndTime()
-    {
-        when(courseMapper.update(any(), any())).thenReturn(1);
-
-        int rows = courseDao.updateStatus(COURSE_ID, 0, 1L);
-
-        assertEquals(1, rows);
-        @SuppressWarnings("unchecked")
-        ArgumentCaptor<LambdaUpdateWrapper<CourseDO>> captor = ArgumentCaptor.forClass(LambdaUpdateWrapper.class);
-        verify(courseMapper).update(any(), captor.capture());
-        LambdaUpdateWrapper<CourseDO> wrapper = captor.getValue();
-        String sqlSet = wrapper.getSqlSet();
-        assertTrue(sqlSet.contains("status"), sqlSet);
-        assertTrue(sqlSet.contains("update_by"), sqlSet);
-        assertTrue(sqlSet.contains("update_time"), sqlSet);
-        assertTrue(wrapper.getSqlSegment().contains("id"), wrapper.getSqlSegment());
-        assertTrue(wrapper.getParamNameValuePairs().containsValue(0), "目标状态应写入 0（停用）");
-        assertTrue(wrapper.getParamNameValuePairs().containsValue(1L), "操作人应写入 1");
-        assertTrue(hasLocalDateTimeValue(wrapper), "更新时间应写入");
-    }
-
-    @Test
-    @DisplayName("5.1.1.26 按编号全量更新：返回影响行数（含清空字段写 NULL）")
-    void updateById_shouldSetAllColumns()
+    @DisplayName("全量更新：显式 SET 新字段，传 null 的字段真的写 NULL（清空语义）")
+    void updateById_shouldSetAllColumnsAndClearNullFields()
     {
         when(courseMapper.update(any(), any())).thenReturn(1);
 
         CourseDO course = new CourseDO();
         course.setId(COURSE_ID);
         course.setName("哈他瑜伽（初级）");
-        course.setType(1);
-        course.setDifficulty(3);
+        course.setCourseType(1);
         course.setCoverUrl(null);
         course.setIntro(null);
-        course.setDurationMin(null);
-        course.setSortNo(20);
+        course.setDifficulty(3);
         course.setUpdateBy(1L);
         int rows = courseDao.updateById(course);
 
@@ -203,18 +240,35 @@ class CourseDaoTest
         LambdaUpdateWrapper<CourseDO> wrapper = captor.getValue();
         String sqlSet = wrapper.getSqlSet();
         assertTrue(sqlSet.contains("name"), sqlSet);
-        assertTrue(sqlSet.contains("type"), sqlSet);
-        assertTrue(sqlSet.contains("difficulty"), sqlSet);
+        assertTrue(sqlSet.contains("course_type"), sqlSet);
         assertTrue(sqlSet.contains("cover_url"), sqlSet);
         assertTrue(sqlSet.contains("intro"), sqlSet);
-        assertTrue(sqlSet.contains("duration_min"), sqlSet);
-        assertTrue(sqlSet.contains("sort_no"), sqlSet);
+        assertTrue(sqlSet.contains("difficulty"), sqlSet);
         assertTrue(sqlSet.contains("update_by"), sqlSet);
         assertTrue(sqlSet.contains("update_time"), sqlSet);
+        // 已移除的列绝不能被拼进 SET
+        assertFalse(sqlSet.contains("store_id"), sqlSet);
+        assertFalse(sqlSet.contains("status"), sqlSet);
+        assertFalse(sqlSet.contains("sort_no"), sqlSet);
+        assertFalse(sqlSet.contains("duration_min"), sqlSet);
         // 传 null 的字段要真的写入 NULL（清空语义），而不是被跳过
         assertTrue(wrapper.getParamNameValuePairs().containsValue(null), "可清空字段应写入 NULL");
         assertTrue(wrapper.getParamNameValuePairs().containsValue("哈他瑜伽（初级）"));
-        assertTrue(wrapper.getParamNameValuePairs().containsValue(20));
+        assertTrue(wrapper.getParamNameValuePairs().containsValue(3));
+        assertTrue(hasLocalDateTimeValue(wrapper), "更新时间应写入");
+        assertTrue(wrapper.getSqlSegment().contains("id"), wrapper.getSqlSegment());
+    }
+
+    @Test
+    @DisplayName("删除：物理删除，走 BaseMapper.deleteById（不产生 UPDATE ... deleted = 1）")
+    void deleteById_shouldCallMapperDelete()
+    {
+        when(courseMapper.deleteById(COURSE_ID)).thenReturn(1);
+
+        int rows = courseDao.deleteById(COURSE_ID);
+
+        assertEquals(1, rows);
+        verify(courseMapper).deleteById(COURSE_ID);
     }
 
     @SuppressWarnings("unchecked")
@@ -240,11 +294,8 @@ class CourseDaoTest
         CourseDO course = new CourseDO();
         course.setId(id);
         course.setName(name);
-        course.setType(1);
+        course.setCourseType(1);
         course.setDifficulty(1);
-        course.setStatus(1);
-        course.setSortNo(0);
-        course.setDeleted(0);
         return course;
     }
 

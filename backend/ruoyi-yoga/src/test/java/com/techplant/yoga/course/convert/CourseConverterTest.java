@@ -12,77 +12,80 @@ import org.junit.jupiter.api.Test;
 import com.techplant.yoga.course.domain.CourseDO;
 import com.techplant.yoga.course.dto.CourseCreateDTO;
 import com.techplant.yoga.course.dto.CourseUpdateDTO;
+import com.techplant.yoga.course.enums.CourseTypeEnum;
 import com.techplant.yoga.course.vo.CourseDetailVO;
 import com.techplant.yoga.course.vo.CourseListItemVO;
+import com.techplant.yoga.course.vo.CourseSummaryVO;
 
 /**
- * 课程对象转换的单元测试（详细设计 §5.1.1，用例 5.1.1.27 ~ 5.1.1.29）。
+ * 课程对象转换的单元测试。
  *
- * <p>纯转换，无依赖，不连数据库。</p>
+ * <p>纯转换，无依赖，不连数据库。重点：<b>课种成对返回</b>（{@code courseType} + {@code courseTypeName}
+ * 由 {@link CourseTypeEnum} 翻译）、列表项不含 {@code intro}、<b>不含已删除的旧字段</b>。</p>
  */
 @DisplayName("CourseConverter 单元测试")
 class CourseConverterTest
 {
     @Test
-    @DisplayName("5.1.1.27 新增请求转数据对象：字段一一对应且默认启用")
-    void toDO_shouldMapFieldsAndSetDefaults()
+    @DisplayName("新增请求转数据对象：字段一一对应，且不产生已删除的旧字段")
+    void toDO_shouldMapFieldsOnly()
     {
         CourseCreateDTO dto = new CourseCreateDTO();
-        dto.setName("哈他瑜伽");
-        dto.setType(1);
+        dto.setName("  哈他瑜伽  ");
+        dto.setCourseType(1);
         dto.setDifficulty(2);
         dto.setCoverUrl("https://cdn.example.com/course/hata.jpg");
         dto.setIntro("以体式与呼吸配合为主的经典课程");
-        dto.setDurationMin(60);
-        dto.setSortNo(10);
 
         CourseDO course = CourseConverter.toDO(dto);
 
-        assertEquals("哈他瑜伽", course.getName());
-        assertEquals(Integer.valueOf(1), course.getType());
+        assertEquals("哈他瑜伽", course.getName(), "名称前后空格应由转换层去除");
+        assertEquals(Integer.valueOf(1), course.getCourseType());
         assertEquals(Integer.valueOf(2), course.getDifficulty());
         assertEquals("https://cdn.example.com/course/hata.jpg", course.getCoverUrl());
         assertEquals("以体式与呼吸配合为主的经典课程", course.getIntro());
-        assertEquals(Integer.valueOf(60), course.getDurationMin());
-        assertEquals(Integer.valueOf(10), course.getSortNo());
-        assertEquals(Integer.valueOf(1), course.getStatus());
-        assertEquals(Integer.valueOf(0), course.getDeleted());
+        // 主键由框架生成，转换层不赋值
         assertNull(course.getId());
+        // 已移除的旧字段在 DO 上根本不存在（表结构与设计均已去掉）
+        assertFalse(hasField(CourseDO.class, "storeId"), "t_course 不再有 store_id");
+        assertFalse(hasField(CourseDO.class, "status"), "课程没有状态字段");
+        assertFalse(hasField(CourseDO.class, "sortNo"));
+        assertFalse(hasField(CourseDO.class, "durationMin"));
+        assertFalse(hasField(CourseDO.class, "deleted"), "物理删除：没有 deleted 字段");
+        assertFalse(hasField(CourseDO.class, "type"), "旧列名 type 已改名为 courseType");
     }
 
     @Test
-    @DisplayName("5.1.1.28 更新请求写入数据对象：可选字段为空时写入空值")
+    @DisplayName("更新请求写入数据对象：可选字段传空即清空；空串归一为 null")
     void applyUpdate_shouldWriteNullForOptionalFields()
     {
         CourseDO course = new CourseDO();
         course.setId(1001L);
         course.setName("哈他瑜伽");
+        course.setCourseType(1);
         course.setCoverUrl("https://cdn.example.com/course/hata.jpg");
         course.setIntro("原介绍");
 
         CourseUpdateDTO dto = new CourseUpdateDTO();
         dto.setName("哈他瑜伽（初级）");
-        dto.setType(1);
+        dto.setCourseType(2);
         dto.setDifficulty(3);
         dto.setCoverUrl(null);
-        dto.setIntro(null);
-        dto.setDurationMin(null);
-        dto.setSortNo(20);
+        dto.setIntro("   ");
 
         CourseConverter.applyUpdate(course, dto);
 
         assertEquals("哈他瑜伽（初级）", course.getName());
+        assertEquals(Integer.valueOf(2), course.getCourseType());
         assertEquals(Integer.valueOf(3), course.getDifficulty());
-        assertEquals(Integer.valueOf(20), course.getSortNo());
-        // 清空语义：传空即清空
+        // 清空语义：传 null 即清空；纯空格也归一为清空（不是「空字符串」）
         assertNull(course.getCoverUrl());
         assertNull(course.getIntro());
-        assertNull(course.getDurationMin());
     }
 
     @Test
-    @DisplayName("5.1.1.29 数据对象转列表项：不含长字段")
-    void toListItemVO_shouldExcludeLongFields()
+    @DisplayName("数据对象转列表项：课种成对返回，且不含 intro")
+    void toListItemVO_shouldExcludeIntroAndReturnTypeName()
     {
         CourseDO course = fullCourse();
 
@@ -90,47 +93,72 @@ class CourseConverterTest
 
         assertEquals(1001L, vo.getId());
         assertEquals("哈他瑜伽", vo.getName());
-        assertEquals(Integer.valueOf(1), vo.getType());
-        assertEquals(Integer.valueOf(2), vo.getDifficulty());
+        assertEquals(Integer.valueOf(1), vo.getCourseType());
+        assertEquals("团课", vo.getCourseTypeName(), "课种名称必须由后端成对返回");
         assertEquals("https://cdn.example.com/course/hata.jpg", vo.getCoverUrl());
-        assertEquals(Integer.valueOf(1), vo.getStatus());
-        assertEquals(Integer.valueOf(10), vo.getSortNo());
+        assertEquals(Integer.valueOf(2), vo.getDifficulty());
         assertNotNull(vo.getCreateTime());
         assertNotNull(vo.getUpdateTime());
-        // 列表项不含介绍与单节时长
+        // 列表项不含课程介绍
         assertFalse(hasField(CourseListItemVO.class, "intro"));
-        assertFalse(hasField(CourseListItemVO.class, "durationMin"));
+        // 旧字段已下线
+        assertFalse(hasField(CourseListItemVO.class, "status"));
+        assertFalse(hasField(CourseListItemVO.class, "sortNo"));
+        assertFalse(hasField(CourseListItemVO.class, "storeId"));
     }
 
     @Test
-    @DisplayName("补充：数据对象转详情包含介绍与单节时长，且不含创建人/更新人")
-    void toDetailVO_shouldIncludeLongFieldsButNotOperator()
+    @DisplayName("数据对象转详情：含 intro、课种成对返回、不含审计人")
+    void toDetailVO_shouldIncludeIntroAndTypeName()
     {
         CourseDO course = fullCourse();
 
         CourseDetailVO vo = CourseConverter.toDetailVO(course);
 
-        assertEquals("课程介绍", vo.getIntro());
-        assertEquals(Integer.valueOf(60), vo.getDurationMin());
         assertEquals(1001L, vo.getId());
+        assertEquals("课程介绍", vo.getIntro());
+        assertEquals(Integer.valueOf(1), vo.getCourseType());
+        assertEquals("团课", vo.getCourseTypeName());
         assertFalse(hasField(CourseDetailVO.class, "createBy"));
         assertFalse(hasField(CourseDetailVO.class, "updateBy"));
+        assertFalse(hasField(CourseDetailVO.class, "status"));
     }
 
+    @Test
+    @DisplayName("数据对象转摘要（跨模块出参）：含 intro / difficulty 与课种名")
+    void toSummaryVO_shouldCarryRealtimeFields()
+    {
+        CourseDO course = fullCourse();
+
+        CourseSummaryVO vo = CourseConverter.toSummaryVO(course);
+
+        assertEquals(1001L, vo.getId());
+        assertEquals("哈他瑜伽", vo.getName());
+        assertEquals(Integer.valueOf(1), vo.getCourseType());
+        assertEquals("团课", vo.getCourseTypeName());
+        assertEquals("https://cdn.example.com/course/hata.jpg", vo.getCoverUrl());
+        assertEquals("课程介绍", vo.getIntro());
+        assertEquals(Integer.valueOf(2), vo.getDifficulty());
+    }
+
+    @Test
+    @DisplayName("课种命名为空/越界时返回 null，不抛异常（供用户端空字符串兜底）")
+    void nameOf_shouldReturnNullForUnknownCode()
+    {
+        assertNull(CourseTypeEnum.nameOf(null));
+        assertNull(CourseTypeEnum.nameOf(0));
+        assertNull(CourseTypeEnum.nameOf(9));
+    }
 
     private CourseDO fullCourse()
     {
         CourseDO course = new CourseDO();
         course.setId(1001L);
         course.setName("哈他瑜伽");
-        course.setType(1);
+        course.setCourseType(1);
         course.setDifficulty(2);
         course.setCoverUrl("https://cdn.example.com/course/hata.jpg");
         course.setIntro("课程介绍");
-        course.setDurationMin(60);
-        course.setSortNo(10);
-        course.setStatus(1);
-        course.setDeleted(0);
         course.setCreateBy(9L);
         course.setUpdateBy(9L);
         course.setCreateTime(LocalDateTime.of(2026, 9, 20, 10, 12, 33));

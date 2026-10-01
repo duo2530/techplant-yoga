@@ -1,31 +1,47 @@
 package com.techplant.yoga.course.dao;
 
+import java.util.Collection;
+import java.util.List;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.techplant.yoga.course.domain.CourseDO;
 import com.techplant.yoga.course.query.CourseQuery;
 
 /**
- * 课程数据访问（详细设计 §3.1.1、§3.2.2）。
+ * 课程数据访问（课程管理详细设计 §3.2）。
  *
- * <p>面向业务语义、屏蔽 mapper 细节：返回 {@code DO}，由 service 负责转 VO（§3.2.3）。</p>
+ * <p>面向业务语义、屏蔽 mapper 细节：返回 {@code DO}，由 service 负责转 VO。</p>
  *
- * <p>逻辑删除说明：{@code selectById} 走 MyBatis-Plus 内置方法，{@code deleted = 0} 由
- * {@code @TableLogic} 自动附加，业务代码不手写（§4.1.3.1、用例 5.1.1.23）。</p>
+ * <p><b>物理删除：</b>{@code CourseDO} 没有 {@code deleted} 字段、没有 {@code @TableLogic}，
+ * 业务代码也<b>不要</b>拼 {@code deleted = 0} 条件（详细设计总览 §2、BR-课程-008）。</p>
  */
 public interface CourseDao
 {
     /**
-     * 分页查询课程列表（只取列表列，不含 intro / duration_min）
-     *
-     * @param query 查询条件（名称模糊、类型、状态、页码、每页条数）
-     * @return MyBatis-Plus 分页结果，由 service 转成 PageResult
+     * 分页查询课程列表（只取列表列，<b>不含 intro</b>），按 {@code course_type ASC, id DESC} 稳定排序
      */
     IPage<CourseDO> selectPage(CourseQuery query);
 
     /**
-     * 按编号查询课程（已删除视为不存在）
+     * 按编号查询课程；不存在返回 {@code null}
      */
     CourseDO selectById(Long id);
+
+    /**
+     * 按名称精确查询课程（名称全平台唯一）
+     */
+    CourseDO selectByName(String name);
+
+    /**
+     * 按名称查询课程并排除自身（修改时的查重）
+     *
+     * @param excludeId 需要排除的课程编号，可为空（为空时不排除任何行）
+     */
+    CourseDO selectByNameExcludeId(String name, Long excludeId);
+
+    /**
+     * 按编号批量查询（名称补齐用；调用方保证非空集合）
+     */
+    List<CourseDO> selectByIds(Collection<Long> ids);
 
     /**
      * 新增课程（主键不传，由 MyBatis-Plus 生成雪花ID）
@@ -35,16 +51,16 @@ public interface CourseDao
     int insert(CourseDO course);
 
     /**
-     * 按编号更新课程状态（同时写入更新人与更新时间）
-     *
-     * @return 影响行数
-     */
-    int updateStatus(Long id, Integer status, Long updateBy);
-
-    /**
-     * 按编号全量更新课程（含可清空字段，传 null 即写入 NULL）
+     * 按编号全量更新业务字段（显式 SET，含可清空字段：传 null 即写入 NULL）
      *
      * @return 影响行数
      */
     int updateById(CourseDO course);
+
+    /**
+     * 按编号<b>物理删除</b>课程
+     *
+     * @return 影响行数
+     */
+    int deleteById(Long id);
 }

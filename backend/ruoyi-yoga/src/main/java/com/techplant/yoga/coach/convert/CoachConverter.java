@@ -2,43 +2,44 @@ package com.techplant.yoga.coach.convert;
 
 import java.util.ArrayList;
 import java.util.List;
-import com.alibaba.fastjson2.JSON;
 import com.techplant.yoga.coach.domain.CoachDO;
 import com.techplant.yoga.coach.dto.CoachCreateDTO;
 import com.techplant.yoga.coach.dto.CoachUpdateDTO;
-import com.techplant.yoga.coach.vo.CoachCardVO;
 import com.techplant.yoga.coach.vo.CoachDetailVO;
-import com.techplant.yoga.coach.vo.CoachIdVO;
 import com.techplant.yoga.coach.vo.CoachListItemVO;
+import com.techplant.yoga.coach.vo.CoachSummaryVO;
 
-/** 教练对象转换（详细设计 §3.1）。 */
+/**
+ * 教练对象转换（教练管理详细设计 §3.2）。
+ *
+ * <p><b>边界：</b>本类只做字段搬运与请求字段去空格，<b>不做</b> {@code gallery} 的
+ * JSON ↔ {@code List<String>} 转换 —— 该转换只在 service 层发生（§3.4 第 2 条），
+ * 因此相册的 JSON 字符串（入）与 {@code List<String>}（出）都作为参数传入。</p>
+ */
 public final class CoachConverter
 {
-    private static final int STATUS_ENABLED = 1;
-    private static final int NOT_DELETED = 0;
-
     private CoachConverter() { }
 
-    public static CoachDO toDO(CoachCreateDTO dto)
+    /** DTO → DO；{@code galleryJson} 由 service 序列化后传入 */
+    public static CoachDO toDO(CoachCreateDTO dto, String galleryJson)
     {
         CoachDO coach = new CoachDO();
-        coach.setIntro(dto.getIntro());
-        coach.setName(dto.getName().trim());
-        coach.setTitle(dto.getTitle());
-        coach.setAvatarUrl(dto.getAvatarUrl());
-        coach.setAlbumUrlsJson(toAlbumJson(dto.getAlbumUrls()));
-        coach.setStatus(STATUS_ENABLED);
-        coach.setDeleted(NOT_DELETED);
+        coach.setName(trimToNull(dto.getName()));
+        coach.setAvatarUrl(trimToNull(dto.getAvatarUrl()));
+        coach.setIntro(trimToNull(dto.getIntro()));
+        coach.setPhone(trimToNull(dto.getPhone()));
+        coach.setGallery(galleryJson);
         return coach;
     }
 
-    public static void applyUpdate(CoachDO coach, CoachUpdateDTO dto)
+    /** 全量覆盖 DO 的业务字段；{@code galleryJson} 由 service 序列化后传入 */
+    public static void applyUpdate(CoachDO coach, CoachUpdateDTO dto, String galleryJson)
     {
-        coach.setIntro(dto.getIntro());
-        coach.setName(dto.getName().trim());
-        coach.setTitle(dto.getTitle());
-        coach.setAvatarUrl(dto.getAvatarUrl());
-        coach.setAlbumUrlsJson(toAlbumJson(dto.getAlbumUrls()));
+        coach.setName(trimToNull(dto.getName()));
+        coach.setAvatarUrl(trimToNull(dto.getAvatarUrl()));
+        coach.setIntro(trimToNull(dto.getIntro()));
+        coach.setPhone(trimToNull(dto.getPhone()));
+        coach.setGallery(galleryJson);
     }
 
     public static CoachListItemVO toListItemVO(CoachDO coach)
@@ -46,9 +47,10 @@ public final class CoachConverter
         CoachListItemVO vo = new CoachListItemVO();
         vo.setId(coach.getId());
         vo.setName(coach.getName());
-        vo.setTitle(coach.getTitle());
         vo.setAvatarUrl(coach.getAvatarUrl());
-        vo.setStatus(coach.getStatus());
+        vo.setPhone(coach.getPhone());
+        vo.setCreateTime(coach.getCreateTime());
+        vo.setUpdateTime(coach.getUpdateTime());
         return vo;
     }
 
@@ -65,64 +67,47 @@ public final class CoachConverter
         return result;
     }
 
-    public static CoachDetailVO toDetailVO(CoachDO coach)
+    /** DO → 详情；{@code gallery} 由 service 反序列化后传入 */
+    public static CoachDetailVO toDetailVO(CoachDO coach, List<String> gallery)
     {
         CoachDetailVO vo = new CoachDetailVO();
         vo.setId(coach.getId());
+        vo.setName(coach.getName());
+        vo.setAvatarUrl(coach.getAvatarUrl());
+        vo.setPhone(coach.getPhone());
         vo.setIntro(coach.getIntro());
-        vo.setName(coach.getName());
-        vo.setTitle(coach.getTitle());
-        vo.setAvatarUrl(coach.getAvatarUrl());
-        vo.setAlbumUrls(parseAlbumJson(coach.getAlbumUrlsJson()));
-        vo.setStatus(coach.getStatus());
+        vo.setGallery(gallery == null ? new ArrayList<String>() : gallery);
+        vo.setCreateTime(coach.getCreateTime());
+        vo.setUpdateTime(coach.getUpdateTime());
         return vo;
     }
 
-    public static CoachCardVO toCardVO(CoachDO coach)
+    public static CoachSummaryVO toSummaryVO(CoachDO coach)
     {
-        CoachCardVO vo = new CoachCardVO();
-        vo.setId(coach.getId());
-        vo.setName(coach.getName());
-        vo.setTitle(coach.getTitle());
-        vo.setAvatarUrl(coach.getAvatarUrl());
-        return vo;
+        return new CoachSummaryVO(coach.getId(), coach.getName(), coach.getAvatarUrl(), coach.getIntro());
     }
 
-    public static List<CoachCardVO> toCardVOList(List<CoachDO> coaches)
+    public static List<CoachSummaryVO> toSummaryVOList(List<CoachDO> coaches)
     {
-        List<CoachCardVO> result = new ArrayList<CoachCardVO>();
+        List<CoachSummaryVO> result = new ArrayList<CoachSummaryVO>();
         if (coaches != null)
         {
             for (CoachDO coach : coaches)
             {
-                result.add(toCardVO(coach));
+                result.add(toSummaryVO(coach));
             }
         }
         return result;
     }
 
-    public static CoachIdVO toIdVO(Long id)
+    /** 请求字段前后空格由转换层去除（详细设计 §1.2.3 第 1 条） */
+    private static String trimToNull(String value)
     {
-        return new CoachIdVO(id);
-    }
-
-    public static List<String> parseAlbumJson(String json)
-    {
-        if (!hasText(json))
+        if (value == null)
         {
-            return new ArrayList<String>();
+            return null;
         }
-        List<String> values = JSON.parseArray(json, String.class);
-        return values == null ? new ArrayList<String>() : values;
-    }
-
-    private static String toAlbumJson(List<String> albumUrls)
-    {
-        return albumUrls == null || albumUrls.isEmpty() ? null : JSON.toJSONString(albumUrls);
-    }
-
-    private static boolean hasText(String value)
-    {
-        return value != null && !value.trim().isEmpty();
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 }

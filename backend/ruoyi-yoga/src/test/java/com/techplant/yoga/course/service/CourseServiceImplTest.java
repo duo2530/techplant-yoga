@@ -15,6 +15,8 @@ import static org.mockito.Mockito.when;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -29,8 +31,8 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.context.SecurityContextHolder;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.ruoyi.common.core.domain.model.LoginUser;
 import com.ruoyi.common.exception.ServiceException;
-import com.techplant.yoga.booking.service.BookingQueryService;
 import com.techplant.yoga.common.response.PageResult;
 import com.techplant.yoga.course.dao.CourseDao;
 import com.techplant.yoga.course.domain.CourseDO;
@@ -38,18 +40,18 @@ import com.techplant.yoga.course.dto.CourseCreateDTO;
 import com.techplant.yoga.course.dto.CourseUpdateDTO;
 import com.techplant.yoga.course.query.CourseQuery;
 import com.techplant.yoga.course.service.impl.CourseServiceImpl;
-import com.techplant.yoga.course.vo.CourseCreatedVO;
 import com.techplant.yoga.course.vo.CourseDetailVO;
 import com.techplant.yoga.course.vo.CourseListItemVO;
-import com.techplant.yoga.schedule.service.ScheduleQueryService;
+import com.techplant.yoga.course.vo.CourseSummaryVO;
+import com.techplant.yoga.schedule.service.ScheduleService;
 
 /**
- * 课程业务实现的单元测试（详细设计 §5.1.1，用例 5.1.1.1 ~ 5.1.1.14）。
+ * 课程业务实现的单元测试。
  *
- * <p>依赖（课程数据访问、排班统计、预约统计）全部用模拟对象隔离，<b>不连数据库</b>（§5.1）。</p>
+ * <p>依赖（课程数据访问、排课统计）全部用模拟对象隔离，<b>不连数据库</b>。</p>
  *
- * <p>用例顺序按「类 → 方法 → 分支」排：设置状态（停用 4 条 / 启用 1 条）→ 新增 → 查询列表 →
- * 查询详情 → 修改（§5.1.1 覆盖表、R05）。</p>
+ * <p><b>本轮口径：</b>课程<b>没有状态接口</b>（{@code updateStatus} 已删除）、名称全平台唯一、
+ * 修改<b>不做引用检查</b>、删除是<b>物理删除</b>且带排课门禁（统计失败 fail-closed）。</p>
  */
 @ExtendWith(MockitoExtension.class)
 @DisplayName("CourseServiceImpl 单元测试")
@@ -65,10 +67,7 @@ class CourseServiceImplTest
     private CourseDao courseDao;
 
     @Mock
-    private ScheduleQueryService scheduleQueryService;
-
-    @Mock
-    private BookingQueryService bookingQueryService;
+    private ScheduleService scheduleService;
 
     @InjectMocks
     private CourseServiceImpl courseService;
@@ -76,8 +75,7 @@ class CourseServiceImplTest
     @BeforeEach
     void setUpOperator()
     {
-        // 让 CurrentUserUtils 能取到操作人（审计字段与日志都要用）
-        com.ruoyi.common.core.domain.model.LoginUser loginUser = new com.ruoyi.common.core.domain.model.LoginUser();
+        LoginUser loginUser = new LoginUser();
         loginUser.setUserId(OPERATOR_ID);
         SecurityContextHolder.getContext()
                 .setAuthentication(new UsernamePasswordAuthenticationToken(loginUser, null));
@@ -90,184 +88,114 @@ class CourseServiceImplTest
     }
 
     // ------------------------------------------------------------------
-    // 设置课程状态（停用）：5.1.1.1 ~ 5.1.1.4
+    // 新增课程
     // ------------------------------------------------------------------
 
     @Test
-    @DisplayName("5.1.1.1 停用课程：课程下有未完成的排班 → 拒绝停用（业务码 409）")
-    void disableCourse_withUnfinishedSchedule_shouldReject()
-    {
-        when(courseDao.selectById(COURSE_ID)).thenReturn(enabledCourse());
-        when(scheduleQueryService.countUnfinishedByCourseId(COURSE_ID)).thenReturn(3L);
-        when(bookingQueryService.countUnfinishedByCourseId(COURSE_ID)).thenReturn(0L);
-
-        ServiceException exception = assertThrows(ServiceException.class,
-                () -> courseService.updateStatus(COURSE_ID, 0));
-
-        // 响应体系统一为若依 AjaxResult 后，阻塞明细放在提示语里（不再有结构化 data）
-        assertEquals(409, exception.getCode().intValue());
-        assertTrue(exception.getMessage().contains("3 个未完成排班"), exception.getMessage());
-        assertTrue(exception.getMessage().contains("0 条未结束预约"), exception.getMessage());
-        verify(courseDao, never()).updateStatus(any(), any(), any());
-    }
-
-    @Test
-    @DisplayName("5.1.1.2 停用课程：课程下有未结束的预约 → 拒绝停用（业务码 409）")
-    void disableCourse_withUnfinishedBooking_shouldReject()
-    {
-        when(courseDao.selectById(COURSE_ID)).thenReturn(enabledCourse());
-        when(scheduleQueryService.countUnfinishedByCourseId(COURSE_ID)).thenReturn(0L);
-        when(bookingQueryService.countUnfinishedByCourseId(COURSE_ID)).thenReturn(5L);
-
-        ServiceException exception = assertThrows(ServiceException.class,
-                () -> courseService.updateStatus(COURSE_ID, 0));
-
-        assertEquals(409, exception.getCode().intValue());
-        assertTrue(exception.getMessage().contains("0 个未完成排班"), exception.getMessage());
-        assertTrue(exception.getMessage().contains("5 条未结束预约"), exception.getMessage());
-        verify(courseDao, never()).updateStatus(any(), any(), any());
-    }
-
-    @Test
-    @DisplayName("5.1.1.3 停用课程：既无排班也无预约 → 停用成功")
-    void disableCourse_withoutReference_shouldSucceed()
-    {
-        when(courseDao.selectById(COURSE_ID)).thenReturn(enabledCourse());
-        when(scheduleQueryService.countUnfinishedByCourseId(COURSE_ID)).thenReturn(0L);
-        when(bookingQueryService.countUnfinishedByCourseId(COURSE_ID)).thenReturn(0L);
-        when(courseDao.updateStatus(eq(COURSE_ID), eq(0), any())).thenReturn(1);
-
-        courseService.updateStatus(COURSE_ID, 0);
-
-        verify(courseDao, times(1)).updateStatus(COURSE_ID, 0, OPERATOR_ID);
-    }
-
-    @Test
-    @DisplayName("5.1.1.4 停用课程：课程不存在 → 提示课程不存在")
-    void disableCourse_notExists_shouldThrow404()
-    {
-        when(courseDao.selectById(COURSE_ID)).thenReturn(null);
-
-        ServiceException exception = assertThrows(ServiceException.class,
-                () -> courseService.updateStatus(COURSE_ID, 0));
-
-        assertEquals(404, exception.getCode().intValue());
-        verify(scheduleQueryService, never()).countUnfinishedByCourseId(anyLong());
-        verify(bookingQueryService, never()).countUnfinishedByCourseId(anyLong());
-        verify(courseDao, never()).updateStatus(any(), any(), any());
-    }
-
-    @Test
-    @DisplayName("5.1.1.5 启用课程：不触发引用检查 → 启用成功")
-    void enableCourse_shouldSkipReferenceCheck()
-    {
-        CourseDO disabled = enabledCourse();
-        disabled.setStatus(0);
-        when(courseDao.selectById(COURSE_ID)).thenReturn(disabled);
-        when(courseDao.updateStatus(eq(COURSE_ID), eq(1), any())).thenReturn(1);
-
-        courseService.updateStatus(COURSE_ID, 1);
-
-        // 重点用例：只有停用才做引用检查，防止实现时把检查错放到启用分支
-        verify(scheduleQueryService, never()).countUnfinishedByCourseId(anyLong());
-        verify(bookingQueryService, never()).countUnfinishedByCourseId(anyLong());
-        verify(courseDao, times(1)).updateStatus(COURSE_ID, 1, OPERATOR_ID);
-    }
-
-    // ------------------------------------------------------------------
-    // 新增课程：5.1.1.6、5.1.1.14
-    // ------------------------------------------------------------------
-
-    @Test
-    @DisplayName("5.1.1.6 新增课程：参数合法 → 返回课程编号且默认启用")
-    void createCourse_shouldReturnGeneratedId()
+    @DisplayName("新增课程：参数合法 → 不返回 ID，只落库一条（课种/难度/封面/介绍都写入）")
+    void createCourse_shouldInsertWithoutReturningId()
     {
         CourseCreateDTO dto = new CourseCreateDTO();
-        dto.setStoreId(2001L);
         dto.setName("哈他瑜伽");
-        dto.setType(1);
+        dto.setCourseType(1);
         dto.setDifficulty(2);
         dto.setCoverUrl("https://cdn.example.com/course/hata.jpg");
         dto.setIntro("以体式与呼吸配合为主的经典课程");
-        dto.setDurationMin(60);
-        dto.setSortNo(10);
-        when(courseDao.insert(any(CourseDO.class))).thenAnswer(invocation -> {
-            CourseDO course = invocation.getArgument(0);
-            course.setId(1856739201475235840L);
-            return 1;
-        });
+        when(courseDao.selectByName("哈他瑜伽")).thenReturn(null);
+        when(courseDao.insert(any(CourseDO.class))).thenReturn(1);
 
-        CourseCreatedVO created = courseService.create(dto);
+        courseService.create(dto);
 
         ArgumentCaptor<CourseDO> captor = ArgumentCaptor.forClass(CourseDO.class);
         verify(courseDao).insert(captor.capture());
         CourseDO saved = captor.getValue();
         assertEquals("哈他瑜伽", saved.getName());
-        assertEquals(Integer.valueOf(1), saved.getType());
+        assertEquals(Integer.valueOf(1), saved.getCourseType());
         assertEquals(Integer.valueOf(2), saved.getDifficulty());
-        assertEquals(60, saved.getDurationMin().intValue());
-        assertEquals(Integer.valueOf(10), saved.getSortNo());
-        // 状态启用、未删除、主键不赋值（由框架生成）
-        assertEquals(Integer.valueOf(1), saved.getStatus());
-        assertEquals(Integer.valueOf(0), saved.getDeleted());
-        assertEquals(1856739201475235840L, created.getId());
+        assertEquals("https://cdn.example.com/course/hata.jpg", saved.getCoverUrl());
+        assertEquals("以体式与呼吸配合为主的经典课程", saved.getIntro());
+        // 主键由框架生成，service 不赋值；也没有 status / deleted / storeId / sortNo
+        assertNull(saved.getId());
     }
 
     @Test
-    @DisplayName("5.1.1.14 新增课程：不传排序号 → 默认 0")
-    void createCourse_withoutSortNo_shouldDefaultZero()
+    @DisplayName("新增课程：名称已存在 → 拒绝（409「课程名称已存在」），不落库")
+    void createCourse_withDuplicateName_shouldReject()
     {
         CourseCreateDTO dto = new CourseCreateDTO();
-        dto.setStoreId(2001L);
-        dto.setName("流瑜伽");
-        dto.setType(2);
-        dto.setDifficulty(3);
-        when(courseDao.insert(any(CourseDO.class))).thenAnswer(invocation -> {
-            CourseDO course = invocation.getArgument(0);
-            course.setId(2L);
-            return 1;
-        });
+        dto.setName("哈他瑜伽");
+        dto.setCourseType(1);
+        dto.setDifficulty(2);
+        when(courseDao.selectByName("哈他瑜伽")).thenReturn(course(2001L, "哈他瑜伽"));
 
-        CourseCreatedVO created = courseService.create(dto);
+        ServiceException exception = assertThrows(ServiceException.class, () -> courseService.create(dto));
 
-        ArgumentCaptor<CourseDO> captor = ArgumentCaptor.forClass(CourseDO.class);
-        verify(courseDao).insert(captor.capture());
-        CourseDO saved = captor.getValue();
-        assertEquals(Integer.valueOf(0), saved.getSortNo());
-        assertNull(saved.getCoverUrl());
-        assertNull(saved.getIntro());
-        assertNull(saved.getDurationMin());
-        assertNotNull(created.getId());
+        assertEquals(409, exception.getCode().intValue());
+        assertEquals("课程名称已存在", exception.getMessage());
+        verify(courseDao, never()).insert(any(CourseDO.class));
+    }
+
+    @Test
+    @DisplayName("新增课程：课种越界 → 500「课程类型取值为 1~4」（枚举兜底校验）")
+    void createCourse_withInvalidCourseType_shouldReject()
+    {
+        CourseCreateDTO dto = new CourseCreateDTO();
+        dto.setName("哈他瑜伽");
+        dto.setCourseType(9);
+        dto.setDifficulty(2);
+
+        ServiceException exception = assertThrows(ServiceException.class, () -> courseService.create(dto));
+
+        assertEquals(500, exception.getCode().intValue());
+        assertEquals("课程类型取值为 1~4", exception.getMessage());
+        verify(courseDao, never()).insert(any(CourseDO.class));
+    }
+
+    @Test
+    @DisplayName("新增课程：落库未生效（影响行数 0）→ 500")
+    void createCourse_whenInsertFails_shouldThrow()
+    {
+        CourseCreateDTO dto = new CourseCreateDTO();
+        dto.setName("哈他瑜伽");
+        dto.setCourseType(1);
+        dto.setDifficulty(2);
+        when(courseDao.selectByName("哈他瑜伽")).thenReturn(null);
+        when(courseDao.insert(any(CourseDO.class))).thenReturn(0);
+
+        ServiceException exception = assertThrows(ServiceException.class, () -> courseService.create(dto));
+
+        assertEquals(500, exception.getCode().intValue());
     }
 
     // ------------------------------------------------------------------
-    // 查询课程列表：5.1.1.7、5.1.1.8
+    // 查询课程列表
     // ------------------------------------------------------------------
 
     @Test
-    @DisplayName("5.1.1.7 查询课程列表：无条件 → 返回分页数据")
+    @DisplayName("查询课程列表：无条件 → 返回分页数据，列表项含课种名称")
     void pageCourses_withoutCondition()
     {
-        when(courseDao.selectPage(any(CourseQuery.class))).thenReturn(pageOf(course(1L, "哈他瑜伽"), course(2L, "流瑜伽")));
+        when(courseDao.selectPage(any(CourseQuery.class)))
+                .thenReturn(pageOf(course(1L, "哈他瑜伽"), course(2L, "流瑜伽")));
 
         PageResult<CourseListItemVO> result = courseService.page(new CourseQuery());
 
         assertEquals(Long.valueOf(2L), result.getTotal());
         assertEquals(2, result.getList().size());
-        // 列表项不含课程介绍与单节时长：由 CourseListItemVO 的字段设计保证（见 CourseConverterTest 5.1.1.29）
         assertEquals("哈他瑜伽", result.getList().get(0).getName());
+        assertEquals(Integer.valueOf(1), result.getList().get(0).getCourseType());
+        assertEquals("团课", result.getList().get(0).getCourseTypeName(), "课种码与名称成对返回");
     }
 
     @Test
-    @DisplayName("5.1.1.8 查询课程列表：带筛选条件 → 条件正确传入")
+    @DisplayName("查询课程列表：带筛选条件 → 条件正确传入（只有名称与课种）")
     void pageCourses_withCondition()
     {
         when(courseDao.selectPage(any(CourseQuery.class))).thenReturn(pageOf());
 
         CourseQuery query = new CourseQuery();
         query.setName("瑜伽");
-        query.setType(2);
-        query.setStatus(1);
+        query.setCourseType(2);
         query.setPageNum(2);
         query.setPageSize(20);
         courseService.page(query);
@@ -276,46 +204,36 @@ class CourseServiceImplTest
         verify(courseDao).selectPage(captor.capture());
         CourseQuery passed = captor.getValue();
         assertEquals("瑜伽", passed.getName());
-        assertEquals(Integer.valueOf(2), passed.getType());
-        assertEquals(Integer.valueOf(1), passed.getStatus());
+        assertEquals(Integer.valueOf(2), passed.getCourseType());
         assertEquals(Integer.valueOf(2), passed.getPageNum());
         assertEquals(Integer.valueOf(20), passed.getPageSize());
     }
 
     // ------------------------------------------------------------------
-    // 查询课程详情：5.1.1.9、5.1.1.10
+    // 查询课程详情
     // ------------------------------------------------------------------
 
     @Test
-    @DisplayName("5.1.1.9 查询课程详情：课程存在 → 返回详情")
+    @DisplayName("查询课程详情：课程存在 → 返回详情（含 intro，课种成对）")
     void getCourse_exists()
     {
-        CourseDO course = enabledCourse();
-        course.setIntro("课程介绍");
-        course.setDurationMin(60);
-        course.setCreateBy(9L);
-        course.setUpdateBy(9L);
+        CourseDO course = fullCourse();
         when(courseDao.selectById(COURSE_ID)).thenReturn(course);
 
         CourseDetailVO detail = courseService.getById(COURSE_ID);
 
         assertEquals("哈他瑜伽", detail.getName());
-        assertEquals(Integer.valueOf(1), detail.getType());
+        assertEquals(Integer.valueOf(1), detail.getCourseType());
+        assertEquals("团课", detail.getCourseTypeName());
         assertEquals(Integer.valueOf(2), detail.getDifficulty());
         assertEquals("https://cdn.example.com/course/hata.jpg", detail.getCoverUrl());
         assertEquals("课程介绍", detail.getIntro());
-        assertEquals(Integer.valueOf(60), detail.getDurationMin());
-        assertEquals(Integer.valueOf(10), detail.getSortNo());
-        assertEquals(Integer.valueOf(1), detail.getStatus());
         assertNotNull(detail.getCreateTime());
         assertNotNull(detail.getUpdateTime());
-        // 不含创建人与更新人：由 CourseDetailVO 的字段设计保证（见 CourseConverterTest 5.1.1.29 同类断言）
-        assertEquals(false, hasField(CourseDetailVO.class, "createBy"));
-        assertEquals(false, hasField(CourseDetailVO.class, "updateBy"));
     }
 
     @Test
-    @DisplayName("5.1.1.10 查询课程详情：课程不存在 → 提示课程不存在")
+    @DisplayName("查询课程详情：课程不存在（或已物理删除）→ 404")
     void getCourse_notExists()
     {
         when(courseDao.selectById(COURSE_ID)).thenReturn(null);
@@ -323,84 +241,97 @@ class CourseServiceImplTest
         ServiceException exception = assertThrows(ServiceException.class, () -> courseService.getById(COURSE_ID));
 
         assertEquals(404, exception.getCode().intValue());
+        assertEquals("课程不存在或已被删除", exception.getMessage());
     }
 
     // ------------------------------------------------------------------
-    // 修改课程：5.1.1.11 ~ 5.1.1.13
+    // 修改课程
     // ------------------------------------------------------------------
 
     @Test
-    @DisplayName("5.1.1.11 修改课程：课程存在 → 字段更新成功")
-    void updateCourse_shouldUpdateFields()
+    @DisplayName("修改课程：课程存在 → 字段全量覆盖，返回最新详情，不做引用检查")
+    void updateCourse_shouldUpdateFieldsWithoutReferenceCheck()
     {
-        CourseDO course = enabledCourse();
+        CourseDO course = fullCourse();
         when(courseDao.selectById(COURSE_ID)).thenReturn(course);
+        when(courseDao.selectByNameExcludeId(eq("哈他瑜伽（初级）"), eq(COURSE_ID))).thenReturn(null);
         when(courseDao.updateById(any(CourseDO.class))).thenReturn(1);
 
         CourseUpdateDTO dto = new CourseUpdateDTO();
-        dto.setStoreId(2001L);
         dto.setName("哈他瑜伽（初级）");
-        dto.setType(1);
+        dto.setCourseType(2);
         dto.setDifficulty(3);
         dto.setCoverUrl("https://cdn.example.com/course/hata2.jpg");
         dto.setIntro("新介绍");
-        dto.setDurationMin(75);
-        dto.setSortNo(20);
 
-        courseService.update(COURSE_ID, dto);
+        CourseDetailVO detail = courseService.update(COURSE_ID, dto);
 
         ArgumentCaptor<CourseDO> captor = ArgumentCaptor.forClass(CourseDO.class);
         verify(courseDao).updateById(captor.capture());
         CourseDO updated = captor.getValue();
         assertEquals(COURSE_ID, updated.getId());
         assertEquals("哈他瑜伽（初级）", updated.getName());
+        assertEquals(Integer.valueOf(2), updated.getCourseType());
         assertEquals(Integer.valueOf(3), updated.getDifficulty());
-        assertEquals(Integer.valueOf(75), updated.getDurationMin());
-        assertEquals(Integer.valueOf(20), updated.getSortNo());
         assertEquals(OPERATOR_ID, updated.getUpdateBy());
+        assertEquals("精品课", detail.getCourseTypeName());
+        // 修改不做引用检查：一次排课统计都不该发生
+        verify(scheduleService, never()).countActiveByCourseId(anyLong());
     }
 
     @Test
-    @DisplayName("5.1.1.12 修改课程：封面图与介绍传空 → 被清空")
+    @DisplayName("修改课程：封面图与介绍传空 → 被清空（传空即清空）")
     void updateCourse_withNullFields_shouldClearThem()
     {
-        CourseDO course = enabledCourse();
-        course.setIntro("原介绍");
+        CourseDO course = fullCourse();
         when(courseDao.selectById(COURSE_ID)).thenReturn(course);
+        when(courseDao.selectByNameExcludeId(any(), eq(COURSE_ID))).thenReturn(null);
         when(courseDao.updateById(any(CourseDO.class))).thenReturn(1);
 
         CourseUpdateDTO dto = new CourseUpdateDTO();
-        dto.setStoreId(2001L);
         dto.setName("哈他瑜伽（初级）");
-        dto.setType(1);
+        dto.setCourseType(1);
         dto.setDifficulty(3);
         dto.setCoverUrl(null);
         dto.setIntro(null);
-        dto.setDurationMin(null);
-        dto.setSortNo(20);
 
         courseService.update(COURSE_ID, dto);
 
-        // 重点用例：传空即清空，不能实现成「只有非空才更新」
         ArgumentCaptor<CourseDO> captor = ArgumentCaptor.forClass(CourseDO.class);
         verify(courseDao).updateById(captor.capture());
         CourseDO updated = captor.getValue();
         assertNull(updated.getCoverUrl());
         assertNull(updated.getIntro());
-        assertNull(updated.getDurationMin());
-        assertEquals("哈他瑜伽（初级）", updated.getName());
     }
 
     @Test
-    @DisplayName("5.1.1.13 修改课程：课程不存在 → 提示课程不存在")
+    @DisplayName("修改课程：名称与其它课程重复 → 409，不更新")
+    void updateCourse_withDuplicateName_shouldReject()
+    {
+        when(courseDao.selectById(COURSE_ID)).thenReturn(fullCourse());
+        when(courseDao.selectByNameExcludeId(eq("流瑜伽"), eq(COURSE_ID))).thenReturn(course(2002L, "流瑜伽"));
+
+        CourseUpdateDTO dto = new CourseUpdateDTO();
+        dto.setName("流瑜伽");
+        dto.setCourseType(1);
+        dto.setDifficulty(2);
+
+        ServiceException exception = assertThrows(ServiceException.class, () -> courseService.update(COURSE_ID, dto));
+
+        assertEquals(409, exception.getCode().intValue());
+        assertEquals("课程名称已存在", exception.getMessage());
+        verify(courseDao, never()).updateById(any(CourseDO.class));
+    }
+
+    @Test
+    @DisplayName("修改课程：课程不存在 → 404，不更新")
     void updateCourse_notExists()
     {
         when(courseDao.selectById(COURSE_ID)).thenReturn(null);
 
         CourseUpdateDTO dto = new CourseUpdateDTO();
-        dto.setStoreId(2001L);
         dto.setName("哈他瑜伽");
-        dto.setType(1);
+        dto.setCourseType(1);
         dto.setDifficulty(2);
 
         ServiceException exception = assertThrows(ServiceException.class, () -> courseService.update(COURSE_ID, dto));
@@ -410,20 +341,119 @@ class CourseServiceImplTest
     }
 
     // ------------------------------------------------------------------
+    // 删除课程（物理删除 + 门禁）
+    // ------------------------------------------------------------------
+
+    @Test
+    @DisplayName("删除课程：无未结束排课 → 物理删除成功（走 deleteById，不是 UPDATE deleted）")
+    void deleteCourse_withoutReference_shouldPhysicallyDelete()
+    {
+        when(courseDao.selectById(COURSE_ID)).thenReturn(fullCourse());
+        when(scheduleService.countActiveByCourseId(COURSE_ID)).thenReturn(0L);
+        when(courseDao.deleteById(COURSE_ID)).thenReturn(1);
+
+        courseService.delete(COURSE_ID);
+
+        verify(courseDao, times(1)).deleteById(COURSE_ID);
+    }
+
+    @Test
+    @DisplayName("删除课程：仍有未结束排课 → 409「该课程仍有 N 节未结束的排课，无法删除」，不删除")
+    void deleteCourse_withActiveSchedule_shouldReject()
+    {
+        when(courseDao.selectById(COURSE_ID)).thenReturn(fullCourse());
+        when(scheduleService.countActiveByCourseId(COURSE_ID)).thenReturn(3L);
+
+        ServiceException exception = assertThrows(ServiceException.class, () -> courseService.delete(COURSE_ID));
+
+        assertEquals(409, exception.getCode().intValue());
+        assertEquals("该课程仍有 3 节未结束的排课，无法删除", exception.getMessage());
+        verify(courseDao, never()).deleteById(anyLong());
+    }
+
+    @Test
+    @DisplayName("删除课程：引用统计抛异常 → fail-closed，409「引用检查未完成，已拒绝本次删除」，不删除")
+    void deleteCourse_whenReferenceCheckFails_shouldFailClosed()
+    {
+        when(courseDao.selectById(COURSE_ID)).thenReturn(fullCourse());
+        when(scheduleService.countActiveByCourseId(COURSE_ID)).thenThrow(new RuntimeException("统计服务不可用"));
+
+        ServiceException exception = assertThrows(ServiceException.class, () -> courseService.delete(COURSE_ID));
+
+        assertEquals(409, exception.getCode().intValue());
+        assertEquals("引用检查未完成，已拒绝本次删除", exception.getMessage());
+        verify(courseDao, never()).deleteById(anyLong());
+    }
+
+    @Test
+    @DisplayName("删除课程：课程不存在 → 404，不统计、不删除")
+    void deleteCourse_notExists_shouldThrow404()
+    {
+        when(courseDao.selectById(COURSE_ID)).thenReturn(null);
+
+        ServiceException exception = assertThrows(ServiceException.class, () -> courseService.delete(COURSE_ID));
+
+        assertEquals(404, exception.getCode().intValue());
+        verify(scheduleService, never()).countActiveByCourseId(anyLong());
+        verify(courseDao, never()).deleteById(anyLong());
+    }
+
+    // ------------------------------------------------------------------
+    // 跨模块出参：summaries / getSummary
+    // ------------------------------------------------------------------
+
+    @Test
+    @DisplayName("批量摘要：按去重后的编号一次查回，课种名一并翻译")
+    void summaries_shouldDeduplicateAndTranslate()
+    {
+        when(courseDao.selectByIds(any())).thenReturn(Arrays.asList(course(1L, "哈他瑜伽"), course(2L, "流瑜伽")));
+
+        List<CourseSummaryVO> list = courseService.summaries(Arrays.asList(1L, 2L, 1L, null));
+
+        assertEquals(2, list.size());
+        assertEquals("团课", list.get(0).getCourseTypeName());
+        ArgumentCaptor<java.util.Collection<Long>> captor = ArgumentCaptor.forClass(java.util.Collection.class);
+        verify(courseDao).selectByIds(captor.capture());
+        assertEquals(2, captor.getValue().size(), "重复 id 与 null 应先去掉");
+    }
+
+    @Test
+    @DisplayName("批量摘要：入参为空返回空列表，不查库")
+    void summaries_withEmptyIds_shouldReturnEmpty()
+    {
+        assertTrue(courseService.summaries(null).isEmpty());
+        assertTrue(courseService.summaries(Collections.<Long>emptyList()).isEmpty());
+        verify(courseDao, never()).selectByIds(any());
+    }
+
+    @Test
+    @DisplayName("单条摘要：课程存在返回摘要；不存在返回 null（调用方按 404 处理）")
+    void getSummary_shouldReturnNullWhenAbsent()
+    {
+        when(courseDao.selectById(COURSE_ID)).thenReturn(fullCourse());
+        CourseSummaryVO summary = courseService.getSummary(COURSE_ID);
+        assertNotNull(summary);
+        assertEquals("团课", summary.getCourseTypeName());
+        assertEquals("课程介绍", summary.getIntro());
+
+        when(courseDao.selectById(9999L)).thenReturn(null);
+        assertNull(courseService.getSummary(9999L));
+        assertNull(courseService.getSummary(null));
+    }
+
+    // ------------------------------------------------------------------
     // 测试数据与工具
     // ------------------------------------------------------------------
 
-    private CourseDO enabledCourse()
+    private CourseDO fullCourse()
     {
         CourseDO course = new CourseDO();
         course.setId(COURSE_ID);
         course.setName("哈他瑜伽");
-        course.setType(1);
+        course.setCourseType(1);
         course.setDifficulty(2);
         course.setCoverUrl("https://cdn.example.com/course/hata.jpg");
-        course.setSortNo(10);
-        course.setStatus(1);
-        course.setDeleted(0);
+        course.setIntro("课程介绍");
         course.setCreateTime(LocalDateTime.of(2026, 9, 20, 10, 12, 33));
         course.setUpdateTime(LocalDateTime.of(2026, 9, 21, 9, 3, 11));
         return course;
@@ -434,11 +464,8 @@ class CourseServiceImplTest
         CourseDO course = new CourseDO();
         course.setId(id);
         course.setName(name);
-        course.setType(1);
+        course.setCourseType(1);
         course.setDifficulty(1);
-        course.setStatus(1);
-        course.setSortNo(0);
-        course.setDeleted(0);
         return course;
     }
 
@@ -454,18 +481,4 @@ class CourseServiceImplTest
         page.setTotal(records.size());
         return page;
     }
-
-    private boolean hasField(Class<?> type, String fieldName)
-    {
-        try
-        {
-            type.getDeclaredField(fieldName);
-            return true;
-        }
-        catch (NoSuchFieldException e)
-        {
-            return false;
-        }
-    }
 }
-

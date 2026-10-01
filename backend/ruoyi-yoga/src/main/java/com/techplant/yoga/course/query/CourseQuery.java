@@ -3,13 +3,15 @@ package com.techplant.yoga.course.query;
 import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.Size;
+import com.techplant.yoga.course.enums.CourseTypeValid;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 
 /**
- * 课程列表查询条件（详细设计 §2.3.5）。
+ * 课程列表查询条件（课程管理详细设计 §2.3.3、§2.2.1）。
  *
- * <p>由 controller 接收 query string 后装配，交给 service 构造查询条件。</p>
+ * <p>筛选：{@code name}（模糊）、{@code courseType}（1~4，不传不限）；分页上限 100。
+ * <b>没有门店、没有状态</b> —— 课程是平台级、且无状态。</p>
  */
 @ApiModel("课程列表查询条件")
 public class CourseQuery
@@ -20,26 +22,16 @@ public class CourseQuery
     /** 默认每页条数 */
     public static final int DEFAULT_PAGE_SIZE = 10;
 
-    /** 每页条数上限（§2.1.4） */
+    /** 每页条数上限 */
     public static final int MAX_PAGE_SIZE = 100;
 
     @ApiModelProperty("课程名称，模糊匹配")
     @Size(max = 64, message = "课程名称长度不能超过 64")
     private String name;
 
-    @ApiModelProperty(value = "门店ID", example = "1856739201475235901")
-    @Min(value = 1, message = "门店ID必须大于 0")
-    private Long storeId;
-
-    @ApiModelProperty(value = "课程类型，1~4", example = "1")
-    @Min(value = 1, message = "课程类型取值为 1~4")
-    @Max(value = 4, message = "课程类型取值为 1~4")
-    private Integer type;
-
-    @ApiModelProperty(value = "课程状态：1 启用、0 停用；不传不限", example = "1")
-    @Min(value = 0, message = "课程状态取值为 0（停用）或 1（启用）")
-    @Max(value = 1, message = "课程状态取值为 0（停用）或 1（启用）")
-    private Integer status;
+    @ApiModelProperty(value = "课种：1团课 2精品课 3私教课 4特色课；不传不限", example = "1")
+    @CourseTypeValid
+    private Integer courseType;
 
     @ApiModelProperty(value = "页码，从 1 开始，默认 1", example = "1")
     @Min(value = 1, message = "页码不能小于 1")
@@ -71,39 +63,19 @@ public class CourseQuery
         return name;
     }
 
-    public Long getStoreId()
-    {
-        return storeId;
-    }
-
-    public void setStoreId(Long storeId)
-    {
-        this.storeId = storeId;
-    }
-
     public void setName(String name)
     {
         this.name = name;
     }
 
-    public Integer getType()
+    public Integer getCourseType()
     {
-        return type;
+        return courseType;
     }
 
-    public void setType(Integer type)
+    public void setCourseType(Integer courseType)
     {
-        this.type = type;
-    }
-
-    public Integer getStatus()
-    {
-        return status;
-    }
-
-    public void setStatus(Integer status)
-    {
-        this.status = status;
+        this.courseType = courseType;
     }
 
     public Integer getPageNum()

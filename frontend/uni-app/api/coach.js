@@ -1,32 +1,21 @@
-import request from '@/utils/request'
+/**
+ * 教练接口（用户端）—— **一期不存在**
+ *
+ * 一期用户端不提供教练接口（BR-用户端-010），此处仅为兼容保留页面的编译而保留同名导出，
+ * 教练信息一律随 `/api/schedules` 带出（卡片 `coachName`，详情 `coachName` / `coachAvatarUrl` / `coachIntro`）。
+ *
+ * 后端 W3 已删除 `CoachPublicController`，`GET /api/coaches*` 不再存在，
+ * 所以本文件**不再发任何请求**：保留同名导出只为让「一期不接入但保留」的旧页面
+ * （`pages/coaches` 约教练）照常编译，统一返回空结果；
+ * 该页将来重新接入时，再按新契约重写这一层。
+ */
 
-const PUBLIC_REQUEST = {
-  headers: { isToken: false }
-}
-
-/** 首页金牌教练：后端只返回启用且头衔为「金牌教练」的数据。 */
+/** 旧「首页金牌教练」：一期首页已无该区块，恒返回空数组 */
 export function getFeaturedCoaches() {
-  return request(Object.assign({}, PUBLIC_REQUEST, {
-    url: '/api/coaches/featured',
-    method: 'get'
-  })).then((res) => {
-    return Array.isArray(res && res.data) ? res.data : []
-  })
+  return Promise.resolve([])
 }
 
-/** 用户端教练分页列表。 */
-export function listCoaches(params = {}) {
-  return request(Object.assign({}, PUBLIC_REQUEST, {
-    url: '/api/coaches',
-    method: 'get',
-    params: {
-      pageNum: params.pageNum || 1,
-      pageSize: params.pageSize || 10
-    }
-  })).then((res) => {
-    return {
-      list: Array.isArray(res && res.rows) ? res.rows : [],
-      total: Number(res && res.total) || 0
-    }
-  })
+/** 旧「用户端教练分页列表」：一期接口不存在，恒返回空分页 */
+export function listCoaches() {
+  return Promise.resolve({ list: [], total: 0 })
 }
