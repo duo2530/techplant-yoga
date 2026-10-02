@@ -1,6 +1,6 @@
 # TechPlant Yoga
 
-[简体中文](./README.md) | [English](./README.en.md)
+[简体中文](./README.md) | English
 
 A yoga & pilates booking and operations management project, consisting of an admin web console, a user-facing mini program, a Java backend, and the project design documents.
 

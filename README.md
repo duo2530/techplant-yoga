@@ -1,6 +1,6 @@
 # TechPlant Yoga
 
-[简体中文](./README.md) | [English](./README.en.md)
+简体中文 | [English](./README.en.md)
 
 瑜伽普拉提预约与运营管理项目，包含管理端、用户端小程序、Java 后端和项目设计文档。
 
