@@ -198,7 +198,7 @@ const data = reactive({
   }
 })
 
-const { form, queryParams, rules } = data
+const { form, queryParams, rules } = toRefs(data)
 
 /** 状态标签颜色（文案用后端 statusText，前端只做颜色映射） */
 function statusTagType(status) {
