@@ -43,7 +43,7 @@
         <el-descriptions-item label="门店">{{ detail.storeName }}</el-descriptions-item><el-descriptions-item label="教室名称">{{ detail.classroomName }}</el-descriptions-item>
         <el-descriptions-item label="排班编号">{{ detail.scheduleId }}</el-descriptions-item>
         <el-descriptions-item label="开始时间">{{ detail.startTime }}</el-descriptions-item><el-descriptions-item label="结束时间">{{ detail.endTime }}</el-descriptions-item>
-        <el-descriptions-item label="使用会员卡">{{ detail.cardName }}</el-descriptions-item><el-descriptions-item label="卡片类型">{{ cardTypeLabel(detail.cardType) }}</el-descriptions-item>
+        <el-descriptions-item label="使用会员卡">{{ detail.cardName }}</el-descriptions-item><el-descriptions-item label="卡片类型">{{ cardTypeLabel(detail.cardType, detail.cardTypeName) }}</el-descriptions-item>
         <el-descriptions-item label="预约人数">{{ detail.bookingCount }}</el-descriptions-item><el-descriptions-item label="扣次结果">{{ detail.deductionResult }}</el-descriptions-item>
         <el-descriptions-item label="预约状态">{{ statusLabel(detail.status) }}</el-descriptions-item><el-descriptions-item label="预约时间">{{ detail.bookingTime }}</el-descriptions-item>
         <el-descriptions-item label="签到时间">{{ detail.checkInTime || '-' }}</el-descriptions-item><el-descriptions-item label="取消来源">{{ detail.cancelSource || '-' }}</el-descriptions-item>
@@ -53,7 +53,7 @@
     </el-dialog>
 
     <el-dialog v-model="openCancel" title="门店代取消预约" width="480px" append-to-body>
-      <el-alert title="门店代取消同样不能突破开课前两小时限制。次数卡会按预约人数立即返还，期限卡不处理次数。" type="warning" :closable="false" class="mb20" />
+      <el-alert title="门店代取消同样不能突破开课前两小时限制。次数卡会按预约人数立即返还并写返次流水，年卡不处理次数。" type="warning" :closable="false" class="mb20" />
       <el-form ref="cancelRef" :model="cancelForm" :rules="cancelRules" label-width="90px">
         <el-form-item label="会员">{{ currentRow.memberName }}（{{ currentRow.phone }}）</el-form-item>
         <el-form-item label="预约课程">{{ currentRow.courseName }} · {{ currentRow.bookingCount }} 人</el-form-item>
@@ -76,7 +76,7 @@ const cancelRules={reason:[{required:true,message:'请选择取消原因',trigge
 
 function statusLabel(value){return {1:'已预约',2:'已取消',3:'已签到'}[Number(value)]||'-'}
 function statusType(value){return Number(value)===1?'primary':Number(value)===2?'info':'success'}
-function cardTypeLabel(value){return Number(value)===1?'次数卡':'期限卡'}
+function cardTypeLabel(value, name){if(name)return name;return value===null||value===undefined||value===''?'-':(Number(value)===1?'次数卡':'年卡')}
 function getList(){loading.value=true;listReservation(queryParams).then(res=>{reservationList.value=res.rows;total.value=res.total}).finally(()=>{loading.value=false})}
 function handleQuery(){queryParams.pageNum=1;getList()}
 function resetQuery(){proxy.resetForm('queryRef');handleQuery()}

@@ -143,7 +143,7 @@ export const prototypeRoutes = [
       },
       {
         path: 'member-card',
-        component: () => import('@/views/memberCard/index.vue'),
+        component: () => import('@/views/member-card/index.vue'),
         name: 'MemberCard',
         meta: { title: '会员卡管理', icon: 'money' }
       },

@@ -78,11 +78,16 @@ techplant-yoga/
 │     ├─ components/     # Business components
 │     └─ static/         # Images, fonts, and style assets
 ├─ docs/
-│  ├─ 需求分析/           # Requirements analysis
-│  ├─ 概要设计/           # High-level design
-│  ├─ 详细设计/           # Detailed design
-│  ├─ 原型/               # Prototypes
-│  └─ 需求文档/           # Requirements documents
+│  ├─ 需求分析/          # Requirements analysis, use-case index and 9 use cases
+│  ├─ 需求文档/          # Business rules (BR-*), global overview, feature inventory, process flows
+│  │  ├─ 管理端/         # Admin feature list, page structure diagram, admin prototype
+│  │  └─ 用户端/         # User-side feature list, structure diagrams, hi-fi prototype
+│  ├─ 产品分析/          # Real-app screenshots, page/object inventory, navigation analysis
+│  ├─ 概要设计/          # High-level design
+│  ├─ 详细设计/          # Detailed design overview and per-module detailed designs
+│  ├─ 项目管理/          # Phase-1 roadmap, activity list, phase-2 plan
+│  ├─ 编码开发/          # Project infrastructure, AI agent development handbook
+│  └─ 模板/              # Document templates
 ├─ .gitignore
 ├─ LICENSE
 ├─ README.md
@@ -121,7 +126,7 @@ The backend depends on three bootstrap scripts, all located in `backend/sql`. Th
 | --- | --- | --- |
 | 1 | `backend/sql/ry_20260417.sql` | RuoYi base tables and seed data (`sys_user` including the `admin` account, `sys_menu`, dictionaries, etc.) |
 | 2 | `backend/sql/quartz.sql` | Quartz scheduled task tables (`QRTZ_*`) |
-| 3 | `backend/sql/yoga.sql` | Yoga business tables (`t_store`, `t_classroom`, `t_coach`, `t_course`, `t_schedule`), business menus (2000–2005), the `store_region` dictionary, and sample data |
+| 3 | `backend/sql/yoga.sql` | Yoga business tables (`t_store`, `t_classroom`, `t_coach`, `t_course`, `t_schedule`), business menus (2001–2005, with 2006–2009 reserved for phase 2), the `store_region` dictionary, and sample data |
 
 `ry_20260417.sql` and `quartz.sql` contain **no `CREATE DATABASE` or `use` statement**, so create the database yourself first. The default database name is `yoga`, matching `application-druid.yml`:
 
@@ -159,7 +164,7 @@ SELECT menu_name FROM sys_menu WHERE menu_id BETWEEN 2000 AND 2005;
 SELECT COUNT(*) FROM t_store;                                   -- the 5 business tables exist
 ```
 
-`yoga.sql` is re-runnable: business tables are dropped with `DROP TABLE IF EXISTS` and recreated, and menus only clean up and rewrite IDs 2000–2006 without touching RuoYi's built-in "System Management" menus. Note that **recreating the business tables wipes business data**.
+`yoga.sql` is re-runnable: business tables are dropped with `DROP TABLE IF EXISTS` and recreated, and menus only clean up and rewrite IDs 2000–2009 (2006–2009 are reserved for phase 2) without touching RuoYi's built-in "System Management" menus. Note that **recreating the business tables wipes business data**.
 
 ### 2. Update the Backend Configuration
 
@@ -308,6 +313,25 @@ npm run build:prod
 - Unconfirmed business rules stay marked as `TODO-待确认` instead of expanding the domain prematurely.
 - APIs use explicit DTOs and VOs and never expose persistence entities directly.
 - Database changes are maintained in the business scripts under `backend/sql`.
+
+### Documentation Conventions (drift prevention)
+
+Each kind of content has exactly one source of truth; other documents reference it rather than restating it:
+
+| Content | Single source of truth | How other documents refer to it |
+| --- | --- | --- |
+| Business rules | `docs/需求文档/业务规则.md` (`BR-*`) | **Cite the rule ID only; never copy the rule text** |
+| Phase-1 feature scope and priority | `docs/需求文档/功能清单汇总.md` (`F-*`, 51 items) | Cite `F-*` IDs only |
+| User-facing screens and navigation | `docs/产品分析/用户端页面与跳转梳理.md` (P/T/C IDs) | Cite IDs only |
+| User-facing API contract | `docs/详细设计/用户端接口详细设计.md` | Module designs cover admin APIs only; user-facing APIs are defined once, there |
+| Global technical conventions | `backend/AGENTS.md`, `frontend/uni-app/AGENTS.md` | `docs/详细设计/详细设计总览.md` only indexes them |
+| Design decision log | `docs/详细设计/详细设计总览.md` §5 | Append new decisions; never rewrite old ones |
+
+Three hard requirements:
+
+1. **Bump version and date together** — changing the body requires updating the header version/date and adding a changelog row; the header version must equal the highest version in the changelog.
+2. **Reference current versions** — always cite the *current* version and a correct relative path; re-check every relative link after moving files.
+3. **Append, don't rewrite history** — changelogs and past decisions are added to, never edited; a superseded rule is explained in the changelog instead of being deleted.
 
 ## License
 
