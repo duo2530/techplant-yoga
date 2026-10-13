@@ -35,7 +35,6 @@ export default {
       return authPermission(item)
     })
   },
-  // 验证用户是否含有指定权限，必须全部拥有
   hasPermiAnd(permissions) {
     return permissions.every(item => {
       return authPermission(item)
@@ -51,7 +50,6 @@ export default {
       return authRole(item)
     })
   },
-  // 验证用户是否含有指定角色，必须全部拥有
   hasRoleAnd(roles) {
     return roles.every(item => {
       return authRole(item)

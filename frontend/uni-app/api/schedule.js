@@ -1,21 +1,7 @@
 import request from '@/utils/request'
 
-/**
- * 排课接口（用户端 · 免登录只读）
- *
- * 契约唯一来源：`docs/详细设计/用户端接口详细设计.md` §2.2、§2.3
- *   1. GET /api/schedules                  参数 storeId / courseType / date / pageNum / pageSize
- *      → TableDataInfo{ total, rows: ScheduleCardVO[] }
- *   2. GET /api/schedules/{scheduleId}     → AjaxResult{ data: ScheduleDetailVO }
- *
- * 两条硬口径（后端已经施加，前端**不要重复过滤、也不要自己推导状态**）：
- *   - 可见口径 `status <> 1`：已上架 / 已结束 / 已取消都会返回，只有「待上架」不返回；
- *   - `statusText`（可约 / 已结束 / 已取消）与 `bookable` 由后端 `ScheduleStatusEnum` 推导。
- *
- * 雪花 ID 一律当字符串：19 位数字转 Number 会塌缩，比较时用 String(...)。
- */
+/** 用户端排课查询接口。 */
 
-/** 匿名请求：显式告诉 utils/request 不要带 token */
 const PUBLIC_REQUEST = { headers: { isToken: false } }
 
 const MAX_PAGE_SIZE = 100
@@ -70,7 +56,6 @@ function normalizeDetail(row) {
     coachAvatarUrl: toText(raw.coachAvatarUrl),
     coachIntro: toText(raw.coachIntro),
     minPersons: toNum(raw.minPersons),
-    // 一期没有预约：后端固定返回 []（不是 null）；这里保证页面拿到的一定是数组
     bookers: Array.isArray(raw.bookers) ? raw.bookers : []
   })
 }

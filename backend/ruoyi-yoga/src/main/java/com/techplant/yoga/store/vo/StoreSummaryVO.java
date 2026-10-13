@@ -7,8 +7,7 @@ import io.swagger.annotations.ApiModelProperty;
  * 门店摘要（跨模块批量补齐名称用）。
  *
  * <p>教室模块用它批量补 {@code storeName}，排课模块用它批量补门店名称；
- * 由 {@code StoreService#summaries(java.util.Collection)} 提供（门店管理详细设计 §3.2、
- * 详细设计总览 §6「跨模块调用一律走对方的 Service」）。</p>
+ * 由 {@code StoreService#summaries(java.util.Collection)} 提供。</p>
  */
 @ApiModel("门店摘要")
 public class StoreSummaryVO

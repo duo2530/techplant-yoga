@@ -39,20 +39,7 @@ import com.baomidou.mybatisplus.extension.spring.MybatisSqlSessionFactoryBean;
 import com.techplant.yoga.coach.domain.CoachDO;
 import com.techplant.yoga.coach.query.CoachQuery;
 
-/**
- * 教练数据访问的**真实 SQL 口径**集成测试（H2 内存库，MySQL 兼容模式，不连开发库）。
- *
- * <p><b>为什么需要它：</b>教练模块有三条「读代码看不出来」的口径，只有把真实
- * {@code SqlSessionFactory} 与分页插件跑起来、配真表真数据才能证明：</p>
- * <ol>
- *   <li><b>物理删除</b>：本表没有 {@code deleted} 列、DO 没有 {@code @TableLogic}，
- *       {@code deleteById} 必须真的把行 DELETE 掉（不是 UPDATE 打标记）；</li>
- *   <li><b>列表只 select 必要列</b>：{@code selectAdminPage} 不查 {@code intro}/{@code gallery}
- *       两个大字段；</li>
- *   <li><b>相册 JSON 原样承载</b>：DO 的 {@code gallery} 与 {@code json} 列内容一比一
- *       （转换只在 service 层发生，DAO 不做任何加工）。</li>
- * </ol>
- */
+/** 教练数据访问的**真实 SQL 口径**集成测试（H2 内存库，MySQL 兼容模式，不连开发库）。 */
 @ExtendWith(SpringExtension.class)
 @ContextConfiguration(classes = { CoachDaoTest.TestConfig.class, CoachDaoImpl.class })
 @DisplayName("CoachDao 真实 SQL 口径集成测试（H2）")
@@ -91,12 +78,7 @@ class CoachDaoTest
             return new DataSourceTransactionManager(dataSource);
         }
 
-        /**
-         * 本测试自己装配一个 MyBatis-Plus 的 {@code SqlSessionFactory}（显式
-         * {@code setConfiguration(new MybatisConfiguration())}），避免「切片上下文里映射器拿不到
-         * BaseMapper CRUD 语句」的坑（{@code backend/AGENTS.md} §8.9 的注意事项，范例
-         * {@code ScheduleDaoTest} / {@code MyBatisWiringTest}）。
-         */
+        /** 本测试自己装配一个 MyBatis-Plus 的 {@code SqlSessionFactory}（显式 {@code setConfiguration(new MybatisConfiguration)}），避免「切片上下文里映射器拿不到 BaseMapper CRUD 语句」的坑。 */
         @Bean
         public MybatisSqlSessionFactoryBean sqlSessionFactory(DataSource dataSource)
         {

@@ -6,7 +6,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.techplant.yoga.coach.domain.CoachDO;
 import com.techplant.yoga.coach.query.CoachQuery;
 
-/** 教练数据访问（教练管理详细设计 §3.2）。 */
+/** 教练数据访问。 */
 public interface CoachDao
 {
     /** 管理端列表分页：只 select id/name/avatar_url/phone/审计时间，按 id DESC */

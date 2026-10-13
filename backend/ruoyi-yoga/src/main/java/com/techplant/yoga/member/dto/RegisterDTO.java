@@ -7,7 +7,7 @@ import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 
 /**
- * 注册请求（用户端接口详细设计 §2.2.5、§2.6.5）。
+ * 注册请求。
  *
  * <p>免登录：手机号 ＋ 6 位验证码 ＋ 密码；密码 8～20 位且同时包含字母与数字，
  * 明文只经 HTTPS 提交，服务端只保存 BCrypt 哈希、永不回显。</p>

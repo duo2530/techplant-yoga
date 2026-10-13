@@ -18,15 +18,7 @@ import com.techplant.yoga.schedule.vo.ScheduleCardVO;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 
-/**
- * 用户端排课接口（《用户端接口详细设计》§2.2、§2.3，共 2 个）。
- *
- * <p><b>免登录、只读、无身份</b>：类上标 {@link Anonymous}，由 {@code PermitAllUrlProperties}
- * 收进 permitAll 白名单；两个接口都是 {@code GET}，没有任何写操作（{@code BR-全局-002}）。</p>
- *
- * <p>可见口径是 {@code status <> 1}（待上架不可见），与管理端的删除门禁口径是两套条件；
- * 详情对「待上架」返回 404，与「不存在」同一个响应，不区分。</p>
- */
+/** 用户端排课接口。 */
 @Api(tags = "用户端-排课")
 @Anonymous
 @Validated

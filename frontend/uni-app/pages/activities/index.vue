@@ -30,16 +30,7 @@ import { ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { listActivities } from '@/api/activity'
 
-/**
- * 活动列表（照 docs/原型/activities.html）
- *
- * 原型截图里**整屏是空态**：内容区竖向渐变 `linear-gradient(180deg,#E3F2FD,#8FC9F9)`，
- * 居中一个 39×36pt 的灰色描边图标（`#AAAAAA`）+ 15pt 的「暂无数据」。
- * 按 _复刻规范 §1.2「空态也要复刻，不要塞假数据」，默认就是空态
- * （由 `MOCK.empty.activities` 控制，见 mock/config.js）。
- *
- * 状态栏 / 导航栏 / 微信胶囊 / TabBar 由小程序绘制，本页不画（标题「活动列表」已在 pages.json）。
- */
+/** 活动列表（照 docs/原型/activities.html） */
 
 const list = ref([])
 

@@ -122,16 +122,7 @@ import { ref, computed } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { listStores, getCurrentStoreId, getCachedStore, saveCurrentStore } from '@/api/store'
 
-/**
- * 首页（W5）
- *
- * 一期首页只做「门店切换」（BR-用户端-003）：门店卡 ＋「换店」入口。
- * 旧原型里的公告栏 / 今日可约 / 热门课程 / 金牌教练 / 门店实景图已按一期范围删除，
- * 「换店要先登录」的登录拦截也已删除（用户端免登录）。
- *
- * 数据：GET /api/stores（分页 ＋ regionCode 区域筛选 ＋ keyword 名称/地址关键字）。
- * 当前门店：只存小程序本地存储（ys_current_store_id，BR-全局-010），不落服务端、不登录。
- */
+/** 首页（W5） */
 
 /** 换店弹层每页条数（接口 pageSize 上限 100） */
 const PICKER_PAGE_SIZE = 10
@@ -159,12 +150,7 @@ const hasStore = computed(() => !!store.value.name)
  */
 const storeImage = computed(() => store.value.imageUrl || '/static/images/home/store-hero.jpg')
 
-/**
- * 加载当前门店
- *
- * 顺序：先渲染本地缓存（避免白屏）→ 再拉一次门店列表校准（同时拿到「无门店」的事实）。
- * 本地没有门店 id（首次进入）→ 默认取列表第一家并写回本地（W5 验收点）。
- */
+/** 加载当前门店 */
 async function loadCurrentStore() {
   const cached = getCachedStore()
   if (cached) {

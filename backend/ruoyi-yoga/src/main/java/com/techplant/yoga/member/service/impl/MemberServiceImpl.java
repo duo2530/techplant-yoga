@@ -8,16 +8,7 @@ import com.techplant.yoga.member.dao.MemberDao;
 import com.techplant.yoga.member.domain.MemberDO;
 import com.techplant.yoga.member.service.MemberService;
 
-/**
- * 会员基础能力实现（会员管理详细设计 §3.2、§4.6；用户端接口详细设计 §4.4）。
- *
- * <p><b>「未注册」= {@code password} 为空</b>：管理端可以只建会员档案不设密码，
- * 用户端注册时补齐同一行的登录信息，因此这里绝不重建档案、不覆盖会员 ID 与资料。</p>
- *
- * <p><b>并发口径</b>：补齐密码用 {@code password IS NULL} 作为条件（影响行数为 0 即 409），
- * 新建会员由 {@code uk_member_phone} 兜底（{@link DuplicateKeyException} 即 409），
- * 两种情况都不覆盖并发结果（用户端接口详细设计 §4.4 第 3 步）。</p>
- */
+/** 会员基础能力实现。 */
 @Service
 public class MemberServiceImpl implements MemberService
 {
@@ -27,7 +18,7 @@ public class MemberServiceImpl implements MemberService
     /** 参数校验失败／系统异常 */
     private static final int PARAM_INVALID = 500;
 
-    /** 显示名前缀：忻会员 + 手机号后 4 位（BR-会员-010） */
+    /** 显示名前缀：忻会员 + 手机号后 4 位 */
     private static final String NAME_PREFIX = "忻会员";
 
     private final MemberDao memberDao;

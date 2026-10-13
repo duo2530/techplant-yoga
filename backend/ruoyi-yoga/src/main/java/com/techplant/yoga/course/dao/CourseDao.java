@@ -6,14 +6,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.techplant.yoga.course.domain.CourseDO;
 import com.techplant.yoga.course.query.CourseQuery;
 
-/**
- * 课程数据访问（课程管理详细设计 §3.2）。
- *
- * <p>面向业务语义、屏蔽 mapper 细节：返回 {@code DO}，由 service 负责转 VO。</p>
- *
- * <p><b>物理删除：</b>{@code CourseDO} 没有 {@code deleted} 字段、没有 {@code @TableLogic}，
- * 业务代码也<b>不要</b>拼 {@code deleted = 0} 条件（详细设计总览 §2、BR-课程-008）。</p>
- */
+/** 课程数据访问。 */
 public interface CourseDao
 {
     /**

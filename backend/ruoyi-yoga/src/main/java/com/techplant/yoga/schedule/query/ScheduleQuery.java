@@ -7,11 +7,7 @@ import org.springframework.format.annotation.DateTimeFormat;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 
-/**
- * 管理端排课列表查询条件（排课管理详细设计 §2.2.1、§2.3.3）。
- *
- * <p><b>日期区间一律筛 {@code schedule_date}</b>（{@code BR-排课-022}），不要用 {@code start_time} 拼区间。</p>
- */
+/** 管理端排课列表查询条件。 */
 @ApiModel("排课列表查询条件")
 public class ScheduleQuery
 {
@@ -21,7 +17,7 @@ public class ScheduleQuery
     /** 默认每页条数 */
     public static final int DEFAULT_PAGE_SIZE = 10;
 
-    /** 每页条数上限（§2.1.4） */
+    /** 每页条数上限 */
     public static final int MAX_PAGE_SIZE = 100;
 
     @ApiModelProperty(value = "门店ID", example = "1856739201475235901")

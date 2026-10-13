@@ -6,12 +6,7 @@ import javax.validation.constraints.Size;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 
-/**
- * 忘记密码请求（用户端接口详细设计 §2.2.7、§2.6.5）。
- *
- * <p>免登录：仅已注册手机号可重置，经验证码校验后覆盖 BCrypt 哈希，不需要旧密码；
- * 本阶段不批量撤销已有登录态。</p>
- */
+/** 忘记密码请求。 */
 @ApiModel("忘记密码请求")
 public class ResetPasswordDTO
 {

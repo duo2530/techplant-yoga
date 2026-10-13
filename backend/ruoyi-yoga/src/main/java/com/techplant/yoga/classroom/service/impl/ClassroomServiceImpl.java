@@ -26,18 +26,7 @@ import com.techplant.yoga.schedule.service.ScheduleService;
 import com.techplant.yoga.store.service.StoreService;
 import com.techplant.yoga.store.vo.StoreSummaryVO;
 
-/**
- * 教室业务实现（教室管理详细设计 §3.2、§4）。
- *
- * <p><b>物理删除：</b>本表没有 {@code deleted} 字段；<b>改名不可换门店</b>：更新走
- * {@code ClassroomDao#updateName}，显式只 set name，绝不把 {@code store_id} 写空（§3.4 第 2 条）。</p>
- *
- * <p><b>删除门禁：</b>调 {@link ScheduleService#countActiveByClassroomId(Long)} 统计「未结束且待上架或已上架」
- * 的排课数；统计调用失败一律 <b>fail-closed</b>（抛 409「引用检查未完成，已拒绝本次删除」）。</p>
- *
- * <p><b>跨模块注入用 {@code @Lazy}：</b>教室依赖门店／排课，门店与排课又依赖教室读取，
- * 构造器注入会成环，本工程统一在构造器参数上加 {@code @Lazy} 打破。</p>
- */
+/** 教室业务实现。 */
 @Service
 public class ClassroomServiceImpl implements ClassroomService
 {
@@ -65,7 +54,7 @@ public class ClassroomServiceImpl implements ClassroomService
     }
 
     /**
-     * 查询教室列表（§4.1）：分页查询后按门店批量补齐 storeName（不跨模块读表）
+     * 查询教室列表：分页查询后按门店批量补齐 storeName（不跨模块读表）
      */
     @Override
     public PageResult<ClassroomListItemVO> page(ClassroomQuery query)
@@ -77,9 +66,7 @@ public class ClassroomServiceImpl implements ClassroomService
                 ClassroomConverter.toListItemVOList(records, storeNames));
     }
 
-    /**
-     * 新增教室（§4.2）：门店必须存在；同一门店内名称唯一；<b>不返回新 ID</b>
-     */
+    /** 新增教室：门店必须存在；同一门店内名称唯一；<b>不返回新 ID</b> */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void create(ClassroomCreateDTO dto)
@@ -100,7 +87,7 @@ public class ClassroomServiceImpl implements ClassroomService
     }
 
     /**
-     * 修改教室（§4.3）：只改名称；同名查重排除自身；<b>改名不加排课门禁</b>
+     * 修改教室：只改名称；同名查重排除自身；<b>改名不加排课门禁</b>
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -123,7 +110,7 @@ public class ClassroomServiceImpl implements ClassroomService
     }
 
     /**
-     * 删除教室（§4.4）：物理删除，删除前做排课引用门禁（fail-closed）
+     * 删除教室：物理删除，删除前做排课引用门禁（fail-closed）
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -177,9 +164,7 @@ public class ClassroomServiceImpl implements ClassroomService
         }
     }
 
-    /**
-     * 批量取教室摘要（跨模块出参）：按编号去重后一次查回，避免 N+1
-     */
+    /** 批量取教室摘要（跨模块出参）：按编号去重后一次查回，避免 N+1 */
     @Override
     public List<ClassroomSummaryVO> summaries(Collection<Long> ids)
     {

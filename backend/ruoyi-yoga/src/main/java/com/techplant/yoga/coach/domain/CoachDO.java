@@ -7,21 +7,7 @@ import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 
-/**
- * 教练数据对象，与 {@code t_coach} 一一对应（教练管理详细设计 §1.2.1）。
- *
- * <p><b>四点约定：</b></p>
- * <ul>
- *   <li>主键：雪花ID，由 MyBatis-Plus 的 {@link IdType#ASSIGN_ID} 在应用侧生成，插入时不赋值（§1.1.1）；</li>
- *   <li><b>物理删除</b>：本表<b>没有</b> {@code deleted} 字段，<b>不加</b> {@code @TableLogic}
- *       （详细设计 §1.1.1、详细设计总览 §2）；</li>
- *   <li><b>没有状态字段</b>：教练不设启用／停用；</li>
- *   <li>审计字段：由 {@code AuditMetaObjectHandler} 自动填充（{@code backend/AGENTS.md} §8.4）。</li>
- * </ul>
- *
- * <p>{@code gallery} 在 DO 里以 <b>JSON 字符串</b> 承载（列类型是 MySQL {@code json}），
- * JSON ↔ {@code List<String>} 的转换<b>只在 service 层发生</b>（详细设计 §3.4 第 2 条）。</p>
- */
+/** 教练数据对象，与 {@code t_coach} 一一对应。 */
 @TableName("t_coach")
 public class CoachDO
 {

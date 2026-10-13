@@ -14,7 +14,7 @@ import com.techplant.yoga.schedule.query.PublicScheduleQuery;
 import com.techplant.yoga.schedule.query.ScheduleQuery;
 
 /**
- * 排课数据访问实现（排课管理详细设计 §3.4 第 2、3、7 条）。
+ * 排课数据访问实现。
  *
  * <p><b>本表没有 {@code deleted} 列</b>：{@code deleteById} 是真正的 {@code DELETE}，
  * 查询也不用追加任何逻辑删除条件。</p>
@@ -38,7 +38,7 @@ public class ScheduleDaoImpl implements ScheduleDao
         wrapper.eq(query.getCourseType() != null, ScheduleDO::getCourseType, query.getCourseType());
         wrapper.eq(query.getCoachId() != null, ScheduleDO::getCoachId, query.getCoachId());
         wrapper.eq(query.getStatus() != null, ScheduleDO::getStatus, query.getStatus());
-        // 日期区间一律筛派生列 schedule_date，不用 start_time 拼（BR-排课-022）
+        // 日期区间一律筛派生列 schedule_date，不用 start_time 拼
         wrapper.ge(query.getStartDate() != null, ScheduleDO::getScheduleDate, query.getStartDate());
         wrapper.le(query.getEndDate() != null, ScheduleDO::getScheduleDate, query.getEndDate());
         // 稳定排序：分页不重复、不漏项
@@ -51,12 +51,12 @@ public class ScheduleDaoImpl implements ScheduleDao
     @Override
     public IPage<ScheduleDO> selectPublicPage(PublicScheduleQuery query, LocalDate scheduleDate)
     {
-        // 可见口径（status <> 1）与详情共用 buildVisibleCondition()
+        // 可见口径（status <> 1）与详情共用 buildVisibleCondition
         LambdaQueryWrapper<ScheduleDO> wrapper = buildVisibleCondition();
         wrapper.eq(ScheduleDO::getStoreId, query.getStoreId());
-        // 课种筛快照列，不回读课程（BR-排课-021）
+        // 课种筛快照列，不回读课程
         wrapper.eq(ScheduleDO::getCourseType, query.getCourseType());
-        // 日期筛派生列 schedule_date，不用 start_time 拼（BR-排课-022）
+        // 日期筛派生列 schedule_date，不用 start_time 拼
         wrapper.eq(ScheduleDO::getScheduleDate, scheduleDate);
         wrapper.orderByAsc(ScheduleDO::getStartTime);
         wrapper.orderByAsc(ScheduleDO::getId);
@@ -128,7 +128,7 @@ public class ScheduleDaoImpl implements ScheduleDao
         wrapper.eq(ScheduleDO::getCourseId, courseId);
         wrapper.eq(ScheduleDO::getStartTime, startTime);
         wrapper.eq(ScheduleDO::getEndTime, endTime);
-        // 已取消（3）不参与冲突判定：取消后同一时段还能排回来（§1.2.3 第 9 条）
+        // 已取消（3）不参与冲突判定：取消后同一时段还能排回来
         wrapper.ne(ScheduleDO::getStatus, ScheduleStatusEnum.CANCELLED.getCode());
         wrapper.ne(excludeId != null, ScheduleDO::getId, excludeId);
         return scheduleMapper.selectCount(wrapper) > 0;
@@ -171,14 +171,7 @@ public class ScheduleDaoImpl implements ScheduleDao
         return scheduleMapper.selectCount(buildActiveCondition().eq(ScheduleDO::getCourseId, courseId));
     }
 
-    /**
-     * 删除门禁口径：{@code end_time > NOW() AND status IN (1, 2)}（§3.4 第 2、7 条）
-     *
-     * <p><b>这是「已结束」表达式的唯一例外</b>：刻意把「未结束」写进 <b>SQL 条件</b>，
-     * 不能把行拉回内存再筛；四个 {@code countActiveByXxx} 共用本方法，口径不允许各自偏离。</p>
-     *
-     * <p>已取消（3）与已结束的历史排课不阻塞删除（{@code BR-全局-007}）。</p>
-     */
+    /** 删除门禁口径：{@code end_time > NOW AND status IN (1, 2)} */
     private LambdaQueryWrapper<ScheduleDO> buildActiveCondition()
     {
         return Wrappers.<ScheduleDO>lambdaQuery()
@@ -187,12 +180,7 @@ public class ScheduleDaoImpl implements ScheduleDao
                         ScheduleStatusEnum.PUBLISHED.getCode());
     }
 
-    /**
-     * 用户端可见口径：{@code status <> 1}（非「待上架」）
-     *
-     * <p>列表与详情**共用本方法**，不要一处写 {@code <> 1}、另一处写 {@code IN (2,3)}
-     * （《用户端接口详细设计》§5.3 第 1 条）。这条口径与删除门禁口径是**两套不同条件**，不要合并。</p>
-     */
+    /** 用户端可见口径：{@code status <> 1}（非「待上架」） */
     private LambdaQueryWrapper<ScheduleDO> buildVisibleCondition()
     {
         return Wrappers.<ScheduleDO>lambdaQuery()

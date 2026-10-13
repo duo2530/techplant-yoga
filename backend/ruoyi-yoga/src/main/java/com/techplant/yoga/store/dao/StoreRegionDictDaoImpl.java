@@ -10,7 +10,7 @@ import com.techplant.yoga.store.domain.StoreRegionDictDO;
 import com.techplant.yoga.store.mapper.StoreRegionDictMapper;
 
 /**
- * 门店区域字典数据访问实现（只读，门店管理详细设计 §1.2.2）。
+ * 门店区域字典数据访问实现。
  *
  * <p>条件固定为 {@code dict_type = 'store_region'} AND {@code status = '0'}（若依字典 status
  * 的 '0' 表示正常），不提供任何写方法。</p>

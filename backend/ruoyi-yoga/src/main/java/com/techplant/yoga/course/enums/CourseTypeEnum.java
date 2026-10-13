@@ -2,20 +2,7 @@ package com.techplant.yoga.course.enums;
 
 import com.ruoyi.common.exception.ServiceException;
 
-/**
- * 课种固定枚举（课程管理详细设计 §1.2.2、§3.4 第 5 条）。
- *
- * <p><b>取值校验与「码 → 名称」翻译都只在这一个类里</b>：controller、DTO、SQL、前端都不得
- * 再各写一遍 1~4 的判断或「1 = 团课」的映射（§3.4 第 5 条）。</p>
- *
- * <table>
- * <caption>取值表</caption>
- * <tr><td>1</td><td>团课</td></tr>
- * <tr><td>2</td><td>精品课</td></tr>
- * <tr><td>3</td><td>私教课（枚举保留，一期不排课）</td></tr>
- * <tr><td>4</td><td>特色课</td></tr>
- * </table>
- */
+/** 课种固定枚举。 */
 public enum CourseTypeEnum
 {
     /** 团课 */
@@ -24,7 +11,7 @@ public enum CourseTypeEnum
     /** 精品课 */
     BOUTIQUE(2, "精品课"),
 
-    /** 私教课：枚举保留，一期不使用（无任何排课数据） */
+    /** 私教课 */
     PERSONAL(3, "私教课"),
 
     /** 特色课 */
@@ -99,10 +86,7 @@ public enum CourseTypeEnum
         return null;
     }
 
-    /**
-     * 「码 → 名称」翻译：列表与详情必须成对返回 {@code courseType} + {@code courseTypeName}
-     * （详细设计总览 §2「枚举返回」约定）。非法码返回 {@code null}，由调用方做兜底。
-     */
+    /** 「码 → 名称」翻译：列表与详情必须成对返回 {@code courseType} + {@code courseTypeName}。非法码返回 {@code null}，由调用方做兜底。 */
     public static String nameOf(Integer code)
     {
         CourseTypeEnum item = of(code);

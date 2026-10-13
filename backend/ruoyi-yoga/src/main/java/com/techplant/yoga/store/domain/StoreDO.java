@@ -7,15 +7,7 @@ import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 
-/**
- * 门店数据对象，与 {@code t_store} 一一对应（门店管理详细设计 §1.2.1）。
- *
- * <p><b>本表没有状态字段、没有 {@code deleted} 字段</b>：门店一期不设状态（BR-门店-008），
- * 删除一律<b>物理删除</b>（BR-门店-009、详细设计总览 §5 决策 1），因此这里
- * <b>刻意不标 {@code @TableLogic}</b>。</p>
- *
- * <p>仅在 mapper、dao 与 service 内部使用，接口层通过 VO 输出（§3.4 第 5 条）。</p>
- */
+/** 门店数据对象，与 {@code t_store} 一一对应。 */
 @TableName("t_store")
 public class StoreDO
 {

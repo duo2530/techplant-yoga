@@ -8,7 +8,7 @@ import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 
 /**
- * 新增教室的请求体（教室管理详细设计 §2.3.2）：{@code storeId} 与 {@code name} 均必填。
+ * 新增教室的请求体：{@code storeId} 与 {@code name} 均必填。
  */
 @ApiModel("新增教室请求")
 public class ClassroomCreateDTO

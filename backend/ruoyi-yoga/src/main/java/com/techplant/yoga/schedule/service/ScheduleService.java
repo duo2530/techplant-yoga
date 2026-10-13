@@ -10,24 +10,7 @@ import com.techplant.yoga.schedule.vo.ScheduleCardVO;
 import com.techplant.yoga.schedule.vo.ScheduleDetailVO;
 import com.techplant.yoga.schedule.vo.ScheduleListItemVO;
 
-/**
- * 排课业务服务（排课管理详细设计 §3.2）。
- *
- * <p>本接口同时承担两类对外职责（全项目统一不另立 QueryService，详细设计总览 §6）：</p>
- * <ol>
- *   <li><b>管理端</b>：列表／详情／新增／修改／状态流转／删除；</li>
- *   <li><b>跨模块</b>：四个主数据（门店／教室／教练／课程）的<b>删除门禁统计</b>，
- *       以及用户端两个免登录只读查询。</li>
- * </ol>
- *
- * <p><b>删除门禁统一口径</b>（门店管理详细设计 §2.2.5、BR-全局-007／009）：</p>
- * <pre>未结束（end_time &gt; 当前时间）AND status IN (1 待上架, 2 已上架)</pre>
- * <p>已取消（3）与已结束的历史排课<b>不阻塞</b>删除；统计失败一律 <b>fail-closed</b>，
- * 由调用方以 {@code ServiceException} 终止本次删除，<b>不降级放行</b>。</p>
- *
- * <p><b>与用户端可见口径的区别</b>（排课管理详细设计 §3.4 第 9 条）：用户端可见口径是
- * {@code status &lt;&gt; 1}，与上面的门禁口径是<b>两套不同条件</b>，不要合并成一个方法。</p>
- */
+/** 排课业务服务。 */
 public interface ScheduleService
 {
     // ------------------------------------------------------------------
@@ -89,7 +72,7 @@ public interface ScheduleService
     long countActiveByCourseId(Long courseId);
 
     // ------------------------------------------------------------------
-    // 用户端：2 个免登录只读查询（契约见《用户端接口详细设计》§2.2、§2.3）
+    // 用户端：2 个免登录只读查询
     // ------------------------------------------------------------------
 
     /** 用户端排课列表（约课页）：固定过滤 status &lt;&gt; 1，按 course_type 快照与 schedule_date 派生列筛选 */

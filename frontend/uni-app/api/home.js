@@ -38,13 +38,7 @@ export function toScheduleCard(schedule) {
   }
 }
 
-/**
- * 首页聚合数据（mock）
- *
- * 返回：当前门店、公告、今日可约团课、热门课程。
- * 金牌教练由用户端教练接口单独查询，避免首页继续使用 mock 教练数据。
- * 其中「今日可约团课 / 热门课程 / 公告」默认按原型显示空态（见 mock/config.js 的 MOCK.empty）
- */
+/** 首页聚合数据（mock） */
 export function getHomeData(params = {}) {
   const storeId = params.storeId || getCurrentStoreId()
   const store = stores.find((item) => item.id === storeId) || stores[0]

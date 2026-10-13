@@ -6,12 +6,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.techplant.yoga.classroom.domain.ClassroomDO;
 import com.techplant.yoga.classroom.query.ClassroomQuery;
 
-/**
- * 教室数据访问（教室管理详细设计 §3.2）。
- *
- * <p><b>物理删除：</b>{@code ClassroomDO} 没有 {@code deleted} 字段、没有 {@code @TableLogic}，
- * 业务代码也<b>不要</b>拼 {@code deleted = 0} 条件。</p>
- */
+/** 教室数据访问。 */
 public interface ClassroomDao
 {
     /**
@@ -53,7 +48,7 @@ public interface ClassroomDao
 
     /**
      * <b>只更新名称</b>（显式 SET name）：不整对象覆盖，避免把 {@code store_id} 写空
-     * （教室管理详细设计 §3.4 第 2 条）
+     *
      *
      * @return 影响行数
      */

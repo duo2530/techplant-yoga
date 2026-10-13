@@ -134,46 +134,7 @@
 </template>
 
 <script setup>
-/**
- * 手机号登录 / 注册（pages.json 标题「手机号登录」；登录、注册是同一页的两个 Tab，可点击切换）
- *
- * 照 docs/原型/phone-auth.html 还原；导航栏灰色胶囊、微信胶囊、状态栏都是原型整机复刻的取巧，
- * 小程序里由系统绘制，本页不画。
- *
- * 【原型实测关键值（源图 1170×2532 @3x → 逻辑 390×844）】
- *  - 背景：上部蓝（#8AC1E6，右上偏青 #85CEDC）→ 下部极淡蓝白（#C6E2F1 → #EEF5FB）；
- *  - 分段控件 246.7×40pt、圆角 20pt，选中半边 linear-gradient(90deg,#CDE8FD,#9DD1F8)，
- *    未选中半边 #F2F9FC，文字 15pt、字距 6pt、文案「登 录」「注 册」；
- *  - 卡片 360pt 宽（左右各 15pt）、圆角 10pt、底色 #F8FCFD、内边距 上 45 / 左右 26 / 下 20pt；
- *  - 输入框 308×40pt、圆角 20pt、1px #C6D1D8 边框、左图标 #78909C、占位符 14pt #C6D1D8，框间距 30.3pt；
- *  - 主按钮 308×40pt、圆角 20pt、#87C7F6、白字 14pt、字距 6pt；输入框→按钮 39pt；
- *  - 登录态多一行：左「快捷登录」(#87C7F6) + 右「忘记密码？」(#AAAAAA)，14pt，两端对齐，按钮→该行 37pt；
- *    注册态没有这一行；
- *  - 注册态第 2 个输入框右侧「获取验证码」小按钮 97.3×23.7pt、圆角 12pt、
- *    渐变 linear-gradient(90deg,#76B7EB,#3F81C7)、白字 11pt；
- *  - 卡片下方协议行：未勾选圆框 17pt（1px #AAAAAA）+ 文案 14pt/#080808，卡片底→该行 65pt。
- *
- * 【与原型的有意出入 / 没把握的点】
- *  1. **没有使用全局 `.ys-field`**：那套表单行是「96rpx 高 + 下划线 + 左侧 label + 红色星号」，
- *     而本页原型是**圆角胶囊输入框 + 左侧线性图标 + 无 label**（308×40pt、1px 边框、无下划线）。
- *     规范 §1「复刻不是重设计、截图上没有的不许发明」优先，所以按原型做胶囊框，未加 label 与星号。
- *     （任务书里提到「用 .ys-field 表单行与 $ys-star 必填星号」——本页原型里没有这两种元素，
- *      按视觉权威（原型）处理；若要改成 .ys-field 风格，需要评审确认。）
- *  2. **两张截图的「选中 Tab 文字颜色」互相矛盾**（原型已像素确认）：手机登录页.png 选中的「登 录」
- *     是深灰蓝 #78909C；手机注册页.png 选中的「注 册」是纯白 #FFFFFF。这里按原型分别还原
- *     （见 .pa__seg-btn--on-login / --on-register），所以切换 Tab 时选中文字颜色会变。
- *  3. 输入框左侧图标原型是内联 SVG（有 2.5pt 圆角、`</>` 等细节，小程序不支持内联 SVG），
- *     这里用等尺寸 PNG（同色 #78909C）替代，见 static/images/auth/icon-*.png。
- *  4. 密码框右侧「闭眼」图标原型不可点击（无展开态）；这里做成了可点击切换明文，
- *     睁眼图标是按闭眼同源补画的（颜色/线宽一致，字形未经原型确认）。
- *  5. 「获取验证码」加了 **60 秒倒计时**：倒计时内按钮显示「Ns 后重发」并禁止再次点击
- *     （原型没有该状态，属交互补充；改文案/去掉只动 .pa__sms 一处）。
- *  6. **本页已接真实后端**（`@/api/auth` → `POST /api/auth/**`，见用户端接口详细设计 §2.2.4～§2.2.6）：
- *     登录成功后写 token 与会员展示信息到本地（`@/utils/auth`）并同步 `useUserStore`；
- *     注册成功后**不签发登录态**，按 §2.2.5 回到「登 录」Tab 并带过手机号。
- *     失败提示（手机号或密码错误、验证码错误等）由 `@/utils/request` 统一 toast，本页只管成功分支。
- *     开发期后端固定验证码由 `sms.code.fixedCode` 配置（当前 888888），页面不回显验证码。
- */
+/** 手机号登录 / 注册 */
 import { ref, reactive } from 'vue'
 import { onUnload } from '@dcloudio/uni-app'
 import { loginByPhone, register, sendSmsCode } from '@/api/auth'
@@ -225,8 +186,6 @@ function handleSendCode(phone, scene = 'register') {
       }, 1000)
     },
     () => {
-      // 失败提示由 @/utils/request 统一 toast（这里刻意不做成功/失败以外的兜底，
-      // 也刻意不写 .catch(() => {})：那会把成功分支里的报错一起吞掉，变成「点了没反应」）
     }
   )
 }
@@ -239,7 +198,6 @@ function handleLogin() {
   loginByPhone({ phone: loginForm.phone, password: loginForm.password }).then(
     (res) => {
       const data = res.data || {}
-      // 返回体不完整（缺 token / memberId / expireTime）就不能写缓存、不能提示成功、不能跳首页
       if (!isValidLoginPayload(data)) {
         console.error('[login] 返回体异常：' + JSON.stringify(data))
         uni.showToast({ title: '登录返回数据异常，请重试', icon: 'none' })
@@ -257,7 +215,7 @@ function handleLogin() {
   )
 }
 
-/** 注册：成功后不签发 token，按设计回到「登 录」Tab 并带过手机号（§2.2.5） */
+/** 注册：成功后不签发 token，按设计回到「登 录」Tab 并带过手机号 */
 function handleRegister() {
   if (!checkAgreed()) {
     return

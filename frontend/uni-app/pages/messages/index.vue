@@ -27,18 +27,7 @@ import { ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { listMessages } from '@/api/message'
 
-/**
- * 消息（照 docs/原型/messages.html）
- *
- * 原型截图里**整页是空态**：一张浅灰插画（山丘 + 云 + 飞碟 + 图片占位图标，66×52pt）
- * 加「暂无数据」15pt/21pt `#999999`，插画与文案间距 26pt。
- * 默认空态由 `MOCK.empty.messages` 控制（见 mock/config.js）。
- *
- * 注意：插画在小程序里不能内联 SVG，已由原型的 SVG 栅格化成
- * `/static/images/empty/message.png`（透明底）。
- *
- * 状态栏 / 导航栏 / TabBar 由小程序绘制，本页不画（标题「消息」已在 pages.json）。
- */
+/** 消息（照 docs/原型/messages.html） */
 
 const list = ref([])
 

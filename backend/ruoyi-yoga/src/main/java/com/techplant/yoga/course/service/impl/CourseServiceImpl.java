@@ -24,18 +24,7 @@ import com.techplant.yoga.course.vo.CourseListItemVO;
 import com.techplant.yoga.course.vo.CourseSummaryVO;
 import com.techplant.yoga.schedule.service.ScheduleService;
 
-/**
- * 课程业务实现（课程管理详细设计 §3.2、§4）。
- *
- * <p><b>物理删除：</b>本表没有 {@code deleted} 字段，删除走 {@code DELETE}；课种取值范围与
- * 「码 → 名」翻译都只在 {@link CourseTypeEnum} 一处（§3.4 第 5 条）。</p>
- *
- * <p><b>删除门禁：</b>调 {@link ScheduleService#countActiveByCourseId(Long)} 统计「未结束且待上架或已上架」的排课数；
- * 统计调用失败一律 <b>fail-closed</b>（抛 409「引用检查未完成，已拒绝本次删除」），不降级放行。</p>
- *
- * <p><b>跨模块注入用 {@code @Lazy}：</b>课程依赖排课统计、排课又依赖课程读取，构造器注入会成环，
- * 本工程统一在构造器参数上加 {@code @Lazy} 打破。</p>
- */
+/** 课程业务实现。 */
 @Service
 public class CourseServiceImpl implements CourseService
 {
@@ -106,7 +95,7 @@ public class CourseServiceImpl implements CourseService
     }
 
     /**
-     * 修改课程（§4.4）：名称查重排除自身；<b>不做引用检查</b>、<b>不刷新既有排课的课种快照</b>
+     * 修改课程：名称查重排除自身；<b>不做引用检查</b>、<b>不刷新既有排课的课种快照</b>
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -138,7 +127,7 @@ public class CourseServiceImpl implements CourseService
     }
 
     /**
-     * 删除课程（§4.5）：物理删除，删除前做排课引用门禁（fail-closed）
+     * 删除课程：物理删除，删除前做排课引用门禁（fail-closed）
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -160,9 +149,7 @@ public class CourseServiceImpl implements CourseService
         courseDao.deleteById(courseId);
     }
 
-    /**
-     * 批量取课程摘要（跨模块出参）：按编号去重后一次查回，避免 N+1
-     */
+    /** 批量取课程摘要（跨模块出参）：按编号去重后一次查回，避免 N+1 */
     @Override
     public List<CourseSummaryVO> summaries(Collection<Long> ids)
     {

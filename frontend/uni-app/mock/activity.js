@@ -2,7 +2,7 @@
  * Mock：活动
  *
  * 原型「活动列表」页整屏是空态（浅蓝渐变 + 灰色图标 + 「暂无数据」），
- * 按 _复刻规范.md §1.2 不塞假数据 —— 默认由 MOCK.empty.activities 控制显示空态。
+ * 按 _复刻规范.md  不塞假数据 —— 默认由 MOCK.empty.activities 控制显示空态。
  * 下面的数据是「有数据」模式下用的（把开关改成 false 即可看到列表）。
  */
 export const activities = [

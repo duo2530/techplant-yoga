@@ -11,30 +11,7 @@ import com.ruoyi.common.constant.CacheConstants;
 import com.ruoyi.common.exception.ServiceException;
 import com.techplant.yoga.member.enums.SmsSceneEnum;
 
-/**
- * 短信验证码（用户端接口详细设计 §4.3）。
- *
- * <p><b>Redis 口径</b>：验证码 key = {@code sms_codes:<scene>:<phone>}（有效期 5 分钟），
- * 发送间隔 key = {@code sms_code_interval:<scene>:<phone>}（60 秒）。
- * 发送新码直接覆盖同一个 key，旧的验证码自然作废；校验失败<b>不消费</b>，
- * 有效期内允许不限次数重试，校验成功才删除（§4.3 第 3 步、§4.4 第 1 步）。</p>
- *
- * <p><b>并发安全（2026-10-13 复审修复）</b>：两处都改成 Redis 原子操作——
- * ①发送间隔用 {@code SET NX EX} 抢锁，并发发码只有一个能成功；
- * ②校验消费用 Lua 脚本把「读取 → 比较 → 删除」做成一个原子步骤，
- * 同一个验证码并发提交只能成功一次，且旧码请求不可能删掉刚写入的新码
- * （脚本只在「取到的值 == 请求值」时才 DEL）。</p>
- *
- * <p><b>为什么用 {@link StringRedisTemplate} 而不是 {@code RedisCache}</b>：这两个能力
- * （NX 抢锁、Lua 比较删除）需要在 Redis 侧按<b>原始字符串</b>比较，而工程里
- * {@code RedisCache} 的值序列化器是带 {@code WriteClassName} 的 fastjson2，
- * 存进去的是 JSON 文本（如 {@code "888888"} 带引号）。验证码是纯数字串、
- * 也没有别的消费者，因此这里单独用字符串模板，key 前缀仍与
- * {@link CacheConstants#SMS_CODE_KEY}／{@link CacheConstants#SMS_CODE_INTERVAL_KEY} 保持一致。</p>
- *
- * <p><b>开发固定码</b>：{@code sms.code.fixedCode} 非空时统一用它（默认 8888 的 6 位版本），
- * 便于本机联调；生产置空即走随机 6 位数字。响应与日志都不回显验证码给客户端。</p>
- */
+/** 短信验证码发送与原子消费；Redis 值使用原始字符串。 */
 @Service
 public class SmsCodeService
 {
@@ -85,9 +62,6 @@ public class SmsCodeService
     /**
      * 发送验证码：原子抢发送间隔 → 生成并落 Redis（覆盖旧码）→ 交给 {@link SmsSender}
      *
-     * <p>{@code SET NX EX} 保证并发发码只有一个成功；落码与限流键都在发送之前完成，
-     * 因此短信通道失败时用户需等到间隔结束才能重发（这是防刷的取舍，不是缺陷）。</p>
-     *
      * @throws ServiceException 发送过频（409）
      */
     public void send(String scene, String phone)
@@ -123,7 +97,7 @@ public class SmsCodeService
         }
         if (result.longValue() < 0L)
         {
-            // 不删除：有效期内允许继续重试（§4.4 第 1 步）
+            // 不删除：有效期内允许继续重试
             throw new ServiceException("验证码错误", CONFLICT);
         }
     }

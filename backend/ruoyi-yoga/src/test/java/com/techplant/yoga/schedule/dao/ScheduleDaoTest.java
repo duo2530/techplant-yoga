@@ -41,18 +41,7 @@ import com.techplant.yoga.schedule.domain.ScheduleDO;
 import com.techplant.yoga.schedule.query.PublicScheduleQuery;
 import com.techplant.yoga.schedule.query.ScheduleQuery;
 
-/**
- * 排课数据访问的**真实 SQL 口径**集成测试（H2 内存库，MySQL 兼容模式，不连开发库）。
- *
- * <p><b>为什么需要它：</b>排课模块有两条写在 SQL 里的口径——删除门禁
- * {@code end_time > NOW() AND status IN (1,2)} 与用户端可见 {@code status <> 1}。
- * 这两条「到底有没有真的进 SQL、有没有把行拉回内存筛」读代码看不出来，只有把真实
- * {@code SqlSessionFactory}（{@code MyBatisConfig}）与分页插件跑起来、配真表真数据才能证明。</p>
- *
- * <p>覆盖：四个 {@code countActiveByXxx} 的共用口径、{@code selectPublicPage} 的固定过滤与稳定排序、
- * {@code selectVisibleById} 的 404 口径、物理删除、两条冲突查询（完全同时段／教练区间相交）、
- * 以及 {@code updateById} 不写 {@code status} 与 {@code booked_persons}。</p>
- */
+/** 排课数据访问的**真实 SQL 口径**集成测试（H2 内存库，MySQL 兼容模式，不连开发库）。 */
 @ExtendWith(SpringExtension.class)
 @ContextConfiguration(classes = { ScheduleDaoTest.TestConfig.class, ScheduleDaoImpl.class })
 @DisplayName("ScheduleDao 真实 SQL 口径集成测试（H2）")
@@ -98,20 +87,7 @@ class ScheduleDaoTest
             return new DataSourceTransactionManager(dataSource);
         }
 
-        /**
-         * 本测试自己装配一个 MyBatis-Plus 的 {@code SqlSessionFactory}（显式
-         * {@code setConfiguration(new MybatisConfiguration())}）。
-         *
-         * <p><b>为什么不复用 {@code MyBatisConfig}</b>：在「@ContextConfiguration 只加载
-         * MyBatisConfig + MybatisPlusConfig + AuditMetaObjectHandler」这种切片用法下，映射器拿不到
-         * MyBatis-Plus 注入的 {@code BaseMapper} CRUD 语句，表现为
-         * {@code BindingException: Invalid bound statement ... selectList}（现有
-         * {@code MyBatisWiringTest} 的 5 条用例同样全红，与本模块改动无关）。
-         * 已实测：在本类里自建同一个 {@code MybatisSqlSessionFactoryBean}（无论显式
-         * {@code setConfiguration(new MybatisConfiguration())}，还是照 MyBatisConfig 那样给
-         * {@code configLocation + mapperLocations + typeAliasesPackage + plugins}）都能正常跑通。
-         * 因此问题的触发点在那个切片上下文的组合方式，而不在工厂本身的装配参数。</p>
-         */
+        /** 本测试自己装配一个 MyBatis-Plus 的 {@code SqlSessionFactory}（显式 {@code setConfiguration(new MybatisConfiguration)}）。 */
         @Bean
         public MybatisSqlSessionFactoryBean sqlSessionFactory(DataSource dataSource)
         {

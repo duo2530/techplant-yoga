@@ -7,10 +7,10 @@ import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 
 /**
- * 管理端教练详情（教练管理详细设计 §2.2.2、§2.3.1）。
+ * 管理端教练详情。
  *
  * <p>{@code gallery} 是出参里的 {@code List<String>}；DO 中承载的是 JSON 字符串，
- * 两者之间的转换在 service 层完成（§3.4 第 2 条），本 VO 不关心存储形态。</p>
+ * 两者之间的转换在 service 层完成，本 VO 不关心存储形态。</p>
  */
 @ApiModel("教练详情")
 public class CoachDetailVO

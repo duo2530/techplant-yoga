@@ -6,10 +6,10 @@ import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 
 /**
- * 管理端门店列表项（门店管理详细设计 §2.3.1）。
+ * 管理端门店列表项。
  *
  * <p>{@code storeType} + {@code storeTypeName}、{@code regionCode} + {@code regionName}
- * <b>成对返回</b>，前端不自己维护「码 → 名」映射（详细设计总览 §2）。门店字段不多，
+ * <b>成对返回</b>，前端不自己维护「码 → 名」映射。门店字段不多，
  * 列表不裁剪，字段与 {@link StoreDetailVO} 一致。</p>
  */
 @ApiModel("门店列表项")

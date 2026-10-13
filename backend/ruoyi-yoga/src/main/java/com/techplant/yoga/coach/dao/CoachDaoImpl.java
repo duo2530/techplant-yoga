@@ -31,7 +31,7 @@ public class CoachDaoImpl implements CoachDao
     @Override
     public IPage<CoachDO> selectAdminPage(CoachQuery query)
     {
-        // 列表只 select 必要列：intro 与 gallery 是大字段，不在列表返回（详细设计 §4.1）
+        // 列表只 select 必要列：intro 与 gallery 是大字段，不在列表返回
         LambdaQueryWrapper<CoachDO> wrapper = Wrappers.<CoachDO>lambdaQuery()
                 .select(CoachDO::getId, CoachDO::getName, CoachDO::getAvatarUrl, CoachDO::getPhone,
                         CoachDO::getCreateTime, CoachDO::getUpdateTime);

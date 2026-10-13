@@ -58,15 +58,7 @@ import { ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { getTrialStatusTabs, listTrialApplications } from '@/api/trial'
 
-/**
- * 我的体验课（照 docs/原型/my-trials.html）
- *
- * 原型截图里整页除「插画 + 暂无数据」外完全空白（复刻规范 §1.2：空态也要复刻，不塞假数据），
- * 默认空态由 mock/config.js 的 MOCK.empty.trials 控制；改成 false 会走下面的卡片分支。
- *
- * 数据全部来自 @/api/trial（内部读 mock），不发任何网络请求。
- * 状态栏 / 导航栏 / TabBar 由小程序绘制，本页不画（标题「我的体验课」已在 pages.json）。
- */
+/** 我的体验课（照 docs/原型/my-trials.html） */
 
 const tabs = ref([])
 const list = ref([])

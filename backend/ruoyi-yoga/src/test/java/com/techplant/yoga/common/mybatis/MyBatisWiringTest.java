@@ -38,33 +38,7 @@ import com.techplant.yoga.course.dao.CourseDaoImpl;
 import com.techplant.yoga.course.domain.CourseDO;
 import com.techplant.yoga.course.query.CourseQuery;
 
-/**
- * MyBatis-Plus 装配的集成测试（交付前自检，不是详细设计 §5 的用例）。
- *
- * <p><b>为什么需要它：</b>工程自己声明了 {@code SqlSessionFactory}（ruoyi-framework 的
- * {@code MyBatisConfig}），MyBatis-Plus 的自动配置因此整体退出，分页插件与
- * {@code MetaObjectHandler} 是手工装配的。这类「装配是否真的生效」的问题读代码看不出来，
- * 只有把真实的 {@code SqlSessionFactory} 跑起来才能验证。</p>
- *
- * <p><b>本轮口径变化（详细设计总览 §2）：</b>{@code t_course} 已去掉
- * {@code store_id / duration_min / sort_no / status / deleted}，并<b>改为物理删除</b>：
- * 表结构里没有 {@code deleted} 列，{@code CourseDO} 也没有 {@code @TableLogic}。
- * 因此本类不再断言「逻辑删除过滤」，改为断言「删除后行真的没了」。</p>
- *
- * <p><b>为什么本类自建 SqlSessionFactory，而不是 {@code @ContextConfiguration} 里挂
- * {@code MyBatisConfig}：</b>在「只加载 MyBatisConfig + MybatisPlusConfig +
- * AuditMetaObjectHandler」这种<b>切片</b>用法下，映射器拿不到 MyBatis-Plus 注入的
- * {@code BaseMapper} CRUD 语句，5 条用例会全部报
- * {@code BindingException: Invalid bound statement (not found): ...CourseMapper.insert}。
- * 根因是切片里缺少真实应用由 {@code MybatisPlusAutoConfiguration} 提供的
- * MyBatis-Plus 装配上下文，属于<b>测试切片的组合问题</b>，不是生产装配的问题
- * （生产由 {@code RuoYiApplication} 全量启动，{@code MyBatisConfig} 的工厂照常工作）。
- * 自建工厂反而更贴合本类的目的：<b>直接验证「MyBatis-Plus 的雪花ID / 审计填充 / 物理删除 /
- * 分页插件的字段映射」在真实 SqlSessionFactory 下确实生效</b>。
- * 同样的写法见 {@code ScheduleDaoTest}（同样是 H2 真跑 SQL）。</p>
- *
- * <p>库用 H2 内存库（MySQL 兼容模式），不连接开发库、不产生任何外部写入。</p>
- */
+/** MyBatis-Plus 装配的集成测试。 */
 @ExtendWith(SpringExtension.class)
 @ContextConfiguration(classes = { MyBatisWiringTest.TestConfig.class, AuditMetaObjectHandler.class,
         CourseDaoImpl.class })
@@ -97,14 +71,7 @@ class MyBatisWiringTest
             return new DataSourceTransactionManager(dataSource);
         }
 
-        /**
-         * 自建 MyBatis-Plus 的 {@code SqlSessionFactory}：显式
-         * {@code setConfiguration(new MybatisConfiguration())}，并挂上分页插件与
-         * {@link AuditMetaObjectHandler}（与 {@code MyBatisConfig} 里手工装配的那两个能力对应）。
-         *
-         * <p>{@code mapUnderscoreToCamelCase=true} 必须打开：业务列是 {@code course_type}
-         * 这类下划线命名，DO 是 {@code courseType} 驼峰命名，靠它映射。</p>
-         */
+        /** 自建 MyBatis-Plus 的 {@code SqlSessionFactory}：显式 {@code setConfiguration(new MybatisConfiguration)}，并挂上分页插件与 {@link AuditMetaObjectHandler}（与 {@code MyBatisConfig} 里手工装配的那两个能力对应）。 */
         @Bean
         public MybatisSqlSessionFactoryBean sqlSessionFactory(DataSource dataSource,
                 AuditMetaObjectHandler auditMetaObjectHandler)
@@ -192,7 +159,6 @@ class MyBatisWiringTest
 
         assertEquals(1, rows);
         assertNull(courseDao.selectById(course.getId()), "物理删除后不应再查到该课程");
-        // 同名课程可以立即重建：名称随物理删除被释放（uk_course_name 不再被占用）
         CourseDO recreated = insert("待删除课程", 1, 3);
         assertNotNull(recreated.getId());
     }

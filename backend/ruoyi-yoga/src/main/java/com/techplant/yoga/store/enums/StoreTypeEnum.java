@@ -1,15 +1,6 @@
 package com.techplant.yoga.store.enums;
 
-/**
- * 门店类型枚举（门店管理详细设计 §1.2.2）。
- *
- * <p>{@code store_type}：{@code 1} 主力店、{@code 2} 精品店。本枚举是门店类型<b>唯一</b>的
- * 取值校验与「码 → 名」翻译落点；接口返回时 {@code storeType} 与 {@code storeTypeName} 成对给出
- * （详细设计总览 §2「枚举返回」）。</p>
- *
- * <p><b>注意：</b>「所在区域」{@code region_code} <b>不建 Java 枚举</b>，取值校验与区名翻译都走
- * 字典 {@code store_region}（详细设计总览 §5 决策 9）。</p>
- */
+/** 门店类型枚举。 */
 public enum StoreTypeEnum
 {
     /** 主力店 */

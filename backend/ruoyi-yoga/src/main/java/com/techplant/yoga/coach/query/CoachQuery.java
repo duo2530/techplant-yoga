@@ -7,7 +7,7 @@ import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 
 /**
- * 教练列表查询条件（教练管理详细设计 §2.2.1、§2.3.3）。
+ * 教练列表查询条件。
  *
  * <p>教练<b>没有状态</b>，因此查询条件只有姓名与分页；列表固定按 {@code id DESC} 稳定排序。</p>
  */

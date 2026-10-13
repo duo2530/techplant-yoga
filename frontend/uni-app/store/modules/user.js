@@ -7,7 +7,6 @@ import { isHttp, isEmpty } from "@/utils/validate"
 import { getInfo, login, logout } from '@/api/login'
 import { getToken, removeToken, setToken } from '@/utils/auth'
 import { clearSessionStorage, isSessionValid, saveSession } from '@/utils/session'
-// 默认头像：若依脚手架原来用 /static/images/profile.jpg，本项目换成品牌资产（mock 阶段页面不依赖它）
 import defAva from '@/static/images/mine/avatar.jpg'
 
 const baseUrl = config.baseUrl
@@ -104,12 +103,7 @@ export const useUserStore = defineStore('user', () => {
     })
   }
 
-  /**
-   * 写入会员登录态（登录成功后调用）
-   *
-   * 存储层（token + 会员展示信息 + 服务端 expireTime）交给 `@/utils/session` 的 saveSession，
-   * store 状态同步在这里做，避免页面各写一遍（调用方先校验返回体完整性）。
-   */
+  /** 写入会员会话并同步 store 状态。 */
   const applySession = (data, phone) => {
     saveSession(data, phone)
     SET_TOKEN(data.token)
@@ -149,9 +143,6 @@ export const useUserStore = defineStore('user', () => {
     avatar,
     roles,
     permissions,
-    // 五个 setter 都要显式返回：setup store 只有 return 出去的函数才会成为 action，
-    // 之前只返回了 SET_AVATAR，登录/退出时调 SET_TOKEN / SET_ID / SET_NAME 会报
-    // 「userStore.SET_TOKEN is not a function」（2026-10-13 踩过）
     SET_TOKEN,
     SET_ID,
     SET_NAME,

@@ -9,7 +9,7 @@ import com.techplant.yoga.classroom.vo.ClassroomListItemVO;
 import com.techplant.yoga.classroom.vo.ClassroomSummaryVO;
 
 /**
- * 教室对象转换（教室管理详细设计 §3.2）。
+ * 教室对象转换。
  *
  * <p>字段少，本版手写转换方法；{@code storeName} 由 service 从 {@code StoreService.summaries}
  * 拿到的映射传入，本类不跨模块取数。</p>

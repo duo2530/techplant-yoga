@@ -6,16 +6,7 @@ import org.springframework.stereotype.Component;
 import com.baomidou.mybatisplus.core.handlers.MetaObjectHandler;
 import com.techplant.yoga.common.util.CurrentUserUtils;
 
-/**
- * 审计字段自动填充（详细设计 §1.1.1「审计字段」、§3.1.4）。
- *
- * <p>由 MyBatis-Plus 的 {@link MetaObjectHandler} 在插入/更新时填充
- * {@code create_by / create_time / update_by / update_time}；数据库的
- * {@code DEFAULT CURRENT_TIMESTAMP} 只作兜底。</p>
- *
- * <p>未登录（拿不到操作人）时只填时间、不填操作人：审计字段在表里本来就是可空的，
- * 不应因为取不到登录人而让写操作失败。</p>
- */
+/** 审计字段自动填充。 */
 @Component
 public class AuditMetaObjectHandler implements MetaObjectHandler
 {

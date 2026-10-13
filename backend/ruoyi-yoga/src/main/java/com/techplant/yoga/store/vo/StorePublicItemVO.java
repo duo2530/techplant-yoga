@@ -4,11 +4,11 @@ import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 
 /**
- * 用户端门店列表项（用户端接口详细设计 §2.1、§3.1）。
+ * 用户端门店列表项。
  *
  * <p>只给展示字段：<b>不返回审计字段、不返回任何状态字段</b>（门店本来就没有状态）。
  * {@code storeType} + {@code storeTypeName}、{@code regionCode} + {@code regionName} 成对返回；
- * {@code imageUrl} 可空时给<b>空字符串</b>（§3.1，不返回 null）。</p>
+ * {@code imageUrl} 可空时给<b>空字符串</b>。</p>
  */
 @ApiModel("用户端门店列表项")
 public class StorePublicItemVO

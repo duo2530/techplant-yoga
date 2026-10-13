@@ -13,7 +13,7 @@ import com.techplant.yoga.course.mapper.CourseMapper;
 import com.techplant.yoga.course.query.CourseQuery;
 
 /**
- * 课程数据访问实现（课程管理详细设计 §3.2、§4）。
+ * 课程数据访问实现。
  */
 @Repository
 public class CourseDaoImpl implements CourseDao
@@ -28,14 +28,12 @@ public class CourseDaoImpl implements CourseDao
     @Override
     public IPage<CourseDO> selectPage(CourseQuery query)
     {
-        // 只查列表列，避免把 intro 这类长文本带进列表查询（§3.4 第 4 条）
         LambdaQueryWrapper<CourseDO> wrapper = Wrappers.<CourseDO>lambdaQuery();
         wrapper.select(CourseDO::getId, CourseDO::getName, CourseDO::getCourseType, CourseDO::getCoverUrl,
                 CourseDO::getDifficulty, CourseDO::getCreateTime, CourseDO::getUpdateTime);
         boolean hasName = query.getName() != null && !query.getName().trim().isEmpty();
         wrapper.like(hasName, CourseDO::getName, query.getName());
         wrapper.eq(query.getCourseType() != null, CourseDO::getCourseType, query.getCourseType());
-        // 稳定排序：course_type 升序 + id 降序兜底，否则翻页会重复/漏项（§3.4 第 4 条）
         wrapper.orderByAsc(CourseDO::getCourseType);
         wrapper.orderByDesc(CourseDO::getId);
 
@@ -80,7 +78,7 @@ public class CourseDaoImpl implements CourseDao
     @Override
     public int updateById(CourseDO course)
     {
-        // 用显式 SET 列表实现「全量更新」：cover_url / intro 传 null 就是要写 NULL（§2.2.4 全量编辑）。
+        // 用显式 SET 列表实现「全量更新」：cover_url / intro 传 null 就是要写 NULL。
         // 若改用 MyBatis-Plus 的 updateById(entity)，null 字段会被默认的 NOT_NULL 策略跳过，运营就清不掉封面图和介绍。
         // 显式列举列名同时保证不会误改 t_course 上不存在的列（本表没有 store_id / status / sort_no）。
         return courseMapper.update(null, Wrappers.<CourseDO>lambdaUpdate()

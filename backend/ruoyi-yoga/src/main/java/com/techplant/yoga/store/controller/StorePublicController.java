@@ -15,16 +15,7 @@ import com.techplant.yoga.store.vo.StorePublicItemVO;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 
-/**
- * 用户端门店列表接口（用户端接口详细设计 §2.1）。
- *
- * <p>免登录：类上标 {@link Anonymous}，由 {@code PermitAllUrlProperties} 收进 permitAll 白名单。
- * 只有 GET，一期用户端没有任何写操作。</p>
- *
- * <p>返回分页 {@link TableDataInfo}，{@code rows} 为 {@code StorePublicItemVO}：
- * 支持按区域筛选（regionCode 精确）与关键字搜索（keyword 同时模糊匹配门店名称与地址），
- * 排序 {@code region_code ASC, name ASC, id DESC}；<b>不返回审计字段与任何状态字段</b>。</p>
- */
+/** 用户端门店列表接口。 */
 @Api(tags = "用户端-门店")
 @Anonymous
 @RestController

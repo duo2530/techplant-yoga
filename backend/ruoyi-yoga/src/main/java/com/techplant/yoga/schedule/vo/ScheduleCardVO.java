@@ -6,15 +6,7 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 
-/**
- * 用户端排课卡片（约课页，《用户端接口详细设计》§2.2 / §3.2）。
- *
- * <p><b>快照 vs 实时</b>：{@code courseType} / {@code courseTypeName} 取排课保存的**课种快照**；
- * {@code courseCoverUrl} / {@code difficulty}（以及详情页的 {@code courseIntro}）**实时取课程当前值**。</p>
- *
- * <p><b>用户端状态文案只有三种</b>：可约／已结束／已取消（{@code BR-排课-020}）；
- * 一期恒量：{@code bookedPersons = 0}、{@code remainingPlaces = maxPersons}。</p>
- */
+/** 用户端排课卡片。 */
 @ApiModel("用户端排课卡片")
 public class ScheduleCardVO
 {

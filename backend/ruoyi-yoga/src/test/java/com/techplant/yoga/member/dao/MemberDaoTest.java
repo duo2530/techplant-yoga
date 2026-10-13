@@ -39,18 +39,7 @@ import com.ruoyi.common.core.domain.model.LoginUser;
 import com.techplant.yoga.common.mybatis.AuditMetaObjectHandler;
 import com.techplant.yoga.member.domain.MemberDO;
 
-/**
- * 会员数据访问的集成测试（H2 内存库，MySQL 兼容模式；不连开发库）。
- *
- * <p>验证的是「读代码看不出来」的那部分：{@code t_member} 的列名映射
- * （{@code phone_last4} / {@code wechat_openid} 等下划线 → 驼峰）、
- * 雪花 ID 与审计填充、以及<b>条件更新</b>的语义
- * （{@code password IS NULL} 只允许补一次密码、唯一键冲突抛
- * {@link DuplicateKeyException} 供上层转 409）。</p>
- *
- * <p>自建 {@code SqlSessionFactory} 的原因与 {@code MyBatisWiringTest} 一致：切片测试里
- * MyBatis-Plus 的自动配置不参与，必须显式挂分页插件与审计填充器。</p>
- */
+/** 会员数据访问的集成测试（H2 内存库，MySQL 兼容模式；不连开发库）。 */
 @ExtendWith(SpringExtension.class)
 @ContextConfiguration(classes = { MemberDaoTest.TestConfig.class, AuditMetaObjectHandler.class,
         MemberDaoImpl.class })

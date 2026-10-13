@@ -58,7 +58,7 @@
 - **样式**：尺寸一律用 `rpx`（原型逻辑画布 390pt → 750rpx，`rpx = pt × 1.9231`），只有 1px 边框写 `px`；颜色用 `uni.scss` 末尾的设计 token（`$ys-*`，实测值）；全局类在 `static/scss/yoga.scss`（`.ys-page`/`.ys-card`/`.ys-pad`/`.press` 等），在 `App.vue` 里随 `index.scss` 一起引入。
 - **静态资源路径**：`/static/images/xxx`（页面里统一用绝对路径；资产清单见 `static/images/README.md`）。
 - **外壳不要自己画**：状态栏、导航栏、微信胶囊、tabBar 都由系统绘制（唯一例外是首页 `navigationStyle:custom` + `<ys-nav-brand>`）。
-- 中文文案与注释，和现有代码保持一致；照原型复刻时把实测值写进注释（既有代码都是这个风格）。
+- 中文文案与注释遵循根目录 [AGENTS.md](../../AGENTS.md) 的源码注释约定；原型测量、还原过程及差异说明集中维护在设计文档中。
 
 ## 6. 当前状态（原型还原 + mock 数据）
 

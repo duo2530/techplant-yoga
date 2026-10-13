@@ -6,7 +6,7 @@ import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 
 /**
- * 课程详情（课程管理详细设计 §2.3.1、§2.2.2）：在列表项字段之上多一个 {@code intro}。
+ * 课程详情：在列表项字段之上多一个 {@code intro}。
  *
  * <p>同样<b>成对返回</b> {@code courseType} ＋ {@code courseTypeName}；不返回审计人字段。</p>
  */

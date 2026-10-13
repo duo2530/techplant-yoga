@@ -10,13 +10,13 @@ import com.techplant.yoga.classroom.vo.ClassroomSummaryVO;
 import com.techplant.yoga.common.response.PageResult;
 
 /**
- * 教室业务接口（教室管理详细设计 §3.2）。
+ * 教室业务接口。
  *
  * <p>管理端 4 个接口：列表／新增／改名／<b>物理删除（带门禁）</b>；
  * <b>没有详情接口</b>（列表项已含编辑回填所需的全部字段）。</p>
  *
  * <p>同时<b>对外</b>提供三个方法，供门店模块（删除门禁统计）与排课模块（存在性／归属校验、名称补齐）直接依赖
- * ——<b>全项目统一不另立 QueryService</b>（详细设计总览 §6）。</p>
+ * ——<b>全项目统一不另立 QueryService</b>。</p>
  */
 public interface ClassroomService
 {

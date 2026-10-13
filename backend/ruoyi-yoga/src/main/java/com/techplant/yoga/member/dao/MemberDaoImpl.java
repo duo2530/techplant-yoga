@@ -8,15 +8,7 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.techplant.yoga.member.domain.MemberDO;
 import com.techplant.yoga.member.mapper.MemberMapper;
 
-/**
- * 会员数据访问实现（会员管理详细设计 §3.2、§3.4）。
- *
- * <p>更新一律用 {@code lambdaUpdate} 显式 SET：MyBatis-Plus 的 {@code updateById} 会忽略 null，
- * 而本模块的更新（补齐密码、覆盖密码、刷新最后登录时间）都要精确控制「只动哪一列」。</p>
- *
- * <p>会员端操作没有管理端登录人，因此更新不写 {@code update_by}，只写 {@code update_time}；
- * 新增走 {@link MemberDO} 上的 {@code @TableField(fill = ...)} 由公共处理器填审计字段。</p>
- */
+/** 会员数据访问实现。 */
 @Repository
 public class MemberDaoImpl implements MemberDao
 {
@@ -73,7 +65,6 @@ public class MemberDaoImpl implements MemberDao
     @Override
     public int updatePasswordIfUnregistered(Long memberId, String passwordHash)
     {
-        // 条件里必须带 password IS NULL：并发注册时只有一个请求能补上凭证（§4.4 第 2 步）
         return memberMapper.update(null, Wrappers.<MemberDO>lambdaUpdate()
                 .eq(MemberDO::getId, memberId)
                 .isNull(MemberDO::getPassword)

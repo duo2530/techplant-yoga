@@ -9,15 +9,7 @@ import com.techplant.yoga.course.enums.CourseTypeValid;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 
-/**
- * 新增课程的请求体（课程管理详细设计 §2.3.2）。
- *
- * <p>字段：{@code name}（必填，≤64）、{@code courseType}（必填，1~4）、{@code coverUrl}（单图，可空）、
- * {@code intro}（可空）、{@code difficulty}（必填，1~5）。</p>
- *
- * <p><b>课种取值范围只由 {@link CourseTypeValid} 委托 {@code CourseTypeEnum} 判断</b>，
- * 这里不写死 1~4 的字面量（§3.4 第 5 条）。</p>
- */
+/** 新增课程的请求体。 */
 @ApiModel("新增课程请求")
 public class CourseCreateDTO
 {

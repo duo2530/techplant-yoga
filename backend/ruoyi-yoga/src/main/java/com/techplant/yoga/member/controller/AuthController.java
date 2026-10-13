@@ -18,21 +18,7 @@ import com.techplant.yoga.member.service.MemberTokenService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 
-/**
- * 用户端账号接口：《用户端接口详细设计》§2.2.4～§2.2.8，共 5 个。
- *
- * <ul>
- *   <li>{@code POST /api/auth/sms-code} 发送短信验证码（免登录）</li>
- *   <li>{@code POST /api/auth/register} 注册（免登录，不发 token）</li>
- *   <li>{@code POST /api/auth/login} 登录（免登录，签发 7 天会员 token）</li>
- *   <li>{@code POST /api/auth/reset-password} 忘记密码（免登录）</li>
- *   <li>{@code POST /api/auth/logout} 退出登录（幂等，允许失效 token）</li>
- * </ul>
- *
- * <p>放行清单由 {@code MemberSecurityConfig} 决定（本阶段这 5 个都免登录），
- * 所以这里<b>不标 {@code @Anonymous}</b>：那是管理端过滤链的放行机制，会员 token 的
- * 放行口径统一收在 {@code /api/**} 那条链里。</p>
- */
+/** 用户端账号接口。 */
 @Api(tags = "用户端-账号")
 @Validated
 @RestController

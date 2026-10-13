@@ -13,7 +13,7 @@ import com.ruoyi.common.core.domain.AjaxResult;
 import com.ruoyi.common.utils.ServletUtils;
 
 /**
- * 会员认证失败处理（用户端接口详细设计 §2.1.2、§4.7）。
+ * 会员认证失败处理。
  *
  * <p>只在 {@code /api/**} 的过滤链上生效：未登录／登录态失效统一返回业务码 401，
  * <b>HTTP 仍是 200</b>，与框架管理端口径一致；文案不暴露内部细节。</p>

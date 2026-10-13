@@ -44,25 +44,7 @@ import com.techplant.yoga.schedule.vo.ScheduleListItemVO;
 import com.techplant.yoga.store.service.StoreService;
 import com.techplant.yoga.store.vo.StoreSummaryVO;
 
-/**
- * 排课业务实现（排课管理详细设计 §3.2、§3.4、§4）。
- *
- * <p>本类同时承担三类职责：管理端 6 个接口、四个主数据的删除门禁统计、用户端 2 个免登录只读查询
- * （全项目统一不另立 QueryService）。</p>
- *
- * <p><b>三条最容易写错的口径：</b></p>
- * <ol>
- *   <li><b>「已结束」只在 service 层判定一次</b>：返回 controller 之前统一用
- *       {@link ScheduleStatusEnum} 推导 {@code finished} / {@code statusText} / {@code bookable}；
- *       controller 不判断、前端不算。唯一例外是删除门禁的 count（写在 SQL 里，见 {@code ScheduleDaoImpl}）。</li>
- *   <li><b>课种快照只在两处写入</b>：新增时从课程复制、更换课程时刷新；其它任何路径都不动快照。</li>
- *   <li><b>两套可见口径不合并</b>：用户端 {@code status <> 1}；删除门禁
- *       {@code end_time > NOW() AND status IN (1,2)}。</li>
- * </ol>
- *
- * <p><b>跨模块注入一律 {@code @Lazy}</b>：一期四个模块与本模块构成构造器注入环
- * （门店／教室／教练／课程都要调本模块做删除门禁统计），由 Spring 延迟代理打破。</p>
- */
+/** 排课业务实现。 */
 @Service
 public class ScheduleServiceImpl implements ScheduleService
 {
@@ -75,7 +57,7 @@ public class ScheduleServiceImpl implements ScheduleService
     /** 参数校验失败／系统异常 */
     private static final int PARAM_ERROR = 500;
 
-    /** 排课窗口：今天起 14 天内（含今天）（BR-排课-009、BR-排课-017） */
+    /** 排课窗口：今天起 14 天内（含今天） */
     private static final int SCHEDULE_WINDOW_DAYS = 14;
 
     /** 用户端日期参数格式（严格 yyyy-MM-dd） */
@@ -109,7 +91,7 @@ public class ScheduleServiceImpl implements ScheduleService
     // ------------------------------------------------------------------
 
     /**
-     * 查询排课列表（§2.2.1）：日期区间筛 {@code schedule_date}，名称按 ID 去重后批量补齐
+     * 查询排课列表：日期区间筛 {@code schedule_date}，名称按 ID 去重后批量补齐
      */
     @Override
     public PageResult<ScheduleListItemVO> page(ScheduleQuery query)
@@ -135,7 +117,7 @@ public class ScheduleServiceImpl implements ScheduleService
     }
 
     /**
-     * 查询排课详情（§2.2.2）：不存在或已被删除 → 404
+     * 查询排课详情：不存在或已被删除 → 404
      */
     @Override
     public ScheduleDetailVO getById(Long scheduleId)
@@ -152,7 +134,7 @@ public class ScheduleServiceImpl implements ScheduleService
     }
 
     /**
-     * 新增排课（§2.2.3、§4.3）：校验 1~8 条与 INSERT 在**同一个事务**内
+     * 新增排课：校验 1~8 条与 INSERT 在**同一个事务**内
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -182,7 +164,7 @@ public class ScheduleServiceImpl implements ScheduleService
     }
 
     /**
-     * 修改排课（§2.2.4、§4.4）：仅「待上架」可改；校验 1~8 条（⑦⑧ 排除自身）
+     * 修改排课：仅「待上架」可改；校验 1~8 条（⑦⑧ 排除自身）
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -204,7 +186,6 @@ public class ScheduleServiceImpl implements ScheduleService
         validateSameSlot(dto.getStoreId(), dto.getCourseId(), dto.getStartTime(), dto.getEndTime(), scheduleId);
         validateCoachOverlap(dto.getCoachId(), dto.getStartTime(), dto.getEndTime(), scheduleId);
 
-        // 课种快照：只有「更换了课程」才刷新（快照的唯一刷新点）；否则保持原快照不动
         Integer snapshot = Objects.equals(dto.getCourseId(), existing.getCourseId())
                 ? existing.getCourseType()
                 : course.getCourseType();
@@ -216,7 +197,7 @@ public class ScheduleServiceImpl implements ScheduleService
     }
 
     /**
-     * 状态流转（§2.2.5、§4.5）：唯一入口，controller 里不写 if-else
+     * 状态流转：唯一入口，controller 里不写 if-else
      *
      * <p>合法流转只有 {@code 1→2} 上架、{@code 2→1} 下架、{@code 2→3} 取消；
      * 目标 = 当前幂等成功；已取消与「已上架且已结束」是终态，一律 409。</p>
@@ -244,7 +225,7 @@ public class ScheduleServiceImpl implements ScheduleService
         {
             throw new ServiceException("已结束的排课不可再变更状态", CONFLICT);
         }
-        // 幂等：目标 = 当前，按成功处理（BR-全局-008）
+        // 幂等：目标 = 当前，按成功处理
         if (targetStatus.equals(current))
         {
             return;
@@ -259,7 +240,7 @@ public class ScheduleServiceImpl implements ScheduleService
     }
 
     /**
-     * 删除排课（§2.2.6、§4.6）：物理删除，**只允许删 {@code status = 1}**；已取消与已结束是终态留痕
+     * 删除排课：物理删除，**只允许删 {@code status = 1}**；已取消与已结束是终态留痕
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -324,7 +305,7 @@ public class ScheduleServiceImpl implements ScheduleService
     // ------------------------------------------------------------------
 
     /**
-     * 用户端排课列表（《用户端接口详细设计》§2.2）：固定过滤 {@code status <> 1}、
+     * 用户端排课列表：固定过滤 {@code status <> 1}、
      * 门店、课种<b>快照</b>、上课日期<b>派生列</b>
      */
     @Override
@@ -369,17 +350,13 @@ public class ScheduleServiceImpl implements ScheduleService
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), list);
     }
 
-    /**
-     * 用户端排课详情（《用户端接口详细设计》§2.3）：未删除且 {@code status <> 1} 才可见，
-     * 否则**一律按不存在返回 404**（不区分「不存在」与「不可见」）
-     */
+    /** 用户端排课详情：未删除且 {@code status <> 1} 才可见， 否则**一律按不存在返回 404**（不区分「不存在」与「不可见」） */
     @Override
     public PublicScheduleDetailVO publicDetail(Long scheduleId)
     {
         ScheduleDO schedule = scheduleDao.selectVisibleById(scheduleId);
         if (schedule == null)
         {
-            // 与「不存在」同一个响应，避免暴露某节课处于待上架
             throw notFoundSchedule();
         }
 
@@ -413,7 +390,6 @@ public class ScheduleServiceImpl implements ScheduleService
                 schedule.getStoreId()));
         vo.setClassroomName(nameOf(classroomNameMap(Collections.singletonList(schedule.getClassroomId())),
                 schedule.getClassroomId()));
-        // 一期没有预约：固定空数组，不是 null
         vo.setBookers(new ArrayList<String>());
         return vo;
     }
@@ -562,9 +538,6 @@ public class ScheduleServiceImpl implements ScheduleService
         return new ServiceException("排课不存在或已被删除", NOT_FOUND);
     }
 
-    // ------------------------------------------------------------------
-    // 内部：跨模块名称批量补齐（按 ID 去重，避免 N+1；查不到一律空字符串）
-    // ------------------------------------------------------------------
 
     private void applyAdminNames(ScheduleListItemVO vo, ScheduleDO schedule, Map<Long, String> storeNames,
             Map<Long, String> courseNames, Map<Long, String> coachNames, Map<Long, String> classroomNames)

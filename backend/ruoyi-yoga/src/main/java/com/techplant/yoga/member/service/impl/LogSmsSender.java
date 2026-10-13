@@ -5,16 +5,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import com.techplant.yoga.member.service.SmsSender;
 
-/**
- * 短信发送的日志实现（用户端接口详细设计 §3.2、§4.3 第 4 步）。
- *
- * <p><b>本阶段不接真实短信通道</b>：验证码只写日志，便于本机联调与验收；
- * 真机/生产前必须换成真实通道实现（微信小程序订阅消息或第三方短信服务），
- * 否则用户永远收不到码。</p>
- *
- * <p>日志级别用 info，且只打手机号与场景，不打任何用户资料；验证码进日志是<b>开发期行为</b>，
- * 上线前应连同本实现一起替换。</p>
- */
+/** 将短信验证码写入日志的发送实现。 */
 @Service
 public class LogSmsSender implements SmsSender
 {

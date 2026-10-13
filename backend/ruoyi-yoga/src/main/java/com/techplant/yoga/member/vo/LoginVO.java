@@ -3,13 +3,7 @@ package com.techplant.yoga.member.vo;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 
-/**
- * 登录结果（用户端接口详细设计 §2.2.6、§2.6.9）。
- *
- * <p>{@code token} 是用户端 JWT（与管理端 token 隔离）；{@code memberId} 是服务端登录主体与业务主体，
- * 客户端传入的会员 ID 一律不作为访问依据；{@code memberId} 字段名以 {@code Id} 结尾，
- * 由 {@code JacksonConfig} 序列化成字符串，避免小程序 Number 精度丢失。</p>
- */
+/** 登录结果。 */
 @ApiModel("登录结果")
 public class LoginVO
 {

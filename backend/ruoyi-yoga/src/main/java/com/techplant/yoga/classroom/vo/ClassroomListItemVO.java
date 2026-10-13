@@ -6,10 +6,10 @@ import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 
 /**
- * 教室列表项（教室管理详细设计 §2.3.1）。
+ * 教室列表项。
  *
  * <p>字段只有「所属门店 ＋ 名称 ＋ 时间」，<b>列表项已含编辑弹窗回填所需的全部字段</b>，
- * 所以本模块<b>没有详情接口</b>（§2.2 说明）。{@code storeName} 由 service 调
+ * 所以本模块<b>没有详情接口</b>。{@code storeName} 由 service 调
  * {@code StoreService} 批量补齐，不跨模块读表。</p>
  */
 @ApiModel("教室列表项")

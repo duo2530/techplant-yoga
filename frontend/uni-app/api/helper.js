@@ -1,8 +1,4 @@
-/**
- * api 层小工具（mock 阶段专用）
- *
- * 命名为 helper 而不是 utils，避免和工程里既有的 `@/utils/*`（框架工具）混淆。
- */
+/** 本地数据查询工具。 */
 export function firstName(list) {
   return (list && list.length && list[0]) || {}
 }

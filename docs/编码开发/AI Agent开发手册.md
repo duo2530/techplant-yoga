@@ -28,7 +28,7 @@
 | domain / dto / vo / query / convert | 同名包 | 对象只用这五种：DO 对应表、DTO 是 service 入参、Query 承载查询条件、VO 是出参、Converter 使用 MapStruct 做转换。**不用 PO / BO / AO** |
 | 公共设施 | `common.*` | `response` / `config` / `mybatis` / `log` / `util`，见第 4 节 |
 
-- 中文注释、中文提示语，和现有代码风格保持一致（JavaDoc 里引用设计章节号，如 `（详细设计 §4.1.1）`，这是本项目的既有写法）。
+- 中文提示语保持一致；源码注释遵循根目录 `AGENTS.md`，仅说明必要的业务含义、外部约束或调用边界，不引用设计章节号或其他易变定位信息。
 
 ## 4、公共能力与接口约定
 

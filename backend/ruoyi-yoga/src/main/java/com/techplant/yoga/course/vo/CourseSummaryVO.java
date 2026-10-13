@@ -3,15 +3,7 @@ package com.techplant.yoga.course.vo;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 
-/**
- * 课程摘要（课程管理详细设计 §3.2「对外提供批量取课程摘要」）。
- *
- * <p>供排课模块做名称补齐与用户端详情页的<b>实时字段</b>读取
- * （{@code courseCoverUrl / courseIntro / difficulty} 取课程当前值，课种取排课快照，见排课详细设计 §2.2.2）。</p>
- *
- * <p>字段：{@code id, name, courseType, courseTypeName, coverUrl, intro, difficulty}
- * —— 其中 {@code courseTypeName} 已由 {@code CourseTypeEnum} 翻好，调用方不要再自己映射。</p>
- */
+/** 课程摘要。 */
 @ApiModel("课程摘要")
 public class CourseSummaryVO
 {

@@ -17,18 +17,11 @@ const isPlainObject = (value) => Object.prototype.toString.call(value) === '[obj
 /**
  * 收到 401：立即完整清理本地登录态，弹窗只决定要不要跳登录页
  *
- * - **先清理再弹窗**：用户点取消也要回到游客态，不能留着失效 token
- *   （2026-10-13 复审：原来清理写在「确定」分支里，取消就什么都没清）
- * - **只清当前会话**：`requestToken` 与当前 token 不一致说明是旧请求迟到的 401，
- *   不能把用户刚登录拿到的新会话清掉
- * - **并发只弹一次**：多个请求同时 401 时共用一个弹窗
- *
  * @param {string|null} requestToken 本次请求实际携带的 token（没带则为 null）
  */
 function handleUnauthorized(requestToken) {
   const currentToken = getToken()
   if (requestToken && currentToken && requestToken !== currentToken) {
-    // 旧会话迟到的 401：忽略，别动新会话
     return
   }
   useUserStore().clearSession()
@@ -53,7 +46,6 @@ const request = config => {
   // 是否需要设置 token
   const isToken = (config.headers || {}).isToken === false
   config.header = config.header || {}
-  // 本地登录态已过期（含历史缓存缺过期时间）：先清干净，本次请求不再带它
   if (!isToken && getToken() && !isSessionValid()) {
     useUserStore().ensureValidSession()
   }
@@ -68,9 +60,6 @@ const request = config => {
     config.url = url
   }
   return new Promise((resolve, reject) => {
-    // 用 success / fail 回调而不是 Promise 链：两条路径都必定给出反馈
-    // （Promise 链写法在失败时如果处理函数本身抛错，外层 Promise 会永远不 settle，
-    //  页面里再 .catch 一吞，界面上就是「点了没反应」——2026-10-13 踩过）
     const requestUrl = config.baseUrl || baseUrl + config.url
     uni.request({
       method: config.method || 'get',
@@ -80,26 +69,22 @@ const request = config => {
       header: config.header,
       dataType: 'json',
       success: (response) => {
-        // 整个处理过程都包在 try 里：万一取字段抛错，也必须 reject，不能让 Promise 一直挂起
         try {
           const res = response || {}
           const status = res.statusCode
           const body = res.data
-          // ① HTTP 层：502／404 的 HTML 错误页不能当成业务成功（2026-10-13 复审修复）
           if (typeof status === 'number' && (status < 200 || status >= 300)) {
             console.error('[request] ' + requestUrl + ' HTTP ' + status + ' body=' + JSON.stringify(body).slice(0, 200))
             toast('接口异常（HTTP ' + status + '）')
             reject(status)
             return
           }
-          // ② 响应结构：必须是 {code,msg,data} 形状的普通对象
           if (!isPlainObject(body)) {
             console.error('[request] ' + requestUrl + ' 返回格式异常：' + JSON.stringify(body).slice(0, 200))
             toast('接口返回格式异常，请稍后重试')
             reject('bad-response')
             return
           }
-          // ③ 业务码必须存在且是数字：不再用 `code || 200` 把缺失业务码当成成功
           if (typeof body.code !== 'number') {
             console.error('[request] ' + requestUrl + ' 缺少业务码：' + JSON.stringify(body).slice(0, 200))
             toast('接口返回异常（缺少业务码）')

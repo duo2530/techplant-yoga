@@ -106,7 +106,7 @@
       </view>
     </view>
 
-    <!-- 空态：该门店该课种该日期没有数据（一期「私教课」固定为空） -->
+        <!-- 排课列表空态 -->
     <view v-else-if="loaded" class="booking__empty">
       <ys-empty
         image="/static/images/empty/booking.png"
@@ -126,19 +126,10 @@ import { onShow, onReachBottom } from '@dcloudio/uni-app'
 import { listSchedules } from '@/api/schedule'
 import { getCurrentStore } from '@/api/store'
 
-/**
- * 约课页（W6）
- *
- * - 课种 Tab 四类（契约 §2.2 的 courseType 1~4）；卡片上的课种文案**一律用后端 courseTypeName**。
- *   Tab 的四个入口值是接口契约的一部分（用户端没有课种字典接口），
- *   文案优先用后端 courseTypeName 校准（syncTypeLabels），模板里不做码→名映射。
- * - 日期条今天起 14 天，默认今天；筛的是后端派生列 schedule_date。
- * - 切门店 / 切课种 / 切日期都重新查询并回到第 1 页。
- * - 状态文案与 bookable 全部来自后端（可约 / 已结束 / 已取消）；前端不过滤、不推导。
- */
+/** 约课页（W6） */
 
 const PAGE_SIZE = 10
-/** 日期条天数（BR-排课-017：只能看今天起 14 天内的排课，含今天） */
+/** 日期条天数 */
 const DATE_DAYS = 14
 const WEEK_SHORT = ['日', '一', '二', '三', '四', '五', '六']
 
@@ -233,7 +224,6 @@ async function loadPage(targetPage) {
     syncTypeLabels(res.list)
     finished.value = schedules.value.length >= total.value || res.list.length === 0
   } catch (error) {
-    // 错误提示由 utils/request 统一 toast；查询失败按空列表兜底，避免旧数据串页
     if (targetPage === 1) {
       schedules.value = []
       total.value = 0
@@ -351,10 +341,6 @@ function goDetail(item) {
   uni.navigateTo({ url: '/pages/detail/index?scheduleId=' + String(item.id) })
 }
 
-/**
- * 「立即预约」：一期没有预约（BR-排课-018），只提示「敬请期待」，**不发任何请求**。
- * 已结束 / 已取消（bookable=false）不可预约，按钮置灰且不响应。
- */
 function onBook(item) {
   if (!item.bookable) {
     return

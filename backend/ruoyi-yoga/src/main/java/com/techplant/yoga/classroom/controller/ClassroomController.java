@@ -22,21 +22,7 @@ import com.techplant.yoga.common.response.PageResult;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 
-/**
- * 管理端教室管理接口（教室管理详细设计 §2.2）。
- *
- * <table>
- * <caption>接口清单（4 个，<b>没有详情接口</b>）</caption>
- * <tr><td>GET /admin/classrooms</td><td>查询教室列表</td></tr>
- * <tr><td>POST /admin/classrooms</td><td>新增教室（不返回新 ID）</td></tr>
- * <tr><td>PUT /admin/classrooms/{classroomId}</td><td>修改教室（只改名称）</td></tr>
- * <tr><td>DELETE /admin/classrooms/{classroomId}</td><td>删除教室（物理，带排课门禁）</td></tr>
- * </table>
- *
- * <p>教室不提供详情接口：字段只有「所属门店 ＋ 名称」，列表项已含全部字段，编辑弹窗直接用列表行数据回填。</p>
- *
- * <p>controller 只调 service、用 {@code @Valid} 做参数校验、装配响应，不写业务逻辑。</p>
- */
+/** 管理端教室管理接口。 */
 @Api(tags = "管理端-教室管理")
 @RestController
 @RequestMapping("/admin/classrooms")
@@ -50,7 +36,7 @@ public class ClassroomController extends BaseController
     }
 
     /**
-     * 查询教室列表（§2.2.1）：按 {@code store_id ASC, name ASC, id DESC} 稳定排序；storeName 批量补齐
+     * 查询教室列表：按 {@code store_id ASC, name ASC, id DESC} 稳定排序；storeName 批量补齐
      */
     @ApiOperation("查询教室列表")
     @GetMapping
@@ -66,7 +52,7 @@ public class ClassroomController extends BaseController
     }
 
     /**
-     * 新增教室（§2.2.2）：成功只返回 {@code {"code":200,"msg":"操作成功"}}，<b>不返回新 ID</b>
+     * 新增教室：成功只返回 {@code {"code":200,"msg":"操作成功"}}，<b>不返回新 ID</b>
      */
     @ApiOperation("新增教室")
     @PostMapping
@@ -77,7 +63,7 @@ public class ClassroomController extends BaseController
     }
 
     /**
-     * 修改教室（§2.2.3）：请求体只有 {@code name}（{@code storeId} 不在模型里）；成功只返回统一成功响应
+     * 修改教室：请求体只有 {@code name}（{@code storeId} 不在模型里）；成功只返回统一成功响应
      */
     @ApiOperation("修改教室（只改名称）")
     @PutMapping("/{classroomId}")
@@ -88,7 +74,7 @@ public class ClassroomController extends BaseController
     }
 
     /**
-     * 删除教室（§2.2.4）：<b>物理删除</b>；被「未结束且待上架或已上架」的排课引用时业务码 409
+     * 删除教室：<b>物理删除</b>；被「未结束且待上架或已上架」的排课引用时业务码 409
      */
     @ApiOperation("删除教室")
     @DeleteMapping("/{classroomId}")

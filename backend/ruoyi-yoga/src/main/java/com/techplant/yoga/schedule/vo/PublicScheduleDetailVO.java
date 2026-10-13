@@ -5,15 +5,7 @@ import java.util.List;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 
-/**
- * 用户端排课详情（课程详情页，《用户端接口详细设计》§2.3 / §3.3）。
- *
- * <p>在 {@link ScheduleCardVO} 的基础上补：{@code courseId}、{@code courseIntro}、{@code coachId}、
- * {@code coachAvatarUrl}、{@code coachIntro}、{@code minPersons}（＝需求里的「开课人数」）、{@code bookers}。</p>
- *
- * <p><b>口径</b>：课种取排课快照；封面／介绍／难度实时取课程；{@code bookers} 一期没有预约，
- * **固定返回空数组 {@code []}（不是 null）**；课程／教练／教室已删除时对应名称返回**空字符串**。</p>
- */
+/** 用户端排课详情。 */
 @ApiModel("用户端排课详情")
 public class PublicScheduleDetailVO extends ScheduleCardVO
 {
@@ -105,7 +97,6 @@ public class PublicScheduleDetailVO extends ScheduleCardVO
 
     public void setBookers(List<String> bookers)
     {
-        // 空值兜底：契约要求固定 []，绝不能是 null
         this.bookers = bookers == null ? new ArrayList<String>() : bookers;
     }
 }

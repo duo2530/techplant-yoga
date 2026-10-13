@@ -8,12 +8,7 @@ import javax.validation.constraints.Size;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 
-/**
- * 修改门店请求（门店管理详细设计 §2.2.4、§2.3.2）。
- *
- * <p>与新增请求字段完全一致，按<b>全量编辑</b>处理；一期门店没有状态字段，
- * 因此本 DTO 不含 {@code status}，也没有独立的状态接口。</p>
- */
+/** 修改门店请求。 */
 @ApiModel("修改门店请求")
 public class StoreUpdateDTO
 {

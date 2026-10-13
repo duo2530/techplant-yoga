@@ -6,10 +6,10 @@ import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 
 /**
- * 课程列表项（课程管理详细设计 §2.3.1）。
+ * 课程列表项。
  *
  * <p><b>不返回 {@code intro}</b>（大字段，列表接口不查）；<b>课种成对返回</b>
- * {@code courseType} ＋ {@code courseTypeName}（详细设计总览 §2「枚举返回」）。</p>
+ * {@code courseType} ＋ {@code courseTypeName}。</p>
  */
 @ApiModel("课程列表项")
 public class CourseListItemVO

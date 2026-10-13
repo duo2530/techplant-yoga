@@ -5,7 +5,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import com.ruoyi.common.exception.ServiceException;
 
 /**
- * 当前会员上下文（用户端接口详细设计 §2.6.10、§4.7）。
+ * 当前会员上下文。
  *
  * <p>只有 {@link MemberJwtAuthenticationTokenFilter} 校验通过后才会把
  * {@link MemberLoginUser} 写进登录上下文；本类统一从上下文取会员 ID，

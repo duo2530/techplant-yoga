@@ -2,25 +2,7 @@ package com.techplant.yoga.schedule.enums;
 
 import java.time.LocalDateTime;
 
-/**
- * 排课状态枚举：状态码、「已结束」的推导、两套状态文案与 {@code bookable} 都收在这一处
- * （排课管理详细设计 §1.2.2、§3.2、§3.4 第 2 条）。
- *
- * <p><b>落库只有三个值</b>：{@code 1} 待上架、{@code 2} 已上架、{@code 3} 已取消。
- * <b>「已结束」不落库</b>，是派生状态：{@code status == 2 && end_time <= 当前时间}（{@code BR-排课-010}）。</p>
- *
- * <p><b>两套文案</b>（{@code BR-排课-020}）：</p>
- * <ul>
- *   <li>管理端：待上架／已上架／已取消／<b>已结束</b>；</li>
- *   <li>用户端：<b>可约</b>／已结束／已取消 —— 用户端不出现「待上架」「已上架」措辞。</li>
- * </ul>
- *
- * <p><b>判定落点在 service 层</b>：返回 controller 之前由 service 调用本枚举判定一次，
- * 装配 {@code finished} / {@code statusText} / {@code bookable}；controller 不判断、前端不推导。</p>
- *
- * <p><b>唯一例外</b>：删除门禁的 count 查询把 {@code end_time > NOW()} 写在 SQL 条件里
- * （见 {@code ScheduleDaoImpl#buildActiveCondition()}），不走本枚举。</p>
- */
+/** 排课状态枚举：状态码、「已结束」的推导、两套状态文案与 {@code bookable} 都收在这一处。 */
 public enum ScheduleStatusEnum
 {
     /** 1 待上架：用户端不可见，可编辑、可物理删除 */
@@ -38,10 +20,7 @@ public enum ScheduleStatusEnum
     /** 用户端「已上架且未结束」的文案 */
     public static final String BOOKABLE_TEXT = "可约";
 
-    /**
-     * 待上架在用户端的兜底文案：用户端口径是 {@code status <> 1}，理论不可达；
-     * 万一被调用也**不能**把「待上架」这个管理端措辞透出去。
-     */
+    /** 待上架排课在用户端的显示文案。 */
     public static final String INVISIBLE_TEXT = "";
 
     /** 非法状态码的兜底文案 */
@@ -156,11 +135,7 @@ public enum ScheduleStatusEnum
         return isFinished(status, endTime, now) ? FINISHED_TEXT : BOOKABLE_TEXT;
     }
 
-    /**
-     * 用户端是否可发起预约：{@code status == 2} 且 {@code end_time > now}
-     *
-     * <p>一期「立即预约」点击只提示「敬请期待」，本字段仅用于前端按钮置灰（{@code BR-排课-018}）。</p>
-     */
+    /** 用户端是否可发起预约：{@code status == 2} 且 {@code end_time > now} */
     public static boolean isBookable(Integer status, LocalDateTime endTime, LocalDateTime now)
     {
         return status != null && status == PUBLISHED.code && endTime != null && now != null

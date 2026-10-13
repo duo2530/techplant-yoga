@@ -6,7 +6,7 @@ import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 
 /**
- * 管理端门店详情（门店管理详细设计 §2.3.1）。
+ * 管理端门店详情。
  *
  * <p>字段与 {@link StoreListItemVO} 一致（门店字段不多，列表不裁剪）；
  * {@code storeType}/{@code storeTypeName}、{@code regionCode}/{@code regionName} 成对返回。</p>

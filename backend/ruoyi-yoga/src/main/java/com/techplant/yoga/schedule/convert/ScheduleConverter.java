@@ -12,16 +12,7 @@ import com.techplant.yoga.schedule.vo.ScheduleCardVO;
 import com.techplant.yoga.schedule.vo.ScheduleDetailVO;
 import com.techplant.yoga.schedule.vo.ScheduleListItemVO;
 
-/**
- * 排课对象转换（排课管理详细设计 §3.2）。
- *
- * <p><b>职责边界</b>：DTO／DO／VO 之间的字段搬运，以及两处**服务端推导**——
- * 课种名称（按快照码由 {@link CourseTypeEnum} 翻译）与派生状态
- * （{@code finished} / {@code statusText} / {@code bookable}，由 {@link ScheduleStatusEnum} 一处收口，§3.4 第 2 条）。</p>
- *
- * <p><b>跨模块名称</b>（门店／课程／教练／教室名称）不在这里查：由 service 按 ID 去重后批量调各模块
- * Service 再用 setter 补上，避免 N+1；未补上时保持**空字符串**兜底（不是 null）。</p>
- */
+/** 排课对象转换。 */
 public final class ScheduleConverter
 {
     private ScheduleConverter()
@@ -29,10 +20,7 @@ public final class ScheduleConverter
     }
 
     /**
-     * 新增：组装 DO（§4.3）
-     *
-     * <p>写入 {@code status = 1}（待上架）、{@code booked_persons = 0}；
-     * 课种快照与上课日期由调用方（service）从课程与开始时间推导后传入，**不接受客户端提交**。</p>
+     * 新增：组装 DO
      *
      * @param dto               新增请求
      * @param courseTypeSnapshot 课种快照（从课程复制）
@@ -51,14 +39,13 @@ public final class ScheduleConverter
         schedule.setEndTime(dto.getEndTime());
         schedule.setMaxPersons(dto.getMaxPersons());
         schedule.setMinPersons(dto.getMinPersons());
-        // 一期固定值：状态与已预约人数不走新增接口（§2.1.4 第 4~5 条）
         schedule.setStatus(ScheduleStatusEnum.PENDING.getCode());
         schedule.setBookedPersons(0);
         return schedule;
     }
 
     /**
-     * 修改：把请求里的业务字段应用到 DO（全量编辑，§4.4）
+     * 修改：把请求里的业务字段应用到 DO
      *
      * <p>{@code status} 与 {@code booked_persons} **不在这里出现**；课种快照只在「更换课程」时由 service 刷新。</p>
      */
@@ -99,12 +86,7 @@ public final class ScheduleConverter
         return vo;
     }
 
-    /**
-     * DO → 用户端卡片（用户端文案只有 可约／已结束／已取消）
-     *
-     * <p>一期恒量：{@code bookedPersons = 0}、{@code remainingPlaces = maxPersons}。
-     * 课程名称／封面／难度与教练、门店、教室名称由 service 批量补齐（默认空字符串）。</p>
-     */
+    /** DO → 用户端卡片（用户端文案只有 可约／已结束／已取消） */
     public static ScheduleCardVO toCardVO(ScheduleDO source, LocalDateTime now)
     {
         ScheduleCardVO vo = new ScheduleCardVO();
@@ -163,7 +145,6 @@ public final class ScheduleConverter
         vo.setEndTime(source.getEndTime());
         vo.setStoreId(source.getStoreId());
         vo.setMaxPersons(source.getMaxPersons());
-        // 一期没有预约（BR-排课-018）：已预约人数恒 0、剩余名额恒等于最大人数
         vo.setBookedPersons(0);
         vo.setRemainingPlaces(source.getMaxPersons());
         vo.setStatus(source.getStatus());

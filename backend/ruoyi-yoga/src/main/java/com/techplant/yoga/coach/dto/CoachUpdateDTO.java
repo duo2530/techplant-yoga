@@ -7,10 +7,10 @@ import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 
 /**
- * 修改教练请求（教练管理详细设计 §2.2.4、§2.3.2）：请求体与新增一致，<b>全量编辑</b>。
+ * 修改教练请求：请求体与新增一致，<b>全量编辑</b>。
  *
  * <p>相册元素上限（≤ 5）由 service 统一校验并返回 <b>409</b>（与新增共用同一段校验）；
- * 修改<b>不做引用检查</b>：已被排课引用时仍允许改教练资料（§2.2.4）。</p>
+ * 修改<b>不做引用检查</b>：已被排课引用时仍允许改教练资料。</p>
  */
 @ApiModel("修改教练请求")
 public class CoachUpdateDTO

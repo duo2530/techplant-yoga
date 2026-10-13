@@ -7,7 +7,7 @@ import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 
 /**
- * 登录请求（用户端接口详细设计 §2.2.6、§2.6.6）。
+ * 登录请求。
  *
  * <p>免登录：手机号 ＋ 密码。密码只校验非空，<b>不在登录时重复执行设置密码的强度规则</b>
  * （老数据／被改过的哈希不该因为规则升级而登录不了）。</p>

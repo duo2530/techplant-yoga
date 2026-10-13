@@ -7,18 +7,7 @@ import com.techplant.yoga.schedule.domain.ScheduleDO;
 import com.techplant.yoga.schedule.query.PublicScheduleQuery;
 import com.techplant.yoga.schedule.query.ScheduleQuery;
 
-/**
- * 排课数据访问语义（排课管理详细设计 §3.2）。
- *
- * <p><b>两条口径在 SQL 里各写一处、都不出现在内存筛：</b></p>
- * <ul>
- *   <li><b>删除门禁（未结束）</b>：{@code end_time > NOW() AND status IN (1,2)} —— 四个
- *       {@code countActiveByXxx} 共用同一个私有条件构造（§3.4 第 2、7 条）；</li>
- *   <li><b>用户端可见</b>：{@code status <> 1} —— 用户端列表与用户端详情共用同一段条件（《用户端接口详细设计》§5.3 第 1 条）。</li>
- * </ul>
- *
- * <p>本表<b>物理删除</b>：{@code deleteById} 就是 {@code DELETE}，没有逻辑删除条件。</p>
- */
+/** 排课数据访问语义。 */
 public interface ScheduleDao
 {
     /** 管理端分页：日期区间筛 {@code schedule_date}，排序 {@code start_time ASC, id ASC} */
@@ -41,7 +30,7 @@ public interface ScheduleDao
     /** 新增（主键与审计字段由公共机制填充） */
     int insert(ScheduleDO schedule);
 
-    /** 修改：**显式指定更新列**，不含 {@code status} 与 {@code booked_persons}（§3.4 第 6 条） */
+    /** 修改：**显式指定更新列**，不含 {@code status} 与 {@code booked_persons} */
     int updateById(ScheduleDO schedule);
 
     /** 只更新 {@code status} 列（状态流转的唯一写入口） */

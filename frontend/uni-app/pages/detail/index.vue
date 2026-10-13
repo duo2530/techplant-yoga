@@ -85,7 +85,7 @@
             <text class="bookers__name">{{ bookerName(booker) }}</text>
           </view>
         </view>
-        <!-- 一期没有预约：后端固定返回 []，这里显示空态 -->
+    <!-- 预约名单空态 -->
         <view v-else class="bookers__empty">
           <text class="bookers__empty-text">暂无预约人员</text>
         </view>
@@ -123,12 +123,7 @@ import { ref, computed } from 'vue'
 import { onLoad, onUnload } from '@dcloudio/uni-app'
 import { getScheduleDetail } from '@/api/schedule'
 
-/**
- * 课程详情页（W6）
- *
- * 一期没有预约：「立即预约」只在 bookable 为 true 时可点，点击仅提示「敬请期待」，不发请求。
- * 状态文案与 bookable 一律来自后端，前端不推导。
- */
+/** 课程详情页（W6） */
 
 const scheduleId = ref('')
 const detail = ref(null)
@@ -152,7 +147,7 @@ const timeText = computed(() => {
   return date ? date + ' ' + range : range
 })
 
-/** 预约人员（一期固定空数组） */
+/** 预约人员 */
 const bookers = computed(() => {
   const list = detail.value ? detail.value.bookers : null
   return Array.isArray(list) ? list : []
@@ -237,7 +232,6 @@ function goBack() {
   uni.switchTab({ url: '/pages/booking/index' })
 }
 
-/** 一期没有预约：只提示「敬请期待」，不发任何请求 */
 function onBook() {
   if (!detail.value || !detail.value.bookable) {
     return

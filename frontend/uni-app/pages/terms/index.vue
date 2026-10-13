@@ -6,20 +6,7 @@
 </template>
 
 <script setup>
-/**
- * 用户协议（pages.json 标题「用户协议」）
- *
- * 照 docs/原型/terms.html 还原；原型导航栏左侧那个 #D9D9D9 淡化胶囊是微信原生导航栏的表现，
- * 小程序里由系统绘制，本页不画。
- *
- * 正文实测：15pt / 行高 20pt / 字色 #080808 / 左右内边距 16pt、顶部 6pt / 底部 24pt，
- * 段落之间**没有额外间距**（原型是一串 <p>，浏览器默认 margin 被重置了，所以这里也不加段间距）。
- *
- * 文案**逐字来自 `@/mock/auth.js` 的 termsContent**（该数组是照 terms.html 逐字录入的），
- * 本页不自己编内容、不改标点；一段一项，用 v-for 渲染成段落。
- * 注意：协议正文页是唯一没有全局 mock 空态开关的页面，`getAgreementContent` 走 mockResult 有约 120ms 延迟，
- * 因此首帧是空白、随后整段出现（不是加载失败）。
- */
+/** 用户协议 */
 import { ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { getAgreementContent } from '@/api/auth'

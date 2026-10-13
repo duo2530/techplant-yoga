@@ -7,22 +7,7 @@ import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 
-/**
- * 课程数据对象，与 {@code t_course} 一一对应（课程管理详细设计 §1.2.1）。
- *
- * <p>只在 mapper 与 service 之间传递，不出现在接口契约里（§3.2）。</p>
- *
- * <p><b>三点约定：</b></p>
- * <ul>
- *   <li>主键：雪花ID，由 MyBatis-Plus 的 {@link IdType#ASSIGN_ID} 在应用侧生成，插入时不赋值；</li>
- *   <li><b>物理删除</b>：本表没有 {@code deleted} 字段，<b>不加</b> {@code @TableLogic}
- *       （详细设计总览 §2、BR-课程-008）；</li>
- *   <li>审计字段：由 {@code AuditMetaObjectHandler} 自动填充（§1.1.1）。</li>
- * </ul>
- *
- * <p><b>本表刻意不建的字段</b>（§1.2.1）：{@code store_id}（课程是平台级，不归属门店）、
- * {@code status}（课程无状态，下架靠删除）、{@code sort_no}（一期不设展示排序）、{@code deleted}。</p>
- */
+/** 课程数据对象，与 {@code t_course} 一一对应。 */
 @TableName("t_course")
 public class CourseDO
 {

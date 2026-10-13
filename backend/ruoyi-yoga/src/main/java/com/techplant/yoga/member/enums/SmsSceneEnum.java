@@ -1,7 +1,7 @@
 package com.techplant.yoga.member.enums;
 
 /**
- * 短信验证码场景（用户端接口详细设计 §2.2.4）。
+ * 短信验证码场景。
  *
  * <p>{@code register} 只允许<b>未注册</b>手机号，{@code reset} 只允许<b>已注册</b>手机号；
  * 两者的验证码在 Redis 里分场景存放，互不串用。</p>

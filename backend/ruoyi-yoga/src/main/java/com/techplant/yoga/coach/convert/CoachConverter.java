@@ -10,10 +10,10 @@ import com.techplant.yoga.coach.vo.CoachListItemVO;
 import com.techplant.yoga.coach.vo.CoachSummaryVO;
 
 /**
- * 教练对象转换（教练管理详细设计 §3.2）。
+ * 教练对象转换。
  *
  * <p><b>边界：</b>本类只做字段搬运与请求字段去空格，<b>不做</b> {@code gallery} 的
- * JSON ↔ {@code List<String>} 转换 —— 该转换只在 service 层发生（§3.4 第 2 条），
+ * JSON ↔ {@code List<String>} 转换 —— 该转换只在 service 层发生，
  * 因此相册的 JSON 字符串（入）与 {@code List<String>}（出）都作为参数传入。</p>
  */
 public final class CoachConverter
@@ -100,7 +100,7 @@ public final class CoachConverter
         return result;
     }
 
-    /** 请求字段前后空格由转换层去除（详细设计 §1.2.3 第 1 条） */
+    /** 请求字段前后空格由转换层去除 */
     private static String trimToNull(String value)
     {
         if (value == null)

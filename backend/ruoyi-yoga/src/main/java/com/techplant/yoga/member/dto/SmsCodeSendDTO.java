@@ -7,7 +7,7 @@ import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 
 /**
- * 发送短信验证码请求（用户端接口详细设计 §2.2.4、§2.6.4）。
+ * 发送短信验证码请求。
  *
  * <p>免登录；发送间隔 60 秒、有效期 5 分钟；发送新码作废旧码，响应不返回验证码。</p>
  */

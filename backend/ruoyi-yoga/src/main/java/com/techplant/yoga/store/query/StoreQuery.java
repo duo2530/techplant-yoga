@@ -7,7 +7,7 @@ import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 
 /**
- * 管理端门店列表查询条件（门店管理详细设计 §2.2.1、§2.3.3）。
+ * 管理端门店列表查询条件。
  *
  * <p>筛选：{@code name}（模糊）、{@code regionCode}（精确，字典 store_region）、
  * {@code storeType}（1／2）；分页 {@code pageNum}／{@code pageSize}（默认 10，上限 100）。

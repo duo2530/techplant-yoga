@@ -7,19 +7,7 @@ import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 
-/**
- * 会员与登录信息数据对象，与 {@code t_member} 一一对应
- * （会员管理详细设计 §1.2.1，字段与建表 SQL 的唯一依据；用户端接口详细设计 §3.1）。
- *
- * <p><b>账号与会员共用同一行</b>：{@code password} 为空表示「有档案但未注册」，
- * 用户端注册／忘记密码才写密码，管理端会员管理不碰登录字段。</p>
- *
- * <p><b>本表没有 {@code deleted} 字段</b>：删除一律物理删除
- * （会员管理详细设计 §1.3.1），因此这里刻意不标 {@code @TableLogic}。</p>
- *
- * <p><b>{@code password} 是凭证，绝不出 service 层</b>：对外一律走 {@code LoginVO} 等 VO，
- * 不进日志、不进响应体（会员管理详细设计 §1.2.3）。</p>
- */
+/** 会员与登录信息数据对象，与 {@code t_member} 一一对应。 */
 @TableName("t_member")
 public class MemberDO
 {
@@ -27,10 +15,10 @@ public class MemberDO
     @TableId(value = "id", type = IdType.ASSIGN_ID)
     private Long id;
 
-    /** 微信 openid（三期预留，二期不写入） */
+    /** 微信 openid */
     private String wechatOpenid;
 
-    /** 微信 unionid（三期预留，二期不写入） */
+    /** 微信 unionid */
     private String wechatUnionid;
 
     /** 最后登录时间（仅登录成功更新） */
@@ -51,7 +39,7 @@ public class MemberDO
     /** 性别：0 未知 / 1 男 / 2 女 */
     private Integer gender;
 
-    /** 会员等级（本期仅 0 = V0 普通会员） */
+    /** 会员等级 */
     private Integer level;
 
     /** 创建人ID */
@@ -99,7 +87,7 @@ public class MemberDO
     public LocalDateTime getUpdateTime() { return updateTime; }
     public void setUpdateTime(LocalDateTime updateTime) { this.updateTime = updateTime; }
 
-    /** 是否已注册：{@code password} 非空即已注册（BR-会员-004、用户端接口详细设计 §4.5） */
+    /** 是否已注册：{@code password} 非空即已注册 */
     public boolean isRegistered()
     {
         return password != null && !password.trim().isEmpty();

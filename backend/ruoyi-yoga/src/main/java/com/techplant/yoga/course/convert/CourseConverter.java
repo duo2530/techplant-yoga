@@ -10,12 +10,7 @@ import com.techplant.yoga.course.vo.CourseDetailVO;
 import com.techplant.yoga.course.vo.CourseListItemVO;
 import com.techplant.yoga.course.vo.CourseSummaryVO;
 
-/**
- * 课程对象转换（课程管理详细设计 §3.2）。
- *
- * <p>字段少，本版手写转换方法；<b>课种名称统一走 {@link CourseTypeEnum#nameOf(Integer)}</b>，
- * 本类不再自己写「1 = 团课」的映射（§3.4 第 5 条）。</p>
- */
+/** 课程对象转换。 */
 public final class CourseConverter
 {
     private CourseConverter()
@@ -37,12 +32,7 @@ public final class CourseConverter
         return course;
     }
 
-    /**
-     * 更新请求写入数据对象（全量编辑）
-     *
-     * <p><b>清空语义：</b>{@code coverUrl / intro} 一律直接覆盖，传 {@code null} 就是清空 ——
-     * 这里不能写成「非空才更新」，否则运营清不掉封面图或课程介绍。</p>
-     */
+    /** 更新请求写入数据对象（全量编辑） */
     public static void applyUpdate(CourseDO course, CourseUpdateDTO dto)
     {
         course.setName(trim(dto.getName()));

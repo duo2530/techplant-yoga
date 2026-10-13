@@ -6,17 +6,7 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 
-/**
- * 管理端排课列表项（排课管理详细设计 §2.3.1）。
- *
- * <p>枚举**成对返回**：{@code courseType} ＋ {@code courseTypeName}（课种名称按快照码翻译，
- * 前端不许硬编码 {@code 1 = 团课}）、{@code status} ＋ {@code statusText}。</p>
- *
- * <p>{@code statusText}（待上架／已上架／已取消／已结束）与 {@code finished} 由 <b>service 层统一判定一次</b>
- * 后写入；controller 不判断、前端不推导（§3.4 第 2 条）。</p>
- *
- * <p>门店／课程／教练／教室的名称由 service 批量补齐；对象已被物理删除时返回**空字符串**（不是 null）。</p>
- */
+/** 管理端排课列表项。 */
 @ApiModel("管理端排课列表项")
 public class ScheduleListItemVO
 {

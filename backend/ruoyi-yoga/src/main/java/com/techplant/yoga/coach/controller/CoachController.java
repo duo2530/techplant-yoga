@@ -22,12 +22,7 @@ import com.techplant.yoga.common.response.PageResult;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 
-/**
- * 管理端教练管理接口（教练管理详细设计 §2.2.1~§2.2.5，共 5 个）。
- *
- * <p>教练<b>没有状态接口</b>；一期用户端<b>不提供</b>教练列表与详情接口（BR-用户端-010）。
- * 管理端接口只要求登录，不发明权限串（详细设计总览 §2）。</p>
- */
+/** 管理端教练管理接口。 */
 @Api(tags = "管理端-教练管理")
 @RestController
 @RequestMapping("/admin/coaches")
@@ -40,7 +35,7 @@ public class CoachController extends BaseController
         this.coachService = coachService;
     }
 
-    /** §2.2.1 查询教练列表 */
+    /**  查询教练列表 */
     @ApiOperation("查询教练列表")
     @GetMapping
     public TableDataInfo list(@Valid CoachQuery query)
@@ -54,7 +49,7 @@ public class CoachController extends BaseController
         return dataTable;
     }
 
-    /** §2.2.2 查询教练详情；不存在 → 404 */
+    /**  查询教练详情；不存在 → 404 */
     @ApiOperation("查询教练详情")
     @GetMapping("/{coachId}")
     public AjaxResult detail(@PathVariable("coachId") Long coachId)
@@ -62,7 +57,7 @@ public class CoachController extends BaseController
         return AjaxResult.success(coachService.getById(coachId));
     }
 
-    /** §2.2.3 新增教练；成功只返回 {@code {code,msg}}，不返回新 ID */
+    /**  新增教练；成功只返回 {@code {code,msg}}，不返回新 ID */
     @ApiOperation("新增教练")
     @PostMapping
     public AjaxResult create(@Valid @RequestBody CoachCreateDTO dto)
@@ -71,7 +66,7 @@ public class CoachController extends BaseController
         return success();
     }
 
-    /** §2.2.4 修改教练（全量编辑）；成功返回最新详情 */
+    /**  修改教练（全量编辑）；成功返回最新详情 */
     @ApiOperation("修改教练")
     @PutMapping("/{coachId}")
     public AjaxResult update(@PathVariable("coachId") Long coachId, @Valid @RequestBody CoachUpdateDTO dto)
@@ -79,7 +74,7 @@ public class CoachController extends BaseController
         return AjaxResult.success(coachService.update(coachId, dto));
     }
 
-    /** §2.2.5 删除教练（物理删除，带排课删除门禁） */
+    /**  删除教练（物理删除，带排课删除门禁） */
     @ApiOperation("删除教练")
     @DeleteMapping("/{coachId}")
     public AjaxResult delete(@PathVariable("coachId") Long coachId)

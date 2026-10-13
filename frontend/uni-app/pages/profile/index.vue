@@ -106,20 +106,7 @@ import { getUserProfile } from '@/api/member'
 import { isSessionValid, LOGIN_PAGE } from '@/utils/session'
 import { useUserStore } from '@/store'
 
-/**
- * 我的
- *
- * 数据来自 @/api/member 的 getUserProfile()：**登录态是真的、会员资料仍是 mock**。
- * 本地有会员 token 时按「已登录」返回，显示名与手机号取登录时保存的会员信息；
- * 没有 token 时返回游客态（暂未登录 / V0 / 普通会员 / 未绑定手机号），也就是原型游客截图的状态。
- * 会员卡/优惠券等域还没接后端，仍走 mock（不发任何网络请求）。
- *
- * 菜单文案与顺序完全照原型，并**按 mock 的 profileMenus 原顺序**切成三块：
- *   前 4 项 → 一行四列快捷入口；第 5~7 项 → 分组一；第 8~10 项 → 分组二。
- * 这样不新增任何菜单字段，也不重排原型顺序。
- *
- * 头像 → 未登录去登录页、已登录去设置页（见 onAvatarTap），设置页里可以退出登录。
- */
+/** 我的 */
 
 /** 菜单图标：原型画的是内联 SVG（深灰线稿）。uni-icons 里没有同款，
  *  按「形状/语义最接近」逐个映射，原型补出图标后以此处为唯一改动点。 */

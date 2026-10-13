@@ -6,20 +6,7 @@
 </template>
 
 <script setup>
-/**
- * 隐私政策（pages.json 标题「隐私政策」）
- *
- * 照 docs/原型/privacy.html 还原；原型导航栏左侧那个 #D9D9D9 淡化胶囊是微信原生导航栏的表现，
- * 小程序里由系统绘制，本页不画。
- *
- * 正文实测：15pt / 行高 20pt / 字色 #080808 / 左右内边距 16pt、顶部 6pt / 底部 24pt，
- * 段落之间**没有额外间距**（原型是一串 <p>，浏览器默认 margin 被重置了，所以这里也不加段间距）。
- *
- * 文案**逐字来自 `@/mock/auth.js` 的 privacyContent**（该数组是照 privacy.html 逐字录入的），
- * 本页不自己编内容、不改标点。注意 mock 里第一段开头是「们承诺保障用户…」（疑为原文漏字），
- * 已照原型保留，未自行补字。
- * 与用户协议页结构相同但**不抽公共组件**（约束：不改 components/ 目录），两页各写各的。
- */
+/** 隐私政策 */
 import { ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { getAgreementContent } from '@/api/auth'

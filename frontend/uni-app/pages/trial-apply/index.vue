@@ -107,18 +107,7 @@ import { onLoad } from '@dcloudio/uni-app'
 import { listStores, getCurrentStore } from '@/api/store'
 import { submitTrialApply } from '@/api/trial'
 
-/**
- * 申请体验（照 docs/原型/trial-apply.html + 截图 二级页面-申请体验.png）
- *
- * ⚠️ 页面只有 4 行：选择门店* / 姓名 / 手机号码* / 留言 —— 与截图逐行一致。
- *    任务书里曾提到「性别 / 期望日期 / 期望时段 / 了解渠道」，**原型与截图里都没有这些字段**，
- *    所以没有实现（`getTrialFormOptions()` 仍可用，将来原型补字段时再加行即可）。
- *
- * 必填星只标在「选择门店」「手机号码」上（照截图），校验也按这个来：手机号必填 + 基本格式。
- *
- * 状态栏 / 导航栏 / TabBar 由小程序绘制，本页不画（标题「申请体验」已在 pages.json）。
- * 数据全部来自 @/api/*（内部读 mock），不发任何网络请求。
- */
+/** 申请体验（照 docs/原型/trial-apply.html + 截图 二级页面-申请体验.png） */
 
 const form = ref({
   storeId: 0,
@@ -193,7 +182,6 @@ async function onSubmit() {
 }
 
 function goMyBookings() {
-  // 「我的预约」是 tabBar 页（pages.json 的「已约」），必须用 switchTab
   uni.switchTab({ url: '/pages/my-bookings/index' })
 }
 </script>

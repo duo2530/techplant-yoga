@@ -10,10 +10,10 @@ import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 
 /**
- * 修改课程的请求体（课程管理详细设计 §2.3.2、§2.2.4）：PUT 全量提交，字段与新增一致。
+ * 修改课程的请求体：PUT 全量提交，字段与新增一致。
  *
  * <p><b>不做引用检查</b>：已被排课引用时仍允许修改；改课种不影响既有排课（课种已快照在排课上），
- * 改难度会影响既有排课的展示（§2.2.4、BR-课程-009）。</p>
+ * 改难度会影响既有排课的展示。</p>
  *
  * <p><b>清空语义：</b>{@code coverUrl / intro} 传 {@code null} 表示<b>清空</b>，不是「不更新」。</p>
  */

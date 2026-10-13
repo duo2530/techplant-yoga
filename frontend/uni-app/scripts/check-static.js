@@ -1,12 +1,4 @@
-/**
- * uni-app（HBuilderX 工程）静态自检 —— 不装 npm 包，复用 HBuilderX 自带编译器依赖。
- *
- * 用法（PowerShell）：
- *   $env:NODE_PATH='D:\Develop\HBuilderX\plugins\uniapp-cli-vite\node_modules;D:\Develop\HBuilderX\plugins\compile-dart-sass\node_modules'
- *   node frontend\uni-app\scripts\check-static.js <uni-app 工程绝对路径>
- *
- * 检查项清单见 frontend/uni-app/AGENTS.md 第 9 节第 3 步。
- */
+/** uni-app（HBuilderX 工程）静态自检 —— 不装 npm 包，复用 HBuilderX 自带编译器依赖。 */
 const fs = require('fs')
 const path = require('path')
 
@@ -79,10 +71,6 @@ for (const file of vueFiles) {
     E(r, `[script] ${e.message}`)
   }
 
-  // 1c. text 节点里的 `>` / `<` / HTML 实体
-  //     uni-app 编译时会把模板里的字面 `>` 转义成 `&gt;` 写进 WXML，
-  //     而微信 <text> 默认不解码实体（会原样显示成「&gt;」），所以必须加 decode 属性（或改成绑定）。
-  //     先去掉注释，否则注释里的示例代码会误报。
   const tplNoComment = tpl.replace(/<!--[\s\S]*?-->/g, '')
   for (const m of tplNoComment.matchAll(/<text\b([^>]*)>([\s\S]*?)<\/text>/g)) {
     const [, attrs, inner] = m
@@ -236,7 +224,6 @@ if (fs.existsSync(mockDir)) {
       if (!pool.has(m[1])) E(`mock/${name}.js`, `${field} 解析不到实体：${m[1]}`)
     }
   }
-  // 雪花 ID 必须是字符串字面量
   for (const f of walk(mockDir)) {
     const src = fs.readFileSync(f, 'utf8')
     for (const m of src.matchAll(/\bid\s*:\s*(\d{15,})\b/g)) {

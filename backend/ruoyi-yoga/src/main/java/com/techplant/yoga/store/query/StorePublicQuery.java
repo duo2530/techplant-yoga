@@ -6,13 +6,7 @@ import javax.validation.constraints.Size;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 
-/**
- * 用户端门店列表查询条件（用户端接口详细设计 §2.1）。
- *
- * <p>筛选：{@code regionCode}（精确，字典 store_region，越界即拒绝）、{@code keyword}
- * （<b>同时模糊匹配门店名称与地址</b>）；分页 {@code pageNum}／{@code pageSize}（默认 10，上限 100）。
- * 排序由 DAO 固定为 {@code region_code ASC, name ASC, id DESC}。</p>
- */
+/** 用户端门店列表查询条件。 */
 @ApiModel("用户端门店列表查询条件")
 public class StorePublicQuery
 {

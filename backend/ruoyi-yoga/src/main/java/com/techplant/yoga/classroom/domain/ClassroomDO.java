@@ -7,15 +7,7 @@ import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 
-/**
- * 教室数据对象，与 {@code t_classroom} 一一对应（教室管理详细设计 §1.2.1）。
- *
- * <p><b>字段只有</b> {@code id / store_id / name} ＋ 审计四列：没有状态、没有容量／设备／图片／楼层。
- * 同一门店内名称唯一（{@code uk_classroom_store_name}）。</p>
- *
- * <p><b>物理删除：</b>本表没有 {@code deleted} 字段，<b>不加</b> {@code @TableLogic}
- * （详细设计总览 §2、BR-教室-006）。</p>
- */
+/** 教室数据对象，与 {@code t_classroom} 一一对应。 */
 @TableName("t_classroom")
 public class ClassroomDO
 {

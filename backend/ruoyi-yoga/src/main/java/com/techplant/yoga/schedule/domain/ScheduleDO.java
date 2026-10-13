@@ -8,13 +8,7 @@ import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 
-/**
- * 排课数据对象，对应 {@code t_schedule}（排课管理详细设计 §1.2.1）。
- *
- * <p><b>刻意不建的字段：</b>{@code deleted}／{@code is_hot}／{@code finished}／{@code capacity}／
- * {@code booking_count}。本表是<b>物理删除</b>（{@code BR-排课-014}），
- * 因此这里<b>绝对不要加 {@code @TableLogic}</b>；「已结束」由 {@code end_time} 推导，也不落库。</p>
- */
+/** 排课数据对象，对应 {@code t_schedule}。 */
 @TableName("t_schedule")
 public class ScheduleDO
 {
@@ -52,7 +46,7 @@ public class ScheduleDO
     /** 最低开课人数（1<=min<=max，默认 2） */
     private Integer minPersons;
 
-    /** 已预约人数（一期固定 0，只允许预约模块维护） */
+    /** 已预约人数 */
     private Integer bookedPersons;
 
     /** 状态：1待上架 2已上架 3已取消（只允许状态流转接口维护） */

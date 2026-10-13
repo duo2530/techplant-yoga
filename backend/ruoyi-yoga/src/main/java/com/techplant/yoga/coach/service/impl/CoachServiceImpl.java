@@ -25,15 +25,7 @@ import com.techplant.yoga.common.response.PageResult;
 import com.techplant.yoga.common.util.CurrentUserUtils;
 import com.techplant.yoga.schedule.service.ScheduleService;
 
-/**
- * 教练业务实现（教练管理详细设计 §3.2、§4）。
- *
- * <p><b>相册的 JSON 转换只在本类发生</b>：DO 里 {@code gallery} 是 JSON 字符串，DTO／VO 里是
- * {@code List<String>}（§3.4 第 2 条）。</p>
- *
- * <p><b>删除门禁</b>走排课模块的 {@link ScheduleService}（不跨模块读表）；统计失败
- * <b>fail-closed</b>，直接拒绝删除（§2.2.5、{@code backend/AGENTS.md} §8.2）。</p>
- */
+/** 教练业务实现。 */
 @Service
 public class CoachServiceImpl implements CoachService
 {
@@ -41,12 +33,12 @@ public class CoachServiceImpl implements CoachService
     private static final int CONFLICT = 409;
     private static final int INTERNAL_ERROR = 500;
 
-    /** 相册元素上限（详细设计 §1.2.3 第 2 条、BR-教练-004） */
+    /** 相册元素上限 */
     private static final int MAX_GALLERY_SIZE = 5;
 
     private final CoachDao coachDao;
 
-    /** 跨模块依赖：构造器注入环由 @Lazy 解开（一期四个主数据模块互相依赖排课模块） */
+    /** 跨模块依赖：构造器注入环由 @Lazy 解开 */
     private final ScheduleService scheduleService;
 
     public CoachServiceImpl(CoachDao coachDao, @Lazy ScheduleService scheduleService)
@@ -174,7 +166,7 @@ public class CoachServiceImpl implements CoachService
         }
     }
 
-    /** 相册上限校验：新增与修改共用同一段逻辑（详细设计 §3.4 第 3 条） */
+    /** 相册上限校验：新增与修改共用同一段逻辑 */
     private void validateGallery(List<String> gallery)
     {
         if (gallery != null && gallery.size() > MAX_GALLERY_SIZE)
@@ -183,7 +175,7 @@ public class CoachServiceImpl implements CoachService
         }
     }
 
-    /** 相册序列化：去空格、丢空串；空相册存 NULL（详细设计 §1.2.3 第 2 条） */
+    /** 相册序列化：去空格、丢空串；空相册存 NULL */
     private String toGalleryJson(List<String> gallery)
     {
         List<String> normalized = normalizeGallery(gallery);

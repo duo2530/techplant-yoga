@@ -25,14 +25,7 @@ import com.techplant.yoga.schedule.vo.ScheduleListItemVO;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 
-/**
- * 管理端排课管理接口（排课管理详细设计 §2.2，共 6 个）。
- *
- * <p><b>controller 只做参数校验与响应装配</b>：业务规则（校验顺序、状态流转、删除门禁）全在 service；
- * 「已结束」的判定也在 service 层（这里不做任何状态推导）。</p>
- *
- * <p>一期不做 RBAC，因此<b>不加 {@code @PreAuthorize}</b>（登录即可调用，{@code BR-全局-003}）。</p>
- */
+/** 管理端排课管理接口。 */
 @Api(tags = "管理端-排课管理")
 @Validated
 @RestController
@@ -90,7 +83,7 @@ public class ScheduleAdminController extends BaseController
     /**
      * 状态流转：{@code ?status=2} 上架／{@code 1} 下架／{@code 3} 取消
      *
-     * <p>只有一个参数，直接用查询参数，**不建 DTO**（§2.3.4）；合法性校验与幂等都在
+     * <p>只有一个参数，直接用查询参数，**不建 DTO**；合法性校验与幂等都在
      * {@link ScheduleService#changeStatus(Long, Integer)} 里收口，这里不写 if-else。</p>
      */
     @ApiOperation("排课状态流转（上架／下架／取消）")

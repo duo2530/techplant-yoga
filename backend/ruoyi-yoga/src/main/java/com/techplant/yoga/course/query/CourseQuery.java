@@ -8,7 +8,7 @@ import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 
 /**
- * 课程列表查询条件（课程管理详细设计 §2.3.3、§2.2.1）。
+ * 课程列表查询条件。
  *
  * <p>筛选：{@code name}（模糊）、{@code courseType}（1~4，不传不限）；分页上限 100。
  * <b>没有门店、没有状态</b> —— 课程是平台级、且无状态。</p>

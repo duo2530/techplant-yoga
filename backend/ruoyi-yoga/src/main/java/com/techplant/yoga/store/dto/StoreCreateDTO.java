@@ -8,13 +8,7 @@ import javax.validation.constraints.Size;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 
-/**
- * 新增门店请求（门店管理详细设计 §2.2.3、§2.3.2）。
- *
- * <p>字段与修改请求一致（全量提交）：{@code name}、{@code storeType}、{@code regionCode}、
- * {@code phone}、{@code businessHours}、{@code address} 必填，{@code imageUrl}（单图）可空；
- * <b>不提交审计字段</b>。{@code regionCode} 的取值合法性由 service 按字典 {@code store_region} 校验。</p>
- */
+/** 新增门店请求。 */
 @ApiModel("新增门店请求")
 public class StoreCreateDTO
 {

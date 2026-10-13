@@ -10,13 +10,7 @@ import javax.validation.ConstraintValidator;
 import javax.validation.ConstraintValidatorContext;
 import javax.validation.Payload;
 
-/**
- * 课种取值校验注解（课程管理详细设计 §2.3.2 的 {@code @Valid} 取值范围校验）。
- *
- * <p>校验逻辑<b>不在注解里重写 1~4</b>：直接委托 {@link CourseTypeEnum#isValid(Integer)}，
- * 保证「课种取值范围」只有 {@link CourseTypeEnum} 一个来源（§3.4 第 5 条）。
- * 校验失败由框架的 {@code GlobalExceptionHandler} 转成业务码 500 + 注解 message。</p>
- */
+/** 课种取值校验注解。 */
 @Documented
 @Target({ ElementType.FIELD, ElementType.PARAMETER })
 @Retention(RetentionPolicy.RUNTIME)

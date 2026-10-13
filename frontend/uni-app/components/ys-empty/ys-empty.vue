@@ -17,15 +17,7 @@
 <script setup>
 import { computed } from 'vue'
 
-/**
- * 空态组件
- *
- * 原型里多处是空态（复刻规范 §1.2：空态也要复刻，不要塞假数据），
- * 各页面的插画/文案/颜色不同，这里统一成一个组件：
- *  - image / imageWidth / imageHeight：插画与尺寸（各页实测值不同，由页面传入）
- *  - title / subtitle / titleColor：文案与颜色
- *  - paddingTop：整块距内容区顶部的距离
- */
+/** 空态组件 */
 const props = defineProps({
   image: { type: String, default: '' },
   imageWidth: { type: String, default: '' },

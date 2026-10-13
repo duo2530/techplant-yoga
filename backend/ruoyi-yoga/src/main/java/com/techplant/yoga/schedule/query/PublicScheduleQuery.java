@@ -7,18 +7,7 @@ import javax.validation.constraints.NotNull;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 
-/**
- * 用户端排课列表查询条件（《用户端接口详细设计》§2.2）。
- *
- * <p>三个参数**全部必填**：{@code storeId}、{@code courseType}、{@code date}。
- * 缺参由这里拦住（{@code 500}，框架既有行为）；日期格式非法、14 天窗口、门店不存在在 service 层判定。</p>
- *
- * <p>{@code date} 刻意用 {@code String} 接收，由 service 解析成 {@code LocalDate}：
- * 这样「日期格式非法」能给出明确的提示语，而不是框架的类型转换异常信息。</p>
- *
- * <p>服务端固定施加的过滤条件（客户端不可覆盖）：{@code status <> 1}、{@code store_id}、
- * {@code course_type}（<b>快照列</b>）、{@code schedule_date}（<b>派生列</b>）。</p>
- */
+/** 用户端排课列表查询条件。 */
 @ApiModel("用户端排课列表查询条件")
 public class PublicScheduleQuery
 {
@@ -28,7 +17,7 @@ public class PublicScheduleQuery
     /** 默认每页条数 */
     public static final int DEFAULT_PAGE_SIZE = 10;
 
-    /** 每页条数上限（§1.3 约定，超出由 MP 分页插件钳制到 100） */
+    /** 每页条数上限 */
     public static final int MAX_PAGE_SIZE = 100;
 
     @ApiModelProperty(value = "当前门店ID", required = true, example = "1856739201475235901")

@@ -23,18 +23,7 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 
-/**
- * 会员登录态（用户端接口详细设计 §4.5、§4.6、§4.7）。
- *
- * <p><b>JWT 只带随机会话标识</b>，会员身份与有效期放在 Redis 的
- * {@code member_tokens:<uuid>} 里（{@link MemberLoginUser}）；有效期 7 天、
- * <b>不自动续期</b>（§4.5 第 2 步），与框架 {@code TokenService} 的「快到期自动刷新」不同。</p>
- *
- * <p><b>与管理端隔离</b>：本类只读写 {@code member_tokens:} 前缀，签名密钥沿用
- * {@code token.secret} 但 claim 名不同（{@code member_login_user_key}）；
- * 管理端 {@code TokenService} 找的是 {@code login_tokens:} 前缀，
- * 因此两边 token 互不认账（§2.1.2）。</p>
- */
+/** 会员登录态。 */
 @Service
 public class MemberTokenService
 {
@@ -67,11 +56,7 @@ public class MemberTokenService
         this.expireMinutes = expireMinutes;
     }
 
-    /**
-     * 签发会员令牌并写入 Redis 会话（登录成功调用）
-     *
-     * <p>Redis 写入失败会直接抛出，调用方<b>不得</b>返回成功 token（§4.5 第 3 步）。</p>
-     */
+    /** 签发会员令牌并写入 Redis 会话（登录成功调用） */
     public LoginVO createToken(MemberDO member)
     {
         long now = System.currentTimeMillis();
@@ -89,8 +74,6 @@ public class MemberTokenService
 
         Map<String, Object> claims = new HashMap<String, Object>();
         claims.put(MEMBER_LOGIN_USER_KEY, uuid);
-        // 双保险：会话有效期以 Redis 里的 MemberLoginUser.expireTime 为准（§2.6.10），
-        // JWT 自身也带 exp，避免「只验签名、不验时间」的 token 被无限期复用
         String token = Jwts.builder()
                 .setClaims(claims)
                 .setExpiration(new Date(expireTime))
@@ -146,10 +129,10 @@ public class MemberTokenService
     }
 
     /**
-     * 退出登录：删除当前 token 对应的会话，<b>不影响该会员的其他会话</b>（§4.6 第 2 步）。
+     * 退出登录：删除当前 token 对应的会话，<b>不影响该会员的其他会话</b>。
      *
      * <p>幂等口径：token 缺失、签名不合法或会话已删除都直接返回（视为已退出）；
-     * 但 Redis 删除本身失败会向上抛出，由统一异常处理器返回 500（§2.2.8）。</p>
+     * 但 Redis 删除本身失败会向上抛出，由统一异常处理器返回 500。</p>
      */
     public void revokeSession(HttpServletRequest request)
     {
@@ -201,7 +184,7 @@ public class MemberTokenService
     /**
      * 当前请求 IP
      *
-     * <p>{@code IpUtils.getIpAddr()} 直接取 {@code RequestContextHolder}，非 web 线程
+     * <p>{@code IpUtils.getIpAddr} 直接取 {@code RequestContextHolder}，非 web 线程
      * （定时任务等）会抛 NPE；这里先判空，取不到就留空，不打断签发。</p>
      */
     private String currentIpAddr()

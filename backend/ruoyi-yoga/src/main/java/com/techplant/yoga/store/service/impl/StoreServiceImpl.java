@@ -31,21 +31,7 @@ import com.techplant.yoga.store.vo.StoreListItemVO;
 import com.techplant.yoga.store.vo.StorePublicItemVO;
 import com.techplant.yoga.store.vo.StoreSummaryVO;
 
-/**
- * 门店业务实现（门店管理详细设计 §3、§4）。
- *
- * <p><b>物理删除</b>：{@code StoreDO} 没有 {@code @TableLogic}，删除等价于 {@code DELETE}（§3.4 第 1 条）。</p>
- *
- * <p><b>所在区域</b>：不建 Java 枚举，取值校验与区名翻译都以字典 {@code store_region} 为准
- * （详细设计总览 §5 决策 9）：每次操作取一次字典映射，同一请求内共用，
- * 校验不通过抛 {@code ServiceException}（参数校验失败的业务码是 500，框架既有行为）。</p>
- *
- * <p><b>删除门禁</b>：先查教室数、再查未结束排课数，任一统计<b>调用失败一律终止删除</b>
- * （fail-closed，BR-全局-007），<b>不降级放行</b>。</p>
- *
- * <p><b>关于 {@code @Lazy}</b>：门店 → 排课（删除门禁统计）、排课 → 门店（校验门店存在）
- * 是一个双向依赖环，构造器注入环会导致启动失败，因此跨模块依赖用 {@code @Lazy} 代理。</p>
- */
+/** 门店业务实现。 */
 @Service
 public class StoreServiceImpl implements StoreService
 {
@@ -82,7 +68,7 @@ public class StoreServiceImpl implements StoreService
         validateRegionCode(query.getRegionCode(), regionLabelMap);
 
         IPage<StoreDO> page = storeDao.selectPage(query);
-        // IPage 不出 service 层（backend/AGENTS.md §8.8）
+        // IPage 不出 service 层
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(),
                 StoreConverter.toListItemVOList(page.getRecords(), regionLabelMap));
     }
@@ -126,7 +112,7 @@ public class StoreServiceImpl implements StoreService
         }
         catch (DuplicateKeyException e)
         {
-            // uk_store_name 并发兜底：唯一键冲突同样返回 409（§3.4 第 3 条）
+            // uk_store_name 并发兜底：唯一键冲突同样返回 409
             throw nameDuplicated(e);
         }
         if (rows != 1 || store.getId() == null)
@@ -149,7 +135,7 @@ public class StoreServiceImpl implements StoreService
         Map<String, String> regionLabelMap = loadRegionLabelMap();
         validateRegionCode(dto.getRegionCode(), regionLabelMap);
         checkNameUnique(dto.getName(), storeId);
-        // 修改门店不做引用检查：已被排课引用时仍允许修改（BR-门店-010、§2.2.4）
+        // 修改门店不做引用检查：已被排课引用时仍允许修改
 
         StoreConverter.applyUpdate(store, dto);
         store.setUpdateBy(CurrentUserUtils.getUserIdOrNull());
@@ -224,7 +210,7 @@ public class StoreServiceImpl implements StoreService
     /**
      * 名称唯一校验：新增时 {@code excludeId} 为 null，修改时排除自身
      *
-     * <p>重复 → 409「门店名称已存在」（§2.2.3、§2.2.4）。</p>
+     * <p>重复 → 409「门店名称已存在」。</p>
      */
     private void checkNameUnique(String name, Long excludeId)
     {
@@ -243,7 +229,7 @@ public class StoreServiceImpl implements StoreService
     /**
      * 统计门店名下教室数（跨模块调用，删除门禁第 ② 步）
      *
-     * <p><b>fail-closed</b>：调用失败直接终止删除，不降级放行（BR-全局-007、§2.2.5 第 4 行）。</p>
+     * <p><b>fail-closed</b>：调用失败直接终止删除，不降级放行。</p>
      */
     private long countClassrooms(Long storeId)
     {
@@ -260,7 +246,7 @@ public class StoreServiceImpl implements StoreService
     /**
      * 统计门店下未结束的排课数（跨模块调用，删除门禁第 ③ 步）
      *
-     * <p>统计口径由排课模块保证：{@code end_time > NOW() AND status IN (1,2)}；
+     * <p>统计口径由排课模块保证：{@code end_time > NOW AND status IN (1,2)}；
      * 调用失败同样 fail-closed。</p>
      */
     private long countActiveSchedules(Long storeId)
@@ -292,11 +278,7 @@ public class StoreServiceImpl implements StoreService
         }
     }
 
-    /**
-     * 所在区域取值校验：必须是字典 {@code store_region} 中存在的 code，越界即拒绝（§1.2.3 第 4 条）
-     *
-     * <p>不传（null／空）表示不按区域筛选，直接放过。</p>
-     */
+    /** 所在区域取值校验：必须是字典 {@code store_region} 中存在的 code，越界即拒绝 */
     private void validateRegionCode(String regionCode, Map<String, String> regionLabelMap)
     {
         if (regionCode == null || regionCode.trim().isEmpty())

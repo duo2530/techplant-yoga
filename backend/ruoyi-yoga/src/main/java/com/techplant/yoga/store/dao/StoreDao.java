@@ -8,7 +8,7 @@ import com.techplant.yoga.store.query.StorePublicQuery;
 import com.techplant.yoga.store.query.StoreQuery;
 
 /**
- * 门店数据访问语义（门店管理详细设计 §3.2）。
+ * 门店数据访问语义。
  *
  * <p>屏蔽 Mapper 细节：筛选条件、字段选择与<b>稳定排序</b>都在这里组装；
  * 删除是<b>物理删除</b>（{@code StoreDO} 不标 {@code @TableLogic}），业务代码不手写 {@code deleted} 条件。</p>

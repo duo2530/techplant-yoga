@@ -10,18 +10,7 @@ import com.techplant.yoga.coach.vo.CoachListItemVO;
 import com.techplant.yoga.coach.vo.CoachSummaryVO;
 import com.techplant.yoga.common.response.PageResult;
 
-/**
- * 教练业务服务（教练管理详细设计 §3.2）。
- *
- * <p>本接口同时承担两类对外职责（全项目统一不另立 QueryService，详细设计总览 §6）：</p>
- * <ol>
- *   <li><b>管理端</b>：列表／详情／新增／修改／删除（物理，带排课删除门禁）；</li>
- *   <li><b>跨模块</b>：向排课模块提供「批量取姓名头像简介」{@link #summaries(Collection)} 与
- *       「取单个教练摘要」{@link #getSummary(Long)}。</li>
- * </ol>
- *
- * <p>教练<b>没有状态</b>（无启用／停用接口），名称<b>允许重名</b>（不做查重）。</p>
- */
+/** 教练业务服务。 */
 public interface CoachService
 {
     /** 管理端列表分页（按 id DESC；<b>不返回</b> intro 与 gallery） */

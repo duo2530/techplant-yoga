@@ -13,11 +13,10 @@ import com.techplant.yoga.store.vo.StorePublicItemVO;
 import com.techplant.yoga.store.vo.StoreSummaryVO;
 
 /**
- * 门店对象转换（门店管理详细设计 §3.2）。
+ * 门店对象转换。
  *
  * <p>转换是<b>纯函数</b>：不查库、不查字典。区名由 service 按字典 {@code store_region} 查好后
- * 以 {@code regionName} 入参传入，门店类型名由 {@link StoreTypeEnum} 翻译（成对返回，
- * 详细设计总览 §2）。所有请求字段在转换时去掉前后空格（§1.2.3 第 1 条）。</p>
+ * 以 {@code regionName} 入参传入，门店类型名由 {@link StoreTypeEnum} 翻译。所有请求字段在转换时去掉前后空格。</p>
  */
 public final class StoreConverter
 {

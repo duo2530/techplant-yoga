@@ -1,18 +1,4 @@
-/**
- * `utils/request.js` + `utils/session.js` 的异常响应与登录态回归自检 —— 不装 npm 包、不起后端。
- *
- * 用法（PowerShell）：
- *   node frontend\uni-app\scripts\check-request.js
- *
- * 覆盖 2026-10-13 复审提出的第 2、3、4 项：
- *   · HTTP 502 / 空响应 / 非对象响应 / 缺业务码 → 必须 reject（不能当成功、不能挂起）
- *   · 会话过期（含历史缓存缺 expireTime）→ 不带 token、清本地登录态
- *   · 401 → 立即完整清理；点取消也回到游客态；并发只弹一次；旧请求迟到的 401 不动新会话
- *
- * 实现方式：把这两个 ESM 源文件就地转成 CommonJS 加载（不引入构建工具），
- * 只桩掉 `@/config`、`@/utils/auth`、`@/store/modules/user`、`@/utils/common`、`@/utils/errorCode`；
- * `@/utils/session` 用的是**真实源码**（过期判断要测真的那份实现）。
- */
+/** 请求封装与本地会话的回归自检：node frontend/uni-app/scripts/check-request.js。 */
 const fs = require('fs')
 const path = require('path')
 const Module = require('module')

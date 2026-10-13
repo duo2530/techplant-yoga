@@ -7,7 +7,7 @@ import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 
 /**
- * 教室列表查询条件（教室管理详细设计 §2.3.3、§2.2.1）。
+ * 教室列表查询条件。
  *
  * <p>筛选：{@code storeId}（所属门店，排课表单必传）、{@code name}（模糊）；分页上限 100。</p>
  */

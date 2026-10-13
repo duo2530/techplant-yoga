@@ -7,15 +7,7 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 
-/**
- * 新增排课的请求体（排课管理详细设计 §2.3.2）。
- *
- * <p><b>刻意不含</b> {@code status}、{@code bookedPersons}（写路径不接受，§2.1.4 第 4 条）、
- * {@code courseType}（课种快照由服务端从课程复制）、{@code scheduleDate}（上课日期由 {@code startTime} 推导）。</p>
- *
- * <p>这里只用 {@code @Valid} 校验非空与格式；「人数范围、14 天窗口、两条冲突」等业务范围校验在 service 层，
- * 业务码是 {@code 409}（§2.2.3）。</p>
- */
+/** 新增排课的请求体。 */
 @ApiModel("新增排课请求")
 public class ScheduleCreateDTO
 {

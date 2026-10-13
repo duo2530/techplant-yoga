@@ -4,7 +4,7 @@ import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 
 /**
- * 教室摘要（教室管理详细设计 §3.2 对外职责：供排课模块按 ID 批量补齐教室名称）。
+ * 教室摘要。
  *
  * <p>字段：{@code id, storeId, name}；排课模块用 {@code storeId} 与排课门店比对，
  * 用 {@code name} 补齐卡片上的教室名。</p>

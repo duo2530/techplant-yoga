@@ -18,18 +18,7 @@ import com.techplant.yoga.member.service.MemberTokenService;
 import com.techplant.yoga.member.service.SmsCodeService;
 import com.techplant.yoga.member.vo.LoginVO;
 
-/**
- * 用户端账号业务实现（用户端接口详细设计 §4.3～§4.6）。
- *
- * <p><b>登录失败口径</b>：手机号不存在、尚未注册（{@code password} 为空）、密码错误
- * 三者<b>统一</b>返回 409「手机号或密码错误」，不泄露手机号是否注册（§4.5 第 1 步）。</p>
- *
- * <p><b>验证码消费时机</b>：注册与忘记密码都在「验证码校验成功」后才消费，
- * 校验失败保留未过期验证码供重试（§4.4 第 1 步、§4.6 第 1 步）。</p>
- *
- * <p><b>密码编码器</b>：注入框架（{@code SecurityConfig}）里那一个
- * {@link BCryptPasswordEncoder} Bean，保证会员密码与管理端密码的编码强度一致。</p>
- */
+/** 用户端账号业务实现。 */
 @Service
 public class AccountServiceImpl implements AccountService
 {
@@ -75,12 +64,12 @@ public class AccountServiceImpl implements AccountService
 
         if (scene == SmsSceneEnum.REGISTER && member != null && member.isRegistered())
         {
-            // 注册场景：手机号已注册 → 409（§2.2.4）
+            // 注册场景：手机号已注册 → 409
             throw new ServiceException("该手机号已注册，请直接登录", CONFLICT);
         }
         if (scene == SmsSceneEnum.RESET && (member == null || !member.isRegistered()))
         {
-            // 忘记密码场景：手机号未注册 → 404（§2.2.4）
+            // 忘记密码场景：手机号未注册 → 404
             throw new ServiceException("手机号未注册", NOT_FOUND);
         }
 
@@ -95,7 +84,7 @@ public class AccountServiceImpl implements AccountService
         validatePasswordStrength(dto.getPassword());
         // 验证码校验成功才消费（错误／过期返回 409，保留未过期验证码供重试）
         smsCodeService.verifyAndConsume(SmsSceneEnum.REGISTER.getCode(), phone, dto.getSmsCode());
-        // 注册成功不签发 token、不刷新最后登录时间（§4.4 第 4 步）
+        // 注册成功不签发 token、不刷新最后登录时间
         memberService.registerByPhone(phone, passwordEncoder.encode(dto.getPassword()));
     }
 
@@ -111,7 +100,7 @@ public class AccountServiceImpl implements AccountService
             throw new ServiceException("手机号或密码错误", CONFLICT);
         }
 
-        // 先刷新最后登录时间，数据库更新成功后才签发登录态（§4.5 第 2 步）
+        // 先刷新最后登录时间，数据库更新成功后才签发登录态
         memberDao.updateLastLoginTime(member.getId(), LocalDateTime.now());
         return memberTokenService.createToken(member);
     }
@@ -128,7 +117,6 @@ public class AccountServiceImpl implements AccountService
             throw new ServiceException("手机号未注册", NOT_FOUND);
         }
         smsCodeService.verifyAndConsume(SmsSceneEnum.RESET.getCode(), phone, dto.getSmsCode());
-        // 覆盖哈希；本阶段不批量撤销已有登录态（§4.6 第 1 步）
         memberDao.updatePassword(member.getId(), passwordEncoder.encode(dto.getPassword()));
     }
 
