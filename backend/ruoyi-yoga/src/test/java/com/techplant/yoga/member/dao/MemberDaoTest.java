@@ -7,47 +7,23 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.sql.Connection;
-import java.sql.Statement;
 import java.time.LocalDateTime;
-import javax.sql.DataSource;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.dao.DuplicateKeyException;
-import org.springframework.jdbc.datasource.DataSourceTransactionManager;
-import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseBuilder;
-import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseType;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.junit.jupiter.SpringExtension;
-import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.annotation.EnableTransactionManagement;
-import com.baomidou.mybatisplus.annotation.DbType;
-import com.baomidou.mybatisplus.core.MybatisConfiguration;
-import com.baomidou.mybatisplus.core.config.GlobalConfig;
-import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
-import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
-import com.baomidou.mybatisplus.extension.spring.MybatisSqlSessionFactoryBean;
-import com.ruoyi.common.core.domain.model.LoginUser;
-import com.techplant.yoga.common.mybatis.AuditMetaObjectHandler;
+import com.techplant.yoga.common.testcontainers.AbstractYogaIntegrationTest;
+import com.techplant.yoga.common.testcontainers.YogaMyBatisTestConfig;
+import com.techplant.yoga.common.testcontainers.YogaSchema;
 import com.techplant.yoga.member.domain.MemberDO;
 
-/** 会员数据访问的集成测试（H2 内存库，MySQL 兼容模式；不连开发库）。 */
-@ExtendWith(SpringExtension.class)
-@ContextConfiguration(classes = { MemberDaoTest.TestConfig.class, AuditMetaObjectHandler.class,
-        MemberDaoImpl.class })
-@DisplayName("MemberDao 集成测试（H2：列映射 / 审计 / 条件更新）")
-class MemberDaoTest
+/** 会员数据访问的集成测试（Testcontainers MySQL，表结构取自 backend/sql/yoga.sql，不连开发库）。 */
+@ContextConfiguration(classes = { YogaMyBatisTestConfig.class, MemberDaoImpl.class })
+@DisplayName("MemberDao 集成测试（Testcontainers MySQL：列映射 / 审计 / 条件更新）")
+class MemberDaoTest extends AbstractYogaIntegrationTest
 {
-    private static final Long OPERATOR_ID = 1L;
-
     private static final String PHONE = "13800138000";
 
     private static final String HASH_1 = "$2a$10$firstHashValueForTest0000000000000000000000000000000000";
@@ -57,83 +33,10 @@ class MemberDaoTest
     @Autowired
     private MemberDao memberDao;
 
-    @Autowired
-    private DataSource dataSource;
-
-    @Configuration
-    @EnableTransactionManagement
-    @MapperScan("com.techplant.yoga.member.mapper")
-    static class TestConfig
-    {
-        @Bean
-        public DataSource dataSource()
-        {
-            return new EmbeddedDatabaseBuilder().setType(EmbeddedDatabaseType.H2)
-                    .setName("yoga_member_dao;MODE=MySQL;DATABASE_TO_LOWER=TRUE").build();
-        }
-
-        @Bean
-        public PlatformTransactionManager transactionManager(DataSource dataSource)
-        {
-            return new DataSourceTransactionManager(dataSource);
-        }
-
-        @Bean
-        public MybatisSqlSessionFactoryBean sqlSessionFactory(DataSource dataSource,
-                AuditMetaObjectHandler auditMetaObjectHandler)
-        {
-            MybatisSqlSessionFactoryBean factory = new MybatisSqlSessionFactoryBean();
-            factory.setDataSource(dataSource);
-
-            MybatisConfiguration configuration = new MybatisConfiguration();
-            configuration.setMapUnderscoreToCamelCase(true);
-            configuration.setUseGeneratedKeys(true);
-            factory.setConfiguration(configuration);
-
-            MybatisPlusInterceptor interceptor = new MybatisPlusInterceptor();
-            PaginationInnerInterceptor pagination = new PaginationInnerInterceptor(DbType.H2);
-            pagination.setMaxLimit(100L);
-            interceptor.addInnerInterceptor(pagination);
-            factory.setPlugins(interceptor);
-
-            GlobalConfig globalConfig = new GlobalConfig();
-            globalConfig.setMetaObjectHandler(auditMetaObjectHandler);
-            factory.setGlobalConfig(globalConfig);
-
-            return factory;
-        }
-    }
-
-    /** 与 backend/sql/yoga.sql 的 t_member 段一一对应（列名、可空性、唯一键） */
     @BeforeEach
-    void prepareTable() throws Exception
+    void resetTable()
     {
-        LoginUser loginUser = new LoginUser();
-        loginUser.setUserId(OPERATOR_ID);
-        SecurityContextHolder.getContext()
-                .setAuthentication(new UsernamePasswordAuthenticationToken(loginUser, null));
-
-        try (Connection connection = dataSource.getConnection(); Statement statement = connection.createStatement())
-        {
-            statement.execute("DROP TABLE IF EXISTS t_member");
-            statement.execute("CREATE TABLE t_member (" //
-                    + "id bigint NOT NULL," //
-                    + "wechat_openid varchar(64) DEFAULT NULL," //
-                    + "wechat_unionid varchar(64) DEFAULT NULL," //
-                    + "last_login_time datetime DEFAULT NULL," //
-                    + "phone varchar(32) NOT NULL," //
-                    + "password varchar(100) DEFAULT NULL," //
-                    + "phone_last4 varchar(4) NOT NULL," //
-                    + "name varchar(64) NOT NULL," //
-                    + "gender tinyint NOT NULL DEFAULT 0," //
-                    + "level tinyint NOT NULL DEFAULT 0," //
-                    + "create_by bigint DEFAULT NULL," //
-                    + "create_time datetime NOT NULL DEFAULT CURRENT_TIMESTAMP," //
-                    + "update_by bigint DEFAULT NULL," //
-                    + "update_time datetime NOT NULL DEFAULT CURRENT_TIMESTAMP," //
-                    + "PRIMARY KEY (id)," //
-                    + "CONSTRAINT uk_member_phone UNIQUE (phone))");
-        }
+        YogaSchema.reset(dataSource, "t_member");
     }
 
     @Test

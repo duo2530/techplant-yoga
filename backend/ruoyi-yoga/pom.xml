@@ -61,14 +61,21 @@
             </exclusions>
         </dependency>
 
-        <!-- 现存 H2 集成测试的过渡依赖；迁移到 Testcontainers 后移除，不新增 H2 测试 -->
+        <!-- 集成测试：隔离的真实 MySQL 容器，表结构与容器由测试自行准备和回收 -->
         <dependency>
-            <groupId>com.h2database</groupId>
-            <artifactId>h2</artifactId>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>mysql</artifactId>
             <scope>test</scope>
         </dependency>
 
-        <!-- 仅测试范围：装配自检要跑真实的 MyBatisConfig（SqlSessionFactory 由它在 ruoyi-framework 里构建），
+        <!-- 集成测试直连容器库所需驱动：生产运行时由 ruoyi-admin 提供，本模块测试自己带一份 -->
+        <dependency>
+            <groupId>mysql</groupId>
+            <artifactId>mysql-connector-java</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- 仅测试范围：集成测试跑真实的 MyBatisConfig（SqlSessionFactory 由它在 ruoyi-framework 里构建），
              业务代码本身不依赖框架模块 -->
         <dependency>
             <groupId>com.ruoyi</groupId>
@@ -79,8 +86,22 @@
     </dependencies>
 
     <build>
+        <testResources>
+            <!-- 集成测试自己的资源 -->
+            <testResource>
+                <directory>src/test/resources</directory>
+            </testResource>
+            <!-- 集成测试使用运行环境的配置来源：这两份文件由 Maven 复制，测试侧不维护副本 -->
+            <testResource>
+                <directory>../ruoyi-admin/src/main/resources</directory>
+                <includes>
+                    <include>application.yml</include>
+                    <include>mybatis/mybatis-config.xml</include>
+                </includes>
+            </testResource>
+        </testResources>
         <plugins>
-            <!-- 使用支持 JUnit 5 的执行器运行现存集成测试 -->
+            <!-- 使用支持 JUnit 5 的执行器运行集成测试 -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>

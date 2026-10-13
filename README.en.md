@@ -292,15 +292,14 @@ GET    /api/stores
 
 ## Verification Commands
 
-Backend module build and existing integration tests:
+Backend module build:
 
 ```powershell
 cd backend
 mvn -pl ruoyi-yoga -am -DskipTests clean compile
-mvn -pl ruoyi-yoga -am test
 ```
 
-New backend tests use Testcontainers; frontend tests use Playwright end-to-end testing. See [AGENTS.md](AGENTS.md). Four existing H2 integration test classes remain during migration; Testcontainers and Playwright are not configured yet.
+Test strategy, commands, and coverage boundaries: [AI Agent testing guide](docs/系统测试/AI%20Agent测试手册.md).
 
 Admin console production build:
 

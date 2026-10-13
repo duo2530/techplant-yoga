@@ -8,42 +8,28 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.sql.Statement;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import javax.sql.DataSource;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.jdbc.datasource.DataSourceTransactionManager;
-import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseBuilder;
-import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseType;
 import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.junit.jupiter.SpringExtension;
-import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.annotation.EnableTransactionManagement;
-import com.baomidou.mybatisplus.annotation.DbType;
-import com.baomidou.mybatisplus.core.MybatisConfiguration;
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
-import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
-import com.baomidou.mybatisplus.extension.spring.MybatisSqlSessionFactoryBean;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.techplant.yoga.coach.domain.CoachDO;
 import com.techplant.yoga.coach.query.CoachQuery;
+import com.techplant.yoga.common.testcontainers.AbstractYogaIntegrationTest;
+import com.techplant.yoga.common.testcontainers.YogaMyBatisTestConfig;
+import com.techplant.yoga.common.testcontainers.YogaSchema;
 
-/** 教练数据访问的**真实 SQL 口径**集成测试（H2 内存库，MySQL 兼容模式，不连开发库）。 */
-@ExtendWith(SpringExtension.class)
-@ContextConfiguration(classes = { CoachDaoTest.TestConfig.class, CoachDaoImpl.class })
-@DisplayName("CoachDao 真实 SQL 口径集成测试（H2）")
-class CoachDaoTest
+/** 教练数据访问的**真实 SQL 口径**集成测试（Testcontainers MySQL，表结构取自 backend/sql/yoga.sql，不连开发库）。 */
+@ContextConfiguration(classes = { YogaMyBatisTestConfig.class, CoachDaoImpl.class })
+@DisplayName("CoachDao 集成测试（Testcontainers MySQL：列表 / 详情 / 物理删除 / 全量更新）")
+class CoachDaoTest extends AbstractYogaIntegrationTest
 {
     private static final Long LIN_COACH_ID = 9001L;
 
@@ -54,74 +40,15 @@ class CoachDaoTest
     /** 允许重名的证明数据：两个同名「林教练」 */
     private static final String LIN_NAME = "林教练";
 
+    private static final ObjectMapper JSON = new ObjectMapper();
+
     @Autowired
     private CoachDao coachDao;
 
-    @Autowired
-    private DataSource dataSource;
-
-    @Configuration
-    @EnableTransactionManagement
-    @MapperScan("com.techplant.yoga.coach.mapper")
-    static class TestConfig
-    {
-        @Bean
-        public DataSource dataSource()
-        {
-            return new EmbeddedDatabaseBuilder().setType(EmbeddedDatabaseType.H2)
-                    .setName("yoga_coach_dao;MODE=MySQL;DATABASE_TO_LOWER=TRUE").build();
-        }
-
-        @Bean
-        public PlatformTransactionManager transactionManager(DataSource dataSource)
-        {
-            return new DataSourceTransactionManager(dataSource);
-        }
-
-        /** 本测试自己装配一个 MyBatis-Plus 的 {@code SqlSessionFactory}（显式 {@code setConfiguration(new MybatisConfiguration)}），避免「切片上下文里映射器拿不到 BaseMapper CRUD 语句」的坑。 */
-        @Bean
-        public MybatisSqlSessionFactoryBean sqlSessionFactory(DataSource dataSource)
-        {
-            MybatisSqlSessionFactoryBean factory = new MybatisSqlSessionFactoryBean();
-            factory.setDataSource(dataSource);
-            MybatisConfiguration configuration = new MybatisConfiguration();
-            configuration.setMapUnderscoreToCamelCase(true);
-            configuration.setUseGeneratedKeys(true);
-            factory.setConfiguration(configuration);
-
-            MybatisPlusInterceptor interceptor = new MybatisPlusInterceptor();
-            PaginationInnerInterceptor pagination = new PaginationInnerInterceptor(DbType.H2);
-            pagination.setMaxLimit(100L);
-            interceptor.addInnerInterceptor(pagination);
-            factory.setPlugins(interceptor);
-            return factory;
-        }
-    }
-
-    /**
-     * 表结构与 {@code backend/sql/yoga.sql} 的 {@code t_coach} 段一一对应：没有 {@code deleted}、
-     * 没有 {@code status}/{@code title}，相册列名是 {@code gallery}。
-     * 这里把 {@code gallery} 建成 varchar 只是 H2 1.4 没有 json 类型，映射层承载的是同一个字符串。
-     */
     @BeforeEach
-    void prepareTable() throws Exception
+    void resetTable()
     {
-        try (Connection connection = dataSource.getConnection(); Statement statement = connection.createStatement())
-        {
-            statement.execute("DROP TABLE IF EXISTS t_coach");
-            statement.execute("CREATE TABLE t_coach (" //
-                    + "id bigint NOT NULL," //
-                    + "name varchar(32) NOT NULL," //
-                    + "avatar_url varchar(255) DEFAULT NULL," //
-                    + "intro varchar(512) DEFAULT NULL," //
-                    + "phone varchar(32) DEFAULT NULL," //
-                    + "gallery varchar(2000) DEFAULT NULL," //
-                    + "create_by bigint DEFAULT NULL," //
-                    + "create_time datetime NOT NULL DEFAULT CURRENT_TIMESTAMP," //
-                    + "update_by bigint DEFAULT NULL," //
-                    + "update_time datetime NOT NULL DEFAULT CURRENT_TIMESTAMP," //
-                    + "PRIMARY KEY (id))");
-        }
+        YogaSchema.reset(dataSource, "t_coach");
     }
 
     // ------------------------------------------------------------------
@@ -187,7 +114,8 @@ class CoachDaoTest
         assertNotNull(coach);
         assertEquals(LIN_NAME, coach.getName());
         assertEquals("十年哈他瑜伽经验", coach.getIntro());
-        assertEquals(gallery, coach.getGallery(), "DO 里的 gallery 是与列内容一致的 JSON 字符串");
+        assertEquals(JSON.readTree(gallery), JSON.readTree(coach.getGallery()),
+                "gallery 列按 json 原样承载，MySQL 会按自己的格式返回内容");
         assertNull(coachDao.selectById(9999L), "不存在返回 null");
     }
 
@@ -234,7 +162,7 @@ class CoachDaoTest
         assertEquals("https://cdn.example.com/coach/new-avatar.jpg", latest.getAvatarUrl());
         assertEquals("新简介", latest.getIntro());
         assertEquals("13800000009", latest.getPhone());
-        assertEquals("[\"https://cdn.example.com/coach/new.jpg\"]", latest.getGallery());
+        assertEquals(JSON.readTree("[\"https://cdn.example.com/coach/new.jpg\"]"), JSON.readTree(latest.getGallery()));
         assertEquals(Long.valueOf(9L), latest.getUpdateBy());
         assertEquals(Long.valueOf(7L), latest.getCreateBy(), "create_by 属于创建审计列，更新不得触碰");
     }

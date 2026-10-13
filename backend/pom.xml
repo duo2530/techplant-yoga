@@ -29,6 +29,8 @@
              MyBatis-Plus 3.5.6 起改用 jsqlparser 4.9，因此 MP 取最后一个用 4.6 的版本 3.5.5 -->
         <mybatis-plus.version>3.5.5</mybatis-plus.version>
         <jsqlparser.version>4.6</jsqlparser.version>
+        <!-- 集成测试容器：JDK 8 字节码，且客户端 Docker API 版本可被 Docker Engine 25+ 接受 -->
+        <testcontainers.version>1.21.4</testcontainers.version>
         <fastjson.version>2.0.64</fastjson.version>
         <oshi.version>7.4.4</oshi.version>
         <commons.io.version>2.22.0</commons.io.version>
@@ -139,6 +141,14 @@
                 <groupId>com.github.jsqlparser</groupId>
                 <artifactId>jsqlparser</artifactId>
                 <version>${jsqlparser.version}</version>
+            </dependency>
+
+            <!-- 集成测试的 MySQL 容器：隔离的真实数据库，测试直接使用容器提供的连接信息 -->
+            <dependency>
+                <groupId>org.testcontainers</groupId>
+                <artifactId>mysql</artifactId>
+                <version>${testcontainers.version}</version>
+                <scope>test</scope>
             </dependency>
 
             <!-- 瑜伽业务模块（课程等业务代码，包名 com.techplant.yoga） -->

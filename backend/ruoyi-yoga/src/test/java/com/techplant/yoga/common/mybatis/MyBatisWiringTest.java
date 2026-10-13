@@ -5,128 +5,32 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.sql.Connection;
-import java.sql.Statement;
 import java.util.List;
-import javax.sql.DataSource;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseBuilder;
-import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseType;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.junit.jupiter.SpringExtension;
-import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.annotation.EnableTransactionManagement;
-import org.springframework.jdbc.datasource.DataSourceTransactionManager;
-import com.baomidou.mybatisplus.annotation.DbType;
-import com.baomidou.mybatisplus.core.MybatisConfiguration;
-import com.baomidou.mybatisplus.core.config.GlobalConfig;
-import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
-import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
-import com.baomidou.mybatisplus.extension.spring.MybatisSqlSessionFactoryBean;
-import com.ruoyi.common.core.domain.model.LoginUser;
+import com.techplant.yoga.common.testcontainers.AbstractYogaIntegrationTest;
+import com.techplant.yoga.common.testcontainers.YogaMyBatisTestConfig;
+import com.techplant.yoga.common.testcontainers.YogaSchema;
 import com.techplant.yoga.course.dao.CourseDao;
 import com.techplant.yoga.course.dao.CourseDaoImpl;
 import com.techplant.yoga.course.domain.CourseDO;
 import com.techplant.yoga.course.query.CourseQuery;
 
-/** MyBatis-Plus 装配的集成测试。 */
-@ExtendWith(SpringExtension.class)
-@ContextConfiguration(classes = { MyBatisWiringTest.TestConfig.class, AuditMetaObjectHandler.class,
-        CourseDaoImpl.class })
-@DisplayName("MyBatis-Plus 装配集成测试（雪花ID / 物理删除 / 审计填充）")
-class MyBatisWiringTest
+/** MyBatis-Plus 装配的集成测试：SqlSessionFactory、分页插件与审计填充都用运行环境的配置类。 */
+@ContextConfiguration(classes = { YogaMyBatisTestConfig.class, CourseDaoImpl.class })
+@DisplayName("MyBatis-Plus 装配集成测试（Testcontainers MySQL：雪花ID / 物理删除 / 分页 / 审计填充）")
+class MyBatisWiringTest extends AbstractYogaIntegrationTest
 {
-    private static final Long OPERATOR_ID = 1L;
-
     @Autowired
     private CourseDao courseDao;
 
-    @Autowired
-    private DataSource dataSource;
-
-    @Configuration
-    @EnableTransactionManagement
-    @MapperScan("com.techplant.yoga.course.mapper")
-    static class TestConfig
-    {
-        @Bean
-        public DataSource dataSource()
-        {
-            return new EmbeddedDatabaseBuilder().setType(EmbeddedDatabaseType.H2)
-                    .setName("yoga_mybatis_wiring;MODE=MySQL;DATABASE_TO_LOWER=TRUE").build();
-        }
-
-        @Bean
-        public PlatformTransactionManager transactionManager(DataSource dataSource)
-        {
-            return new DataSourceTransactionManager(dataSource);
-        }
-
-        /** 自建 MyBatis-Plus 的 {@code SqlSessionFactory}：显式 {@code setConfiguration(new MybatisConfiguration)}，并挂上分页插件与 {@link AuditMetaObjectHandler}（与 {@code MyBatisConfig} 里手工装配的那两个能力对应）。 */
-        @Bean
-        public MybatisSqlSessionFactoryBean sqlSessionFactory(DataSource dataSource,
-                AuditMetaObjectHandler auditMetaObjectHandler)
-        {
-            MybatisSqlSessionFactoryBean factory = new MybatisSqlSessionFactoryBean();
-            factory.setDataSource(dataSource);
-
-            MybatisConfiguration configuration = new MybatisConfiguration();
-            configuration.setMapUnderscoreToCamelCase(true);
-            configuration.setUseGeneratedKeys(true);
-            factory.setConfiguration(configuration);
-
-            MybatisPlusInterceptor interceptor = new MybatisPlusInterceptor();
-            PaginationInnerInterceptor pagination = new PaginationInnerInterceptor(DbType.H2);
-            pagination.setMaxLimit(100L);
-            interceptor.addInnerInterceptor(pagination);
-            factory.setPlugins(interceptor);
-
-            // 审计字段填充器：与 MyBatisConfig 里从容器取 MetaObjectHandler 的行为对齐
-            GlobalConfig globalConfig = new GlobalConfig();
-            globalConfig.setMetaObjectHandler(auditMetaObjectHandler);
-            factory.setGlobalConfig(globalConfig);
-
-            return factory;
-        }
-    }
-
-    /**
-     * 与 {@code backend/sql/yoga.sql} 的 {@code t_course} 段一一对应：
-     * 无 store_id / status / sort_no / deleted，课种列名是 course_type
-     */
     @BeforeEach
-    void prepareTable() throws Exception
+    void resetTable()
     {
-        LoginUser loginUser = new LoginUser();
-        loginUser.setUserId(OPERATOR_ID);
-        SecurityContextHolder.getContext()
-                .setAuthentication(new UsernamePasswordAuthenticationToken(loginUser, null));
-
-        try (Connection connection = dataSource.getConnection(); Statement statement = connection.createStatement())
-        {
-            statement.execute("DROP TABLE IF EXISTS t_course");
-            statement.execute("CREATE TABLE t_course (" //
-                    + "id bigint NOT NULL," //
-                    + "name varchar(64) NOT NULL," //
-                    + "course_type tinyint NOT NULL," //
-                    + "cover_url varchar(255) DEFAULT NULL," //
-                    + "intro varchar(1024) DEFAULT NULL," //
-                    + "difficulty tinyint NOT NULL," //
-                    + "create_by bigint DEFAULT NULL," //
-                    + "create_time datetime NOT NULL DEFAULT CURRENT_TIMESTAMP," //
-                    + "update_by bigint DEFAULT NULL," //
-                    + "update_time datetime NOT NULL DEFAULT CURRENT_TIMESTAMP," //
-                    + "PRIMARY KEY (id))");
-        }
+        YogaSchema.reset(dataSource, "t_course");
     }
 
     @Test

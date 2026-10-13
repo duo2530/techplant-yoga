@@ -10,42 +10,27 @@ import java.sql.Connection;
 import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.sql.Statement;
 import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
-import javax.sql.DataSource;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.jdbc.datasource.DataSourceTransactionManager;
-import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseBuilder;
-import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseType;
 import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.junit.jupiter.SpringExtension;
-import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.annotation.EnableTransactionManagement;
-import com.baomidou.mybatisplus.annotation.DbType;
-import com.baomidou.mybatisplus.core.MybatisConfiguration;
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
-import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
-import com.baomidou.mybatisplus.extension.spring.MybatisSqlSessionFactoryBean;
-import org.mybatis.spring.annotation.MapperScan;
+import com.techplant.yoga.common.testcontainers.AbstractYogaIntegrationTest;
+import com.techplant.yoga.common.testcontainers.YogaMyBatisTestConfig;
+import com.techplant.yoga.common.testcontainers.YogaSchema;
 import com.techplant.yoga.schedule.domain.ScheduleDO;
 import com.techplant.yoga.schedule.query.PublicScheduleQuery;
 import com.techplant.yoga.schedule.query.ScheduleQuery;
 
-/** 排课数据访问的**真实 SQL 口径**集成测试（H2 内存库，MySQL 兼容模式，不连开发库）。 */
-@ExtendWith(SpringExtension.class)
-@ContextConfiguration(classes = { ScheduleDaoTest.TestConfig.class, ScheduleDaoImpl.class })
-@DisplayName("ScheduleDao 真实 SQL 口径集成测试（H2）")
-class ScheduleDaoTest
+/** 排课数据访问的**真实 SQL 口径**集成测试（Testcontainers MySQL，表结构取自 backend/sql/yoga.sql，不连开发库）。 */
+@ContextConfiguration(classes = { YogaMyBatisTestConfig.class, ScheduleDaoImpl.class })
+@DisplayName("ScheduleDao 集成测试（Testcontainers MySQL：状态口径 / 冲突校验 / 稳定排序）")
+class ScheduleDaoTest extends AbstractYogaIntegrationTest
 {
     private static final Long STORE_ID = 100L;
 
@@ -66,74 +51,10 @@ class ScheduleDaoTest
     @Autowired
     private ScheduleDao scheduleDao;
 
-    @Autowired
-    private DataSource dataSource;
-
-    @Configuration
-    @EnableTransactionManagement
-    @MapperScan("com.techplant.yoga.schedule.mapper")
-    static class TestConfig
-    {
-        @Bean
-        public DataSource dataSource()
-        {
-            return new EmbeddedDatabaseBuilder().setType(EmbeddedDatabaseType.H2)
-                    .setName("yoga_schedule_dao;MODE=MySQL;DATABASE_TO_LOWER=TRUE").build();
-        }
-
-        @Bean
-        public PlatformTransactionManager transactionManager(DataSource dataSource)
-        {
-            return new DataSourceTransactionManager(dataSource);
-        }
-
-        /** 本测试自己装配一个 MyBatis-Plus 的 {@code SqlSessionFactory}（显式 {@code setConfiguration(new MybatisConfiguration)}）。 */
-        @Bean
-        public MybatisSqlSessionFactoryBean sqlSessionFactory(DataSource dataSource)
-        {
-            MybatisSqlSessionFactoryBean factory = new MybatisSqlSessionFactoryBean();
-            factory.setDataSource(dataSource);
-            MybatisConfiguration configuration = new MybatisConfiguration();
-            configuration.setMapUnderscoreToCamelCase(true);
-            configuration.setUseGeneratedKeys(true);
-            factory.setConfiguration(configuration);
-
-            MybatisPlusInterceptor interceptor = new MybatisPlusInterceptor();
-            PaginationInnerInterceptor pagination = new PaginationInnerInterceptor(DbType.H2);
-            pagination.setMaxLimit(100L);
-            interceptor.addInnerInterceptor(pagination);
-            factory.setPlugins(interceptor);
-            return factory;
-        }
-    }
-
-    /** 表结构与 {@code backend/sql/yoga.sql} 的 {@code t_schedule} 段一一对应（无 deleted 列） */
     @BeforeEach
-    void prepareTable() throws Exception
+    void resetTable()
     {
-        try (Connection connection = dataSource.getConnection(); Statement statement = connection.createStatement())
-        {
-            statement.execute("DROP TABLE IF EXISTS t_schedule");
-            statement.execute("CREATE TABLE t_schedule (" //
-                    + "id bigint NOT NULL," //
-                    + "store_id bigint NOT NULL," //
-                    + "course_id bigint NOT NULL," //
-                    + "course_type tinyint NOT NULL," //
-                    + "coach_id bigint NOT NULL," //
-                    + "classroom_id bigint NOT NULL," //
-                    + "schedule_date date NOT NULL," //
-                    + "start_time datetime NOT NULL," //
-                    + "end_time datetime NOT NULL," //
-                    + "max_persons int NOT NULL," //
-                    + "min_persons int NOT NULL DEFAULT 2," //
-                    + "booked_persons int NOT NULL DEFAULT 0," //
-                    + "status tinyint NOT NULL DEFAULT 1," //
-                    + "create_by bigint DEFAULT NULL," //
-                    + "create_time datetime NOT NULL DEFAULT CURRENT_TIMESTAMP," //
-                    + "update_by bigint DEFAULT NULL," //
-                    + "update_time datetime NOT NULL DEFAULT CURRENT_TIMESTAMP," //
-                    + "PRIMARY KEY (id))");
-        }
+        YogaSchema.reset(dataSource, "t_schedule");
     }
 
     @Test

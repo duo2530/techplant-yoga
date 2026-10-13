@@ -124,9 +124,7 @@
 4. 父 `pom.xml` 把 **`jsqlparser` 锁在 4.6**：PageHelper 5.3.3 需要 `SelectBody`（4.7 起被删），MP 3.5.5 是最后一个用 4.6 的版本。**不要顺手升级 MyBatis-Plus 或 jsqlparser**，升级会让 PageHelper 直接启动报错。
 5. `com.techplant.yoga.common.config.MybatisPlusConfig` 只负责 `@MapperScan("com.techplant.yoga.**.mapper")` 与提供分页插件 Bean。
 
-装配类问题**读代码看不出来**，新增验证使用 Testcontainers MySQL 集成测试，加载真实应用的 `MyBatisConfig` 与 MyBatis-Plus 自动配置，验证主键生成、CRUD、分页及审计填充。不要另建与生产配置不同的测试装配来代替真实应用验证。
-
-现存 `MyBatisWiringTest`、`CoachDaoTest`、`MemberDaoTest` 与 `ScheduleDaoTest` 是 H2 集成测试，暂保留为迁移过渡，后续改写为 Testcontainers；不新增 H2 测试。
+持久化装配的测试要求与运行方式见 [AI Agent测试手册](../系统测试/AI%20Agent测试手册.md)。
 
 ### 4.10 其他框架能力（按需取用，别重复实现）
 
@@ -177,7 +175,7 @@
 | `ruoyi-admin/src/main/resources/logback.xml` | 日志级别与输出路径（上游默认 `/home/ruoyi/logs`） |
 | `ruoyi-admin/src/main/resources/mybatis/mybatis-config.xml` | MyBatis 全局设置 |
 
-## 7、构建与验证
+## 7、构建与启动
 
 
 ```bash
@@ -191,22 +189,11 @@ java -jar backend/ruoyi-admin/target/ruoyi-admin.jar
 
 - Windows 下也有 `backend/bin/*.bat`（clean/package/run）和 `backend/ry.bat`；Linux 用 `backend/ry.sh {start|stop|restart|status}`。**这些 .bat 是 GBK 编码，别用 UTF-8 工具直接改写。**
 - **JDK 必须是 8**：本机 `JAVA_HOME=D:\Develop\Java\jdk1.8.0_202`，命令行/IDEA 都用这个 SDK。
-- 测试策略以根目录 `AGENTS.md` 为准：后端新增 Testcontainers 集成测试，前端新增 Playwright 端到端测试。后端使用 JUnit 5 与 Spring 测试上下文，真实 MySQL／Redis 由隔离容器提供；不模拟内部业务或存储。测试数据自行准备和清理，不连接开发库或生产库。
-- 当前 Testcontainers 与 Playwright 尚未接入。后端仅保留 4 个 H2 集成测试作为迁移过渡，现有 `maven-surefire-plugin` 2.22.2 用于运行这些测试；不能将现有测试通过视为容器集成测试通过。引入 Testcontainers 时确保依赖版本兼容 JDK 8 与 Spring Boot 2.5.15，并提供 Docker 前置说明和明确的运行入口。
 - 启动前置条件：**MySQL 和 Redis 都必须可用**，且 `backend/sql/ry_20260417.sql`、`backend/sql/quartz.sql`、`backend/sql/yoga.sql` 三个脚本都已导入目标库。前两个 SQL 里没有 `CREATE DATABASE`/`use`，必须先自己建库（当前工作区的库名是 `yoga`，见 `application-druid.yml`）再导入；`yoga.sql` 在已有基础库上执行，建 5 张业务表 + `store_region` 字典 16 条 + 业务菜单 2000~2005。
 - 业务模块的表的脚本：`backend/sql/yoga.sql`
 - 默认端口 8080，默认账号 `admin / admin123`。
 
-### 7.1 验证入口
-
-
-1. `mvn -f backend/pom.xml -DskipTests clean compile` 通过（最低要求）。
-2. 改了后端业务代码：新增 Testcontainers 集成测试，通过真实应用接口覆盖正常、边界、异常、事务和并发场景，并验证安全过滤链、统一异常响应及 ID 字符串化。当前 `mvn -f backend/pom.xml -pl ruoyi-yoga -am test` 仅运行保留的 H2 集成测试；Testcontainers 接入前应报告验证缺口。
-3. 需要实跑时：确认 MySQL/Redis 可连 → `java -jar ruoyi-admin/target/ruoyi-admin.jar` → 日志出现"若依启动成功" → 调用 `/login` 验证管理端登录。
-4. 涉及菜单/页面：登录后 `GET /getRouters` 能看到新菜单。
-5. 涉及接口：确认方法上有 `@ApiOperation`，然后看 swagger UI（`http://localhost:8080/swagger-ui/index.html`，被 Security 拦截时参考 `SecurityConfig` 的 permitAll 列表）。
-6. 涉及响应/异常口径：确认返回体仍是 `{code,msg,data}` / `{total,rows,code,msg}`，业务失败走的是 `ServiceException` 而不是自拼响应。
-
+测试策略与验证要求统一维护在 [AI Agent测试手册](../系统测试/AI%20Agent测试手册.md)。
 
 ## 8、SQL 与菜单
 

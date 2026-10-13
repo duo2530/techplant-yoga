@@ -6,7 +6,8 @@
 
 | 文档 | 内容 |
 |---|---|
-| [AI Agent开发手册](../docs/编码开发/AI%20Agent开发手册.md) | 后端编码、分层、接口约定、技术栈、配置和验证 |
+| [AI Agent开发手册](../docs/编码开发/AI%20Agent开发手册.md) | 后端编码、分层、接口约定、技术栈和配置 |
+| [AI Agent测试手册](../docs/系统测试/AI%20Agent测试手册.md) | 测试约定、运行方式和验证要求 |
 | [项目基础设施](../docs/编码开发/项目基础设施.md) | 公共工具、框架类与基础设施位置 |
 | [详细设计](../docs/详细设计/) | 各模块数据、接口、开发架构和运行流程 |
 
@@ -48,15 +49,6 @@
 | `ruoyi-admin/src/main/resources/application-druid.yml` | 数据源配置 |
 | `ruoyi-admin/src/main/resources/logback.xml` | 日志配置 |
 | `ruoyi-yoga/src/main/resources/mapper/` | 业务 Mapper XML |
-| `ruoyi-yoga/src/test/` | 现存 H2 集成测试（迁移过渡）；新增集成测试使用 Testcontainers |
+| `ruoyi-yoga/src/test/` | 后端集成测试 |
 | `sql/yoga.sql` | 业务表、字典和菜单 SQL |
 | `ruoyi-admin/target/ruoyi-admin.jar` | 构建产物 |
-
-## 测试约定
-
-- 遵循根目录 [AGENTS.md](../AGENTS.md) 的测试策略：不再编写单元测试，新增测试统一使用 Testcontainers 集成测试。
-- 使用隔离的 MySQL、Redis 容器，加载真实应用配置，验证 HTTP 接口、安全过滤链、持久化、事务与缓存行为。
-- 不模拟内部 service、DAO、数据库或 Redis；数据自行准备和清理，不连接开发库或生产库。
-- 现存 4 个 H2 集成测试仅作为迁移过渡，不新增此类测试；迁移时使用与运行环境相符的容器镜像和 SQL。
-- Testcontainers 测试需要可用的 Docker 环境；依赖版本必须兼容项目 JDK 8 和 Spring Boot 2.5.15。
-- 当前尚未接入 Testcontainers。`mvn -f backend/pom.xml -pl ruoyi-yoga -am test` 只运行保留的 H2 集成测试，不能视为容器集成测试通过。

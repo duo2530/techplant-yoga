@@ -292,15 +292,14 @@ GET    /api/stores
 
 ## 验证命令
 
-后端模块构建和现存集成测试：
+后端模块构建：
 
 ```powershell
 cd backend
 mvn -pl ruoyi-yoga -am -DskipTests clean compile
-mvn -pl ruoyi-yoga -am test
 ```
 
-新增后端测试使用 Testcontainers，前端使用 Playwright 端到端测试，详见 [AGENTS.md](AGENTS.md)。当前仅保留 4 个 H2 集成测试作为迁移过渡，Testcontainers 与 Playwright 尚未接入。
+测试策略、运行命令和覆盖边界见 [AI Agent测试手册](docs/系统测试/AI%20Agent测试手册.md)。
 
 管理端构建：
 

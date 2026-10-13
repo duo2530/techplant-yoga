@@ -45,8 +45,8 @@
 | `plugins/**` | `proxy.$tab`、`proxy.$auth`、`proxy.$modal` |
 | `static/**` | 静态资源（`images/` 业务资产 + 清单 `images/README.md`、字体、`scss/index.scss`、`uni.scss` 设计 token、`static/index.html` H5 模板） |
 | `uni_modules/**` | 第三方插件代码，**不要手改** |
-| `scripts/check-static.js` | 本工程静态自检脚本（无 npm 依赖，复用 HBuilderX 自带编译器，见第 9 节第 3 步） |
-| `scripts/check-request.js` | `request.js` / `session.js` 的异常响应与登录态回归自检（无 npm 依赖、不起后端，见第 9 节第 4 步） |
+| `scripts/check-static.js` | 本工程静态自检脚本（无 npm 依赖，复用 HBuilderX 自带编译器，见测试手册） |
+| `scripts/check-request.js` | 请求与会话逻辑的本地自检，运行方式见测试手册 |
 
 ## 5. 代码约定
 
@@ -111,51 +111,6 @@
 - 不要绕过 `utils/request.js` 直接用 `uni.request`。
 - 不要用 PC 端的写法（`@/utils/request` 返回结构、Element Plus 组件、`npm run dev`）套到本工程。
 
-## 9. 改完怎么验证
+## 9. 测试入口
 
-前端业务流程统一使用 **Playwright 端到端测试**，遵循根目录 [AGENTS.md](../../AGENTS.md) 的测试策略。uni-app 使用 HBuilderX 编译后的 **H5 页面**执行浏览器测试，覆盖注册、登录、忘记密码、退出、游客态及登录态失效；正常流程连接隔离的真实后端，测试数据自行准备和清理。尚未接真实后端的业务域应明确标注覆盖边界。
-
-当前尚未接入 Playwright。测试工具使用独立目录和依赖配置，保留本工程的 HBuilderX 编译方式；接入后提供测试配置、运行入口和失败时的 trace／截图。Playwright 无法代替微信小程序开发者工具与真机验收，尤其是微信授权及平台 API。以下编译、静态检查和原型对照继续作为辅助检查。
-
-**当前阶段（mock、无后端）没有自动化构建**，按下面三层做：
-
-1. **HBuilderX 编译（最低要求）**：HBuilderX 打开 `frontend/uni-app` → 运行到微信开发者工具（或运行到浏览器 H5），**编译无报错**。`pages.json` / `manifest.json` 改过要重新编译。
-2. **命令行真实编译（不用开 HBuilderX GUI，已验证可用）**：HBuilderX 自带 uni-app（Vue3/vite）编译器，可直接调用：
-   ```powershell
-   # ① 临时把编译器缺的 sass / pinia 放进工程的 node_modules（HBuilderX 运行时自己会注入，命令行需要手动提供）
-   #    来源：D:\Develop\HBuilderX\plugins\compile-dart-sass\node_modules（sass 及其依赖）
-   #         D:\Develop\HBuilderX\plugins\uniapp-cli-vite\node_modules（pinia、vue-demi）
-   #    这一步只是本机验证用，跑完删掉 node_modules 即可（已在 .gitignore 里忽略）
-   # ② 跑编译（platform 换成 h5 / mp-weixin）
-   $env:UNI_INPUT_DIR='<工程绝对路径>'; $env:UNI_PLATFORM='mp-weixin'; $env:NODE_ENV='production'
-   $env:UNI_HBUILDERX_PLUGINS='D:\Develop\HBuilderX\plugins'
-   cd 'D:\Develop\HBuilderX\plugins\uniapp-cli-vite'
-   node node_modules\vite\bin\vite.js build --config vite.config.js
-   ```
-   产物默认落在工程的 `dist/`（已在 .gitignore 忽略）；mp-weixin 产物里可以直接核对 `app.json` 的页面数、`pages/**/*.wxml` 数量与总包大小（主包上限 2MB）。**本次实现 15 页时两端编译均通过（exit 0，小程序总包 1.54MB）。**
-3. **静态自检（抓语法/资产/跳转/模板绑定类问题）**：直接用工程内的 `scripts/check-static.js`，**不需要 npm install**——它复用 HBuilderX 自带的编译器依赖（`@vue/compiler-sfc` 在 `uniapp-cli-vite`、`sass` 在 `compile-dart-sass`），用 `NODE_PATH` 指过去就行：
-   ```powershell
-   $env:NODE_PATH='D:\Develop\HBuilderX\plugins\uniapp-cli-vite\node_modules;D:\Develop\HBuilderX\plugins\compile-dart-sass\node_modules'
-   node frontend\uni-app\scripts\check-static.js <工程绝对路径>
-   ```
-   它遍历 `frontend/uni-app/{pages,components}/**/*.vue` 做这些检查（**扫之前先去掉注释**，否则注释里的示例代码会误报）：
-   - `@vue/compiler-sfc` 的 `parse` + `compileTemplate` + `compileScript` → 抓模板/脚本语法错误；
-   - **模板引用了 script setup 未声明的标识符**：本工程没有自动导入，模板里写 `store.name` / `todaySchedules` 就必须先有顶层绑定（`const store = computed(...)`）。漏了**不会编译报错**，而是渲染时对 undefined 取属性抛错 → **整页动态绑定全部变空、只剩静态文字**（首页踩过：门店名/地址/课程/教练列表空白，只有「换店」这类写死的字还在）；
-   - **`<text>` 节点里的 `>` / `<` / HTML 实体必须走绑定或加 `decode`**：uni-app 编译时会把模板里的字面 `>` 转义成 `&gt;` 写进 WXML，而微信 `<text>` **默认不解码实体**、会原样显示成「&gt;」。所以源码写 `>` 和写 `&gt;` 都会中招，正确写法是 `<text decode>{{ '>' }}</text>`（`decode` 是微信 `<text>` 的原生属性；绑定值在 WXML 里不过实体转义，H5 端同样正常）；
-   - `sass` 编译 `uni.scss + style内容` → **抓 scss 变量写错**（`$ys-*` 拼错就会在这里报 undefined variable），并检查产物 CSS 里有没有**通配选择器 `*`**：WXSS 不支持（`& > * + *` 这类写法在 HBuilderX/开发者工具里报 `error at token '*'`），改用 `display:flex + gap`（本项目踩过）；
-   - 正则收集所有 `/static/images/**` 引用并检查文件是否真实存在（**要同时扫 .vue、pages.json、config.js、mock/、api/、store/ —— 只扫 .vue 会漏掉 `store/modules/user.js` 里的默认头像引用，本项目已踩过**）；
-   - 校验 `pages.json` 里登记的每个页面都有 `.vue`、tabBar 四个图标都在；
-   - 校验页面里的跳转目标都已登记，且 tabBar 页必须用 `switchTab`（`navigateTo` 跳 tabBar 页会静默失败）；**扫之前先去掉注释**，否则 TODO 里的示例代码会误报；
-   - 校验 `uni-icons` 的 `type` 名在 `uni_modules/uni-icons/.../uniicons_file_vue.js` 里真实存在（拼错会静默不显示）；
-   - grep `uni.request` / `@/utils/request` / `@/mock`（页面只应依赖 `@/api/*`）；
-   - **mock 数据一致性**：所有 `courseId` / `coachId` / `storeId` 能否解析到实体、默认视图（约课页「私教课 + 9.20」、教练页「团课」）是否有数据。
-     ⚠️ **雪花 ID 必须写成字符串**：19 位数字字面量会超出 JS 安全整数范围而**塌缩成同一个数**，导致所有课程名/类型筛选错乱（本项目已踩过）。
-4. **异常响应 / 登录态回归自检**：`scripts/check-request.js`（同样免安装、不起后端），把 `request.js`、`session.js` 源码就地转成 CommonJS 加载、只桩 `uni.request` 与几个依赖，覆盖：HTTP 502/404 错误页不当成功、`data` 为 null/非对象/缺业务码必须 reject（不能挂起）、后端文案优先、会话过期不带 token 并清登录态、历史缓存缺 `expireTime` 视为未登录、401 立即清理（点取消也清）、并发 401 只弹一次、旧请求迟到的 401 不动新会话。
-   ```powershell
-   node frontend\uni-app\scripts\check-request.js
-   ```
-5. **逐页对照原型**：`docs/需求文档/用户端/高保真原型/_复刻规范.md` 是**视觉实现的统一约定**（色值、换算、坑），页面注释里写的实测值要能对上；**原型注释与截图不一致时以截图为准**（约教练/我的体验课/申请体验三页都出现过，实现按截图并已在注释里记录）。
-
-**想在「有数据」的状态下验收**：把 `mock/config.js` 的 `MOCK.empty.*` 改成 `false`（列表页会显示 mock 卡片）；「我的」页的已登录态请用种子账号真登录（见第 7 节），未登录时按原型显示游客态。
-
-**将来接真实后端**：确认 `backend` 在 8080、`config.js` 的 `baseUrl` 指向它、把 `api/*` 换成真实请求、`permission.js` 的 `MOCK_MODE` 改回 `false`，然后按第 7 节的域名要求准备发布。
+编写和验证测试前，阅读并遵循 [AI Agent测试手册](../../docs/系统测试/AI%20Agent测试手册.md)。
