@@ -33,13 +33,11 @@
     <el-table v-loading="loading" :data="courseList">
       <el-table-column label="封面" align="center" prop="coverUrl" width="90">
         <template #default="scope">
-          <el-image
+          <image-preview
             v-if="scope.row.coverUrl"
             :src="scope.row.coverUrl"
-            :preview-src-list="[scope.row.coverUrl]"
-            preview-teleported
-            fit="cover"
-            style="width: 40px; height: 40px"
+            :width="40"
+            :height="40"
           />
           <span v-else>-</span>
         </template>
@@ -116,13 +114,11 @@
         <el-descriptions-item label="课程难度">{{ difficultyLabel(viewForm.difficulty) }}</el-descriptions-item>
         <el-descriptions-item label="更新时间">{{ viewForm.updateTime || '-' }}</el-descriptions-item>
         <el-descriptions-item label="课程封面" :span="2">
-          <el-image
+          <image-preview
             v-if="viewForm.coverUrl"
             :src="viewForm.coverUrl"
-            :preview-src-list="[viewForm.coverUrl]"
-            preview-teleported
-            fit="cover"
-            style="width: 120px; height: 120px"
+            :width="120"
+            :height="120"
           />
           <span v-else>-</span>
         </el-descriptions-item>

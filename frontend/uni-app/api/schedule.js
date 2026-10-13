@@ -1,4 +1,5 @@
 import request from '@/utils/request'
+import config from '@/config'
 
 /** 用户端排课查询接口。 */
 
@@ -14,18 +15,25 @@ function toText(value) {
   return value === null || value === undefined ? '' : String(value)
 }
 
+function toImageUrl(value) {
+  const url = toText(value).trim()
+  if (!url || /^(?:[a-z][a-z\d+.-]*:|\/\/|\/?static\/)/i.test(url)) {
+    return url
+  }
+  return config.baseUrl.replace(/\/+$/, '') + '/' + url.replace(/^\/+/, '')
+}
+
 function toNum(value) {
   const n = Number(value)
   return isNaN(n) ? 0 : n
 }
 
-/** 归一化 ScheduleCardVO（原样透传后端字段，只做空值与类型兜底） */
 function normalizeCard(row) {
   const item = row || {}
   return {
     id: toId(item.id),
     courseName: toText(item.courseName),
-    courseCoverUrl: toText(item.courseCoverUrl),
+    courseCoverUrl: toImageUrl(item.courseCoverUrl),
     courseType: item.courseType,
     courseTypeName: toText(item.courseTypeName),
     difficulty: item.difficulty,
@@ -53,7 +61,7 @@ function normalizeDetail(row) {
     courseId: toId(raw.courseId),
     courseIntro: toText(raw.courseIntro),
     coachId: toId(raw.coachId),
-    coachAvatarUrl: toText(raw.coachAvatarUrl),
+    coachAvatarUrl: toImageUrl(raw.coachAvatarUrl),
     coachIntro: toText(raw.coachIntro),
     minPersons: toNum(raw.minPersons),
     bookers: Array.isArray(raw.bookers) ? raw.bookers : []
