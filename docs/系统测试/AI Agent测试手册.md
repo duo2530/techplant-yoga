@@ -48,7 +48,7 @@ Playwright 尚未接入运行配置。接入时提供明确的启动和测试命
 - 管理端覆盖登录、退出、表单校验、增删改查和异常反馈；涉及权限或字典时验证相应页面行为。
 - uni-app 在 HBuilderX 编译的 H5 页面上覆盖注册、登录、忘记密码、退出、游客态和登录态失效。仍使用 mock 的业务域应明确标注覆盖边界。
 - 使用角色、标签或稳定的测试标识定位元素，通过可见结果断言和自动等待同步操作，避免固定延时。
-- uni-app 的测试工具使用独立目录与依赖配置，保留 HBuilderX 工程的编译方式。
+- uni-app 的测试工具使用独立目录与依赖配置；应用支持 npm CLI 与 HBuilderX 编译。
 
 ### 管理端辅助检查
 
@@ -62,26 +62,19 @@ npm run build:prod
 
 ### uni-app 辅助检查
 
-使用 HBuilderX 打开 `frontend/uni-app`，运行到 H5 或微信开发者工具，确认编译无错误；修改 `pages.json` 或 `manifest.json` 后重新编译。
-
-也可使用 HBuilderX 自带的 Vue3/Vite 编译器。在本机编译器缺少 sass、pinia 等依赖时，从 HBuilderX 插件目录提供临时依赖，验证后清理本次创建的依赖文件。
+在 `frontend/uni-app` 执行以下命令，使用工程内依赖，不需要本机 HBuilderX 插件路径：
 
 ```powershell
-$env:UNI_INPUT_DIR='D:\Projects\DSHProjects\techplant-yoga\frontend\uni-app'
-$env:UNI_PLATFORM='h5' # 小程序编译使用 mp-weixin
-$env:NODE_ENV='production'
-$env:UNI_HBUILDERX_PLUGINS='D:\Develop\HBuilderX\plugins'
-Set-Location 'D:\Develop\HBuilderX\plugins\uniapp-cli-vite'
-node node_modules\vite\bin\vite.js build --config vite.config.js
+npm ci
+npm run build:h5
+npm run build:mp-weixin
+npm run check:static
+npm run check:request
 ```
 
-以下命令在仓库根目录执行，工具路径按本机安装位置调整：
+开发时执行 `npm run dev:h5` 或 `npm run dev:mp-weixin`。H5 服务默认使用 9090 端口；微信开发者工具导入 `dist/dev/mp-weixin`，发行时导入 `dist/build/mp-weixin`。H5 生产产物为 `dist/build/h5`。
 
-```powershell
-$env:NODE_PATH='D:\Develop\HBuilderX\plugins\uniapp-cli-vite\node_modules;D:\Develop\HBuilderX\plugins\compile-dart-sass\node_modules'
-node frontend\uni-app\scripts\check-static.js 'D:\Projects\DSHProjects\techplant-yoga\frontend\uni-app'
-node frontend\uni-app\scripts\check-request.js
-```
+也可用 HBuilderX 打开工程并编译；修改 `pages.json` 或 `manifest.json` 后重新编译。微信平台能力仍需开发者工具或真机验证。
 
 - `check-static.js` 检查模板与脚本、样式、资源引用、页面注册、跳转及 mock 数据一致性；具体检查以脚本为准。
 - `check-request.js` 是现有请求与会话逻辑的本地自检，不启动真实后端，仅作为辅助检查。

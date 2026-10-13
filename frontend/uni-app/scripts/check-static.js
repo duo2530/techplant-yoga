@@ -1,4 +1,4 @@
-/** uni-app（HBuilderX 工程）静态自检 —— 不装 npm 包，复用 HBuilderX 自带编译器依赖。 */
+/** uni-app 页面、组件与资源静态自检。 */
 const fs = require('fs')
 const path = require('path')
 

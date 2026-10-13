@@ -58,10 +58,6 @@
     "vueVersion" : "3",
     "h5" : {
         "template" : "static/index.html",
-        "devServer" : {
-            "port" : 9090,
-            "https" : false
-        },
         "title" : "瑜伽普拉提",
         "router" : {
             "mode" : "hash",

@@ -6,14 +6,16 @@
 
 面向 **微信小程序**（用户端；**教练端已整体不做**）的 uni-app 工程，基于 **RuoYi-App 模板**二次开发。目前**已按高保真原型实现用户端 16 个页面**（4 个 tabBar 一级页 + 12 个二级页 + 3 个登录相关页，见第 6 节），**原型事实源是 `docs/需求文档/用户端/高保真原型/*.html`**（设置页另见截图 `docs/产品分析/用户端小程序截图/P4-我的-02-设置.png`）。数据层正处于「从 mock 切向真实后端」的过渡期：**账号域（发验证码／注册／登录／忘记密码／退出）已接真实后端**（`api/auth.js` → `POST /api/auth/**`，见《用户端接口详细设计》§2.2.4～§2.2.8），其余域仍是本地 mock。若依自带的登录/注册/首页/工作台/我的等演示页面**已删除**。
 
-**这是 Vue 3 + uni-app，且是 HBuilderX 工程**——两个最容易踩的前提，见下节。
+这是 Vue 3 + uni-app，支持 npm 命令行与 HBuilderX，源码保留在工程根目录。
 
-## 2. 运行方式（**没有 package.json，不能用 npm**）
+## 2. 运行方式
 
-- 工程里**没有 `package.json`**，`npm install` / `npm run dev:mp-weixin` 这类 CLI 流程**不适用**（工程里的 `unpackage/`、`dist/` 只是构建缓存/产物，已在 `.gitignore` 里忽略）。只能：
-  1. 用 **HBuilderX** 打开 `frontend/uni-app` 目录（本机：`D:\Develop\HBuilderX`）；
-  2. 运行 → 运行到小程序模拟器 → 微信开发者工具（本机：`D:\Develop\miniprogram_ide`）；或运行到浏览器（H5）。
-- 因此**不要在本目录引入 npm 依赖**（HBuilderX 直接编译，不会装包）；需要新组件优先用 `uni_modules` 插件市场或 `components/` 自写组件。
+- Node.js >= 20.19，在本目录执行 `npm ci` 安装锁定依赖。
+- `npm run dev:h5` 启动 H5，默认端口 9090；`npm run dev:mp-weixin` 持续编译微信小程序。
+- `npm run build:h5`、`npm run build:mp-weixin` 分别生成 `dist/build/h5`、`dist/build/mp-weixin`。
+- 微信开发者工具导入 `dist/dev/mp-weixin` 调试，发布时导入 `dist/build/mp-weixin`。
+- `package.json` 中的 DCloud 包保持同一版本，依赖变更同步更新 `package-lock.json`。
+- HBuilderX 仍可打开工程；命令行编译不依赖本机 HBuilderX 插件路径。操作说明见 [README.md](README.md)。
 
 ## 3. 技术栈（已核对文件）
 
@@ -45,7 +47,7 @@
 | `plugins/**` | `proxy.$tab`、`proxy.$auth`、`proxy.$modal` |
 | `static/**` | 静态资源（`images/` 业务资产 + 清单 `images/README.md`、字体、`scss/index.scss`、`uni.scss` 设计 token、`static/index.html` H5 模板） |
 | `uni_modules/**` | 第三方插件代码，**不要手改** |
-| `scripts/check-static.js` | 本工程静态自检脚本（无 npm 依赖，复用 HBuilderX 自带编译器，见测试手册） |
+| `scripts/check-static.js` | 本工程静态自检脚本（使用本地 Vue 编译器和 Sass，见测试手册） |
 | `scripts/check-request.js` | 请求与会话逻辑的本地自检，运行方式见测试手册 |
 
 ## 5. 代码约定
@@ -105,7 +107,7 @@
 
 ## 8. 不要做的事
 
-- 不要引入 npm 依赖或试图把工程改成 CLI 工程（除非明确要求，那属于脚手架改造）。
+- npm 依赖需兼容 H5 和微信小程序，不引入只支持浏览器 DOM 的业务组件。
 - 不要手改 `uni_modules/**`（升级插件会覆盖）。
 - 不要把业务逻辑写进 `App.vue` / `permission.js`；它们只做初始化和登录守卫。
 - 不要绕过 `utils/request.js` 直接用 `uni.request`。

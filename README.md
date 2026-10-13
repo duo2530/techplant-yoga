@@ -220,10 +220,22 @@ npm run dev
 
 ### 5. 运行用户端小程序
 
-`frontend/uni-app` 是 HBuilderX 工程，**没有 `package.json`，不能用也不需要用 npm 启动**。
+`frontend/uni-app` 支持 npm 命令行启动与打包，需要 Node.js >= 20.19。
+
+```powershell
+cd frontend/uni-app
+npm ci
+npm run dev:h5
+# 微信小程序开发：npm run dev:mp-weixin
+# 生产打包：npm run build:h5 或 npm run build:mp-weixin
+```
+
+H5 默认地址为 `http://localhost:9090`。微信开发者工具导入 `dist/dev/mp-weixin` 调试，生产产物位于 `dist/build/h5` 和 `dist/build/mp-weixin`。完整说明见 [用户端 README](frontend/uni-app/README.md)。
+
+也可继续使用 HBuilderX：
 
 1. **用 HBuilderX 打开工程**：HBuilderX → 文件 → 打开目录 → 选择 `frontend/uni-app` 目录。
-2. **修改 AppID**：双击工程中的 `manifest.json`，在可视化界面左侧选择「微信小程序配置」，把 **AppID** 填成自己的微信小程序 AppID；也可以直接修改 `manifest.json` 里 `mp-weixin.appid`（当前是占位值 `touristappid`，**必须替换**，否则微信开发者工具会报 AppID 无效）。
+2. **确认 AppID**：双击工程中的 `manifest.json`，在可视化界面左侧选择「微信小程序配置」，确认 **AppID** 对应自己的微信小程序；也可以直接修改 `manifest.json` 里的 `mp-weixin.appid`。
    - AppID 在微信公众平台「开发 → 开发管理 → 开发设置」中获取。
    - 仓库根目录的 `.env`（已被 `.gitignore` 忽略，不入库）里记录了本地使用的 `APP_ID`，可以作参考；该文件不会被工程代码读取。
 3. **准备微信开发者工具**：先在 HBuilderX「工具 → 设置 → 运行配置」里把「微信开发者工具路径」指向本机安装目录，并确认微信开发者工具「设置 → 安全设置 → 服务端口」处于打开状态，否则 HBuilderX 无法把编译结果推给它。
