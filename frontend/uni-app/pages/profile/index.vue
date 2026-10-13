@@ -24,7 +24,12 @@
       </view>
 
       <view class="hero__account">
-        <image class="hero__avatar" :src="avatarUrl" mode="aspectFill" />
+        <image
+          class="hero__avatar press"
+          :src="avatarUrl"
+          mode="aspectFill"
+          @tap="onAvatarTap"
+        />
         <view class="hero__meta">
           <view class="hero__row">
             <text class="hero__nickname">{{ profile.nickname || '暂未登录' }}</text>
@@ -98,17 +103,22 @@
 import { ref, computed } from 'vue'
 import { onShow, onPullDownRefresh } from '@dcloudio/uni-app'
 import { getUserProfile } from '@/api/member'
+import { isSessionValid, LOGIN_PAGE } from '@/utils/session'
+import { useUserStore } from '@/store'
 
 /**
  * 我的
  *
- * 数据来自 @/api/member 的 getUserProfile()（内部读 mock），不发任何网络请求。
- * MOCK.loggedIn = false 时返回游客态（暂未登录 / V0 / 普通会员 / 未绑定手机号），
- * 也就是原型截图的状态；= true 时返回 mock 用户。
+ * 数据来自 @/api/member 的 getUserProfile()：**登录态是真的、会员资料仍是 mock**。
+ * 本地有会员 token 时按「已登录」返回，显示名与手机号取登录时保存的会员信息；
+ * 没有 token 时返回游客态（暂未登录 / V0 / 普通会员 / 未绑定手机号），也就是原型游客截图的状态。
+ * 会员卡/优惠券等域还没接后端，仍走 mock（不发任何网络请求）。
  *
  * 菜单文案与顺序完全照原型，并**按 mock 的 profileMenus 原顺序**切成三块：
  *   前 4 项 → 一行四列快捷入口；第 5~7 项 → 分组一；第 8~10 项 → 分组二。
  * 这样不新增任何菜单字段，也不重排原型顺序。
+ *
+ * 头像 → 未登录去登录页、已登录去设置页（见 onAvatarTap），设置页里可以退出登录。
  */
 
 /** 菜单图标：原型画的是内联 SVG（深灰线稿）。uni-icons 里没有同款，
@@ -158,6 +168,8 @@ async function loadProfile() {
 }
 
 onShow(() => {
+  // 本地会话过期（token 失效 / 历史缓存缺 expireTime）→ 清干净，「我的」页随之回到游客态
+  useUserStore().ensureValidSession()
   loadProfile()
 })
 
@@ -189,6 +201,22 @@ function onMenuTap(item) {
  */
 function goMessages() {
   uni.navigateTo({ url: '/pages/messages/index' })
+}
+
+/**
+ * 点头像：
+ *  - **未登录 / 会话已过期** → 登录页（截图 登录注册.png，即 `/pages/auth/quick-login`）
+ *  - **已登录** → 设置页（截图 P4-我的-02-设置.png，里面可以退出登录）
+ *
+ * 只把头像做成入口：原型里点的是头像本身，昵称/手机号那块不跳转。
+ * 登录态用 `@/utils/session` 的统一判断（token + 服务端 expireTime 是否过期）。
+ */
+function onAvatarTap() {
+  if (!isSessionValid()) {
+    uni.navigateTo({ url: LOGIN_PAGE })
+    return
+  }
+  uni.navigateTo({ url: '/pages/settings/index' })
 }
 </script>
 

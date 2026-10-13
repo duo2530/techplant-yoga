@@ -1,14 +1,19 @@
 -- ============================================================================
--- 瑜伽普拉提 · 一期业务库脚本
--- 版本：v2.0（重置版）   日期：2026-10-01
+-- 瑜伽普拉提 · 业务库脚本
+-- 版本：v2.1（新增会员登录表）   日期：2026-10-12
 --
 -- 用法：在已经导入若依基础库（ry_20260417.sql + quartz.sql）的库上执行本脚本。
---       本脚本只负责「一期业务表 + 业务菜单 + 业务字典」，不涉及 sys_* 的结构。
+--       本脚本只负责「业务表 + 业务菜单 + 业务字典」，不涉及 sys_* 的结构。
 --
--- 依据：docs/详细设计/ 下的 7 份详细设计（总览 / 门店 / 教室 / 教练 / 课程 / 排课 / 用户端接口）
+-- 依据：docs/详细设计/ 下的详细设计（总览 / 门店 / 教室 / 教练 / 课程 / 排课 / 用户端接口 / 会员管理）
 --
--- 六条硬口径（与旧脚本的差别）：
---   1. 一期 5 张业务表一律【物理删除】—— 不建 `deleted` 列、不用 @TableLogic
+-- v2.1 新增（二期「会员登录与排课浏览」的第一块）：
+--   · §3.6 t_member：会员与登录信息表（唯一依据是会员管理详细设计 §1.2.1／§1.3.1）
+--   · 1 条**已注册**的种子会员，密码 yoga1234（BCrypt），小程序端可以直接登录
+--     手机号 13800138000 → 显示名「忻会员8000」（= 忻会员 + 手机号后 4 位，BR-会员-010）
+--
+-- 六条硬口径（一期既有口径，v2.1 不变）：
+--   1. 业务表一律【物理删除】—— 不建 `deleted` 列、不用 @TableLogic（t_member 同样如此）
 --   2. 门店「所在区域」存【行政区划 code】，区名由字典 `store_region` 翻译
 --   3. 排课表保存【课种快照 course_type】与【上课日期 schedule_date】两个派生列
 --   4. 排课状态：1 待上架 / 2 已上架 / 3 已取消；「已结束」按 end_time 推导，不落库
@@ -282,8 +287,51 @@ VALUES
    10, 2, 0, 3, 1, SYSDATE(), 1, SYSDATE());
 
 -- ============================================================================
--- 4. 一期不建的表
---    会员、会员卡、预约（t_booking）、私教排班、营业时间登记、
---    教练×门店关联、教练技能、会员等级/权益、优惠券、礼包、积分、合同、体测、
---    公告、消息、活动 —— 全部不在本期范围（见 docs/需求文档/业务规则.md 的 BR-全局-005）。
+-- 3.6 会员与登录信息 t_member（二期：用户端注册／登录／鉴权）
+--     唯一依据：会员管理详细设计 §1.2.1 字段定义、§1.3.1 建表语句
+--     账号与会员【共用同一行】：password 为空表示「有档案但未注册」，
+--     用户端注册／忘记密码才写密码哈希，管理端会员管理不碰登录字段。
+--     没有 deleted 列 —— 与其余业务表一致，删除一律物理删除。
+-- ============================================================================
+DROP TABLE IF EXISTS `t_member`;
+CREATE TABLE `t_member` (
+  `id`          bigint unsigned NOT NULL COMMENT '会员ID',
+  `wechat_openid` varchar(64) DEFAULT NULL COMMENT '微信openid（三期预留）',
+  `wechat_unionid` varchar(64) DEFAULT NULL COMMENT '微信unionid（三期预留）',
+  `last_login_time` datetime DEFAULT NULL COMMENT '最后登录时间',
+  `phone`       varchar(32)  NOT NULL COMMENT '手机号',
+  `password` varchar(100) DEFAULT NULL COMMENT '密码（BCrypt；为空表示未注册）',
+  `phone_last4` varchar(4)  NOT NULL COMMENT '手机号后4位',
+  `name`        varchar(64)  NOT NULL COMMENT '会员显示名',
+  `gender`      tinyint      NOT NULL DEFAULT 0 COMMENT '性别：0未知 1男 2女',
+  `level`       tinyint      NOT NULL DEFAULT 0 COMMENT '会员等级',
+  `create_by`   bigint unsigned DEFAULT NULL COMMENT '创建人ID',
+  `create_time` datetime     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_by`   bigint unsigned DEFAULT NULL COMMENT '更新人ID',
+  `update_time` datetime     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_member_phone` (`phone`),
+  INDEX `idx_member_phone_last4` (`phone_last4`),
+  UNIQUE KEY `uk_member_wechat_openid` (`wechat_openid`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='会员与登录信息表';
+
+-- 种子会员（小程序端可直接登录）：
+--   手机号 / 密码：13800138000 / yoga1234（下面存的是 BCrypt 哈希，明文不落库）
+--   显示名 忻会员8000 = 忻会员 + 手机号后 4 位；等级 0 = V0 普通会员
+--   last_login_time 留空，首次登录成功后由后端刷新（用户端接口详细设计 §4.5）
+--   ⚠️ 演示账号，上线前请删除或改密码；换成别的密码时用 BCryptPasswordEncoder 生成哈希
+INSERT INTO `t_member`
+  (`id`, `wechat_openid`, `wechat_unionid`, `last_login_time`, `phone`, `password`, `phone_last4`, `name`,
+   `gender`, `level`, `create_by`, `create_time`, `update_by`, `update_time`)
+VALUES
+  (1856739201475235902, NULL, NULL, NULL, '13800138000',
+   '$2a$10$3STsWqV/E3dCLbLtS0qy3OznVw1eBCbP.94Sb.Ny5kAothF1QwMdy', '8000', '忻会员8000',
+   0, 0, 1, '2026-10-12 09:00:00', 1, '2026-10-12 09:00:00');
+
+-- ============================================================================
+-- 4. 暂不建的表
+--    会员卡、预约（t_booking）、私教排班、营业时间登记、教练×门店关联、教练技能、
+--    会员等级/权益、优惠券、礼包、积分、合同、体测、公告、消息、活动
+--    —— 全部不在本期范围（见 docs/需求文档/业务规则.md 的 BR-全局-005）。
+--    注：会员表 t_member 已在 §3.6 落地（二期用户端登录需要），会员卡与预约仍未交付。
 -- ============================================================================

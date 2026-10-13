@@ -31,6 +31,7 @@
 | 位置 | 内容 |
 |---|---|
 | `store/`、`classroom/`、`coach/`、`course/`、`schedule/` | 门店、教室、教练、课程、排课 |
+| `member/` | 会员与用户端账号：`t_member`、会员 token 登录态（Redis 前缀 `member_tokens:`）、发码／注册／登录／忘记密码／退出（[用户端接口详细设计](../docs/详细设计/用户端接口详细设计.md) §2.2.4～§2.2.8） |
 | `booking/` | 既有预约代码；当前交付范围见详细设计 |
 | `common/config/` | ID 序列化、MyBatis-Plus 等配置 |
 | `common/mybatis/` | 审计字段填充 |

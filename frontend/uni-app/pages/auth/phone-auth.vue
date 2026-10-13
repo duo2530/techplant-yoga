@@ -168,11 +168,17 @@
  *     睁眼图标是按闭眼同源补画的（颜色/线宽一致，字形未经原型确认）。
  *  5. 「获取验证码」加了 **60 秒倒计时**：倒计时内按钮显示「Ns 后重发」并禁止再次点击
  *     （原型没有该状态，属交互补充；改文案/去掉只动 .pa__sms 一处）。
- *  6. mock 验证码固定 8888，`sendSmsCode()` 返回的 message 会带出来，用 toast 提示。
+ *  6. **本页已接真实后端**（`@/api/auth` → `POST /api/auth/**`，见用户端接口详细设计 §2.2.4～§2.2.6）：
+ *     登录成功后写 token 与会员展示信息到本地（`@/utils/auth`）并同步 `useUserStore`；
+ *     注册成功后**不签发登录态**，按 §2.2.5 回到「登 录」Tab 并带过手机号。
+ *     失败提示（手机号或密码错误、验证码错误等）由 `@/utils/request` 统一 toast，本页只管成功分支。
+ *     开发期后端固定验证码由 `sms.code.fixedCode` 配置（当前 888888），页面不回显验证码。
  */
 import { ref, reactive } from 'vue'
 import { onUnload } from '@dcloudio/uni-app'
 import { loginByPhone, register, sendSmsCode } from '@/api/auth'
+import { isValidLoginPayload } from '@/utils/session'
+import { useUserStore } from '@/store'
 
 /** 当前 Tab：login / register */
 const mode = ref('login')
@@ -201,14 +207,14 @@ function checkAgreed() {
   return true
 }
 
-/** 发送验证码（mock：固定 8888，message 里会带出来） */
-function handleSendCode(phone) {
+/** 发送验证码（真实接口；scene=register 对应「注册」Tab） */
+function handleSendCode(phone, scene = 'register') {
   if (countdown.value > 0) {
     return
   }
-  sendSmsCode(phone).then((res) => {
-    uni.showToast({ title: res.message, icon: 'none' })
-    if (res.success) {
+  sendSmsCode(phone, scene).then(
+    () => {
+      uni.showToast({ title: '验证码已发送', icon: 'none' })
       countdown.value = 60
       timer = setInterval(() => {
         countdown.value -= 1
@@ -217,38 +223,57 @@ function handleSendCode(phone) {
           timer = null
         }
       }, 1000)
+    },
+    () => {
+      // 失败提示由 @/utils/request 统一 toast（这里刻意不做成功/失败以外的兜底，
+      // 也刻意不写 .catch(() => {})：那会把成功分支里的报错一起吞掉，变成「点了没反应」）
     }
-  })
+  )
 }
 
-/** 登录 */
+/** 登录：成功后写登录态（token + 会员展示信息 + expireTime）并回首页 */
 function handleLogin() {
   if (!checkAgreed()) {
     return
   }
-  loginByPhone({ phone: loginForm.phone, password: loginForm.password }).then((res) => {
-    if (res.success) {
+  loginByPhone({ phone: loginForm.phone, password: loginForm.password }).then(
+    (res) => {
+      const data = res.data || {}
+      // 返回体不完整（缺 token / memberId / expireTime）就不能写缓存、不能提示成功、不能跳首页
+      if (!isValidLoginPayload(data)) {
+        console.error('[login] 返回体异常：' + JSON.stringify(data))
+        uni.showToast({ title: '登录返回数据异常，请重试', icon: 'none' })
+        return
+      }
+      // 统一写入登录态：token + 会员展示信息 + 服务端 7 天有效期（@/utils/session）
+      useUserStore().applySession(data, loginForm.phone)
+
       uni.showToast({ title: '登录成功' })
       uni.switchTab({ url: '/pages/home/index' })
-    } else {
-      uni.showToast({ title: res.message || '登录失败', icon: 'none' })
+    },
+    () => {
+      // 登录失败统一提示「手机号或密码错误」，由 @/utils/request toast
     }
-  })
+  )
 }
 
-/** 注册 */
+/** 注册：成功后不签发 token，按设计回到「登 录」Tab 并带过手机号（§2.2.5） */
 function handleRegister() {
   if (!checkAgreed()) {
     return
   }
-  register({ phone: regForm.phone, code: regForm.code, password: regForm.password }).then((res) => {
-    if (res.success) {
-      uni.showToast({ title: '注册成功' })
-      uni.switchTab({ url: '/pages/home/index' })
-    } else {
-      uni.showToast({ title: res.message || '注册失败', icon: 'none' })
+  register({ phone: regForm.phone, code: regForm.code, password: regForm.password }).then(
+    (res) => {
+      uni.showToast({ title: res.msg || '注册成功，请登录' })
+      loginForm.phone = regForm.phone
+      regForm.password = ''
+      regForm.code = ''
+      mode.value = 'login'
+    },
+    () => {
+      // 手机号已注册／验证码错误等提示由 @/utils/request 统一 toast
     }
-  })
+  )
 }
 
 function goQuickLogin() {

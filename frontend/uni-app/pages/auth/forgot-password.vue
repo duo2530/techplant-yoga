@@ -97,8 +97,10 @@
  *  3. 输入框左侧图标原型是内联 SVG（小程序不支持），用等尺寸同色 PNG 替代，见 static/images/auth/icon-*.png。
  *  4. 密码框右侧「闭眼」图标原型不可点击（无展开态）；这里做成可点切换明文，睁眼图标为同源补画。
  *  5. 「获取验证码」加了 **60 秒倒计时**（原型无该状态，属交互补充）。
- *  6. mock 的 `resetPassword()` 校验的是验证码（固定 8888）与新密码是否填写，**不校验手机号是否为空**，
- *     因此这里对手机号只做「为空时提示请输入手机号」的前置校验，其余交给 api 返回的 message。
+ *  6. **本页已接真实后端**（`@/api/auth` → `POST /api/auth/sms-code`、`POST /api/auth/reset-password`，
+ *     见用户端接口详细设计 §2.2.4、§2.2.7）：验证码场景固定 `reset`（只允许已注册手机号），
+ *     页面表单的 `code` 在 api 层映射为后端的 `smsCode`；失败提示由 `@/utils/request` 统一 toast，
+ *     本页只做「两次密码是否一致」这类前端前置校验。开发期固定验证码见后端 `sms.code.fixedCode`。
  */
 import { ref, reactive } from 'vue'
 import { onUnload } from '@dcloudio/uni-app'
@@ -117,14 +119,14 @@ onUnload(() => {
   clearTimeout(backTimer)
 })
 
-/** 发送验证码（mock：固定 8888，message 里会带出来） */
+/** 发送验证码（真实接口；scene=reset 对应「忘记密码」） */
 function handleSendCode() {
   if (countdown.value > 0) {
     return
   }
-  sendSmsCode(form.phone).then((res) => {
-    uni.showToast({ title: res.message, icon: 'none' })
-    if (res.success) {
+  sendSmsCode(form.phone, 'reset').then(
+    () => {
+      uni.showToast({ title: '验证码已发送', icon: 'none' })
       countdown.value = 60
       timer = setInterval(() => {
         countdown.value -= 1
@@ -133,8 +135,11 @@ function handleSendCode() {
           timer = null
         }
       }, 1000)
+    },
+    () => {
+      // 失败提示由 @/utils/request 统一 toast（不写 .catch(() => {})，避免吞掉成功分支的报错）
     }
-  })
+  )
 }
 
 /** 提交：两次新密码一致 → resetPassword */
@@ -147,16 +152,17 @@ function handleSubmit() {
     uni.showToast({ title: '两次输入的新密码不一致', icon: 'none' })
     return
   }
-  resetPassword({ phone: form.phone, code: form.code, password: form.password }).then((res) => {
-    if (res.success) {
-      uni.showToast({ title: res.message || '密码已重置' })
+  resetPassword({ phone: form.phone, code: form.code, password: form.password }).then(
+    (res) => {
+      uni.showToast({ title: res.msg || '密码已重置' })
       backTimer = setTimeout(() => {
         uni.navigateBack()
       }, 800)
-    } else {
-      uni.showToast({ title: res.message || '修改失败', icon: 'none' })
+    },
+    () => {
+      // 验证码错误／手机号未注册等提示由 @/utils/request 统一 toast
     }
-  })
+  )
 }
 </script>
 

@@ -97,6 +97,22 @@ token:
   # 令牌有效期（默认30分钟）
   expireTime: 30
 
+# 会员端（微信小程序）配置
+member:
+  token:
+    # 会员令牌有效期（分钟）：7 天，不自动续期（用户端接口详细设计 §2.2.6）
+    expireTime: 10080
+
+# 短信验证码配置（用户端注册／忘记密码）
+sms:
+  code:
+    # 验证码有效期（秒）
+    expireSeconds: 300
+    # 同一手机号同一场景的发送间隔（秒）
+    intervalSeconds: 60
+    # 开发固定验证码：非空时统一使用该码（6 位），便于本机联调；上线前置空即走随机 6 位数字
+    fixedCode: 888888
+
 # MyBatis配置
 mybatis:
   # 搜索指定包别名（业务模块的 domain 包也要进来，MyBatis-Plus 实体同样注册别名）

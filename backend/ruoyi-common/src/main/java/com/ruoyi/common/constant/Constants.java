@@ -157,8 +157,16 @@ public class Constants
 
     /**
      * 自动识别json对象白名单配置（仅允许解析的包名，范围越小越安全）
+     *
+     * <p>只放开业务侧真正要进 Redis 的那一个类：会员登录态
+     * {@code com.techplant.yoga.member.security.MemberLoginUser}。
+     * Redis 的值序列化器是带 {@code WriteClassName} 的 fastjson2
+     * （{@code FastJson2JsonRedisSerializer}），反序列化时按本白名单校验 {@code @type}，
+     * 不列进来读会员会话会抛 autoType 异常；写成具体类名而不是 {@code com.techplant.yoga}
+     * 整个包，是为了把可实例化的范围压到最小。</p>
      */
-    public static final String[] JSON_WHITELIST_STR = { "com.ruoyi" };
+    public static final String[] JSON_WHITELIST_STR = { "com.ruoyi",
+            "com.techplant.yoga.member.security.MemberLoginUser" };
 
     /**
      * 定时任务白名单配置（仅允许访问的包名，如其他需要可以自行添加）
