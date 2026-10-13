@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- 单元测试日志：默认只留业务日志与告警，避免 Spring/MyBatis 的 DEBUG 淹没测试输出 -->
+<!-- 集成测试日志：默认只留业务日志与告警，避免 Spring/MyBatis 的 DEBUG 淹没测试输出 -->
 <configuration>
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>

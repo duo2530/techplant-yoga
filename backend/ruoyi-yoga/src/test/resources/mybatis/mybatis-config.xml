@@ -2,7 +2,7 @@
 <!DOCTYPE configuration
 PUBLIC "-//mybatis.org//DTD Config 3.0//EN"
 "http://mybatis.org/dtd/mybatis-3-config.dtd">
-<!-- 单元测试用的 MyBatis 全局配置：内容与 ruoyi-admin/src/main/resources/mybatis/mybatis-config.xml 对齐 -->
+    <!-- 现存集成测试使用的 MyBatis 全局配置：内容与 ruoyi-admin/src/main/resources/mybatis/mybatis-config.xml 对齐 -->
 <configuration>
     <settings>
         <setting name="cacheEnabled"             value="true"   />

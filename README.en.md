@@ -292,13 +292,15 @@ GET    /api/stores
 
 ## Verification Commands
 
-Backend module build and targeted store tests:
+Backend module build and existing integration tests:
 
 ```powershell
 cd backend
 mvn -pl ruoyi-yoga -am -DskipTests clean compile
-mvn -pl ruoyi-yoga -am -Dtest=com.techplant.yoga.store.convert.StoreConverterTest -Dsurefire.failIfNoSpecifiedTests=false test
+mvn -pl ruoyi-yoga -am test
 ```
+
+New backend tests use Testcontainers; frontend tests use Playwright end-to-end testing. See [AGENTS.md](AGENTS.md). Four existing H2 integration test classes remain during migration; Testcontainers and Playwright are not configured yet.
 
 Admin console production build:
 

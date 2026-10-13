@@ -202,7 +202,7 @@ public class MemberTokenService
      * 当前请求 IP
      *
      * <p>{@code IpUtils.getIpAddr()} 直接取 {@code RequestContextHolder}，非 web 线程
-     * （定时任务、单元测试）会抛 NPE；这里先判空，取不到就留空，不打断签发。</p>
+     * （定时任务等）会抛 NPE；这里先判空，取不到就留空，不打断签发。</p>
      */
     private String currentIpAddr()
     {

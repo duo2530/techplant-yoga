@@ -74,7 +74,7 @@
 1. **409 的结构化明细放不进 `data`**：`AjaxResult` 只有 `code/msg/data`，而框架处理器不会附带 `data`，所以阻塞明细（几个排班、几条预约）现在是**拼进 `msg`** 的。这是 R11 的已知遗留，要结构化明细就得改框架处理器（会同时影响 `sys_*` 接口）。
 2. **`@Valid` 校验失败返回 500**，与直觉里的 400 不一样；要改成 400 同样得动框架处理器 —— **不要顺手改**。
 
-范例：`ruoyi-yoga/.../course/service/impl/CourseServiceImpl.java`；响应转换测试见 `CourseControllerTest`。
+范例：`ruoyi-yoga/.../course/service/impl/CourseServiceImpl.java`；响应转换通过真实 HTTP 接口集成测试验证。
 
 ### 4.3 ID 序列化：64 位整数一律返回字符串
 
@@ -124,17 +124,9 @@
 4. 父 `pom.xml` 把 **`jsqlparser` 锁在 4.6**：PageHelper 5.3.3 需要 `SelectBody`（4.7 起被删），MP 3.5.5 是最后一个用 4.6 的版本。**不要顺手升级 MyBatis-Plus 或 jsqlparser**，升级会让 PageHelper 直接启动报错。
 5. `com.techplant.yoga.common.config.MybatisPlusConfig` 只负责 `@MapperScan("com.techplant.yoga.**.mapper")` 与提供分页插件 Bean。
 
-装配类问题**读代码看不出来**，验证方式是跑 `MyBatisWiringTest`（H2 内存库，验证主键生成、CRUD 与审计填充）。
+装配类问题**读代码看不出来**，新增验证使用 Testcontainers MySQL 集成测试，加载真实应用的 `MyBatisConfig` 与 MyBatis-Plus 自动配置，验证主键生成、CRUD、分页及审计填充。不要另建与生产配置不同的测试装配来代替真实应用验证。
 
-> ⚠️ **写「只加载业务类的切片测试」时注意（2026-10-01 踩过）**：如果 `@ContextConfiguration` 里只挂
-> `MyBatisConfig` + `MybatisPlusConfig` + `AuditMetaObjectHandler` 这种**切片**组合，映射器拿不到
-> MyBatis-Plus 注入的 `BaseMapper` CRUD 语句，报
-> `BindingException: Invalid bound statement (not found): ...CourseMapper.insert`。原因是切片里缺少真实应用
-> 由 `MybatisPlusAutoConfiguration` 提供的 MP 装配上下文（**生产全量启动不受影响**）。
-> **正确写法**：让测试自己声明 `MybatisSqlSessionFactoryBean`（显式
-> `setConfiguration(new MybatisConfiguration())`，打开 `mapUnderscoreToCamelCase`，挂 `MybatisPlusInterceptor`
-> 与 `GlobalConfig.setMetaObjectHandler(...)`），并在 `TestConfig` 上写 `@MapperScan("<模块>.mapper")`。
-> 现成范例：`MyBatisWiringTest` 与 `ScheduleDaoTest`（都是 H2 真跑 SQL）。
+现存 `MyBatisWiringTest`、`CoachDaoTest`、`MemberDaoTest` 与 `ScheduleDaoTest` 是 H2 集成测试，暂保留为迁移过渡，后续改写为 Testcontainers；不新增 H2 测试。
 
 ### 4.10 其他框架能力（按需取用，别重复实现）
 
@@ -199,7 +191,8 @@ java -jar backend/ruoyi-admin/target/ruoyi-admin.jar
 
 - Windows 下也有 `backend/bin/*.bat`（clean/package/run）和 `backend/ry.bat`；Linux 用 `backend/ry.sh {start|stop|restart|status}`。**这些 .bat 是 GBK 编码，别用 UTF-8 工具直接改写。**
 - **JDK 必须是 8**：本机 `JAVA_HOME=D:\Develop\Java\jdk1.8.0_202`，命令行/IDEA 都用这个 SDK。
-- 测试：`ruoyi-yoga/src/test` 已有用例（JUnit 5 + Mockito + MockMvc，另有 H2 装配自检）。`ruoyi-yoga/pom.xml` 显式锁定 `maven-surefire-plugin` 2.22.2 —— 本机 Maven 3.3.9 默认绑的 2.12.4 不认识 JUnit 5，去掉就会**静默跑不到用例**。`ruoyi-*` 框架模块仍没有 `src/test`。
+- 测试策略以根目录 `AGENTS.md` 为准：后端新增 Testcontainers 集成测试，前端新增 Playwright 端到端测试。后端使用 JUnit 5 与 Spring 测试上下文，真实 MySQL／Redis 由隔离容器提供；不模拟内部业务或存储。测试数据自行准备和清理，不连接开发库或生产库。
+- 当前 Testcontainers 与 Playwright 尚未接入。后端仅保留 4 个 H2 集成测试作为迁移过渡，现有 `maven-surefire-plugin` 2.22.2 用于运行这些测试；不能将现有测试通过视为容器集成测试通过。引入 Testcontainers 时确保依赖版本兼容 JDK 8 与 Spring Boot 2.5.15，并提供 Docker 前置说明和明确的运行入口。
 - 启动前置条件：**MySQL 和 Redis 都必须可用**，且 `backend/sql/ry_20260417.sql`、`backend/sql/quartz.sql`、`backend/sql/yoga.sql` 三个脚本都已导入目标库。前两个 SQL 里没有 `CREATE DATABASE`/`use`，必须先自己建库（当前工作区的库名是 `yoga`，见 `application-druid.yml`）再导入；`yoga.sql` 在已有基础库上执行，建 5 张业务表 + `store_region` 字典 16 条 + 业务菜单 2000~2005。
 - 业务模块的表的脚本：`backend/sql/yoga.sql`
 - 默认端口 8080，默认账号 `admin / admin123`。
@@ -208,7 +201,7 @@ java -jar backend/ruoyi-admin/target/ruoyi-admin.jar
 
 
 1. `mvn -f backend/pom.xml -DskipTests clean compile` 通过（最低要求）。
-2. 改了 `ruoyi-yoga`（业务代码）：`mvn -f backend/pom.xml -pl ruoyi-yoga -am test` 通过（JUnit 5 单元测试 + H2 装配自检，**不连开发库**）。新增接口请补两类用例：service 层用 Mockito 隔离，controller 层用 MockMvc（参考 `CourseControllerTest`，记得挂框架的 `GlobalExceptionHandler` 与 `JacksonConfig`，否则测不到统一异常转换和 ID 字符串化）。
+2. 改了后端业务代码：新增 Testcontainers 集成测试，通过真实应用接口覆盖正常、边界、异常、事务和并发场景，并验证安全过滤链、统一异常响应及 ID 字符串化。当前 `mvn -f backend/pom.xml -pl ruoyi-yoga -am test` 仅运行保留的 H2 集成测试；Testcontainers 接入前应报告验证缺口。
 3. 需要实跑时：确认 MySQL/Redis 可连 → `java -jar ruoyi-admin/target/ruoyi-admin.jar` → 日志出现"若依启动成功" → 调用 `/login` 验证管理端登录。
 4. 涉及菜单/页面：登录后 `GET /getRouters` 能看到新菜单。
 5. 涉及接口：确认方法上有 `@ApiOperation`，然后看 swagger UI（`http://localhost:8080/swagger-ui/index.html`，被 Security 拦截时参考 `SecurityConfig` 的 permitAll 列表）。

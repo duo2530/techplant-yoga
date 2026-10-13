@@ -24,7 +24,7 @@
             <artifactId>ruoyi-common</artifactId>
         </dependency>
 
-        <!-- SpringBoot Web（控制器注解、参数校验、MockMvc 测试） -->
+        <!-- SpringBoot Web（控制器注解、参数校验） -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
@@ -44,14 +44,24 @@
             <version>1.6.2</version>
         </dependency>
 
-        <!-- 单元测试：JUnit 5 + Mockito（详细设计 §5.1，不连数据库） -->
+        <!-- 集成测试：Spring 测试上下文与 JUnit 5，不引入模拟对象库 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.mockito</groupId>
+                    <artifactId>mockito-core</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.mockito</groupId>
+                    <artifactId>mockito-junit-jupiter</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
-        <!-- 集成测试用的内存库：验证 MyBatis-Plus 装配（雪花ID / 逻辑删除 / 审计填充） -->
+        <!-- 现存 H2 集成测试的过渡依赖；迁移到 Testcontainers 后移除，不新增 H2 测试 -->
         <dependency>
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
@@ -70,8 +80,7 @@
 
     <build>
         <plugins>
-            <!-- 单元测试跑 JUnit 5（详细设计 §5.1）：本机 Maven 3.3.9 默认绑定的
-                 surefire 2.12.4 不认识 JUnit 5，必须显式指定支持 Jupiter 的版本 -->
+            <!-- 使用支持 JUnit 5 的执行器运行现存集成测试 -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
