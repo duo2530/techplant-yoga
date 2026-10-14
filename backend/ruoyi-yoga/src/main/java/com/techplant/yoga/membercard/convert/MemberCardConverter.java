@@ -3,14 +3,16 @@ package com.techplant.yoga.membercard.convert;
 import com.techplant.yoga.membercard.domain.MemberCardDO;
 import com.techplant.yoga.membercard.dto.MemberCardCreateDTO;
 import com.techplant.yoga.membercard.enums.CourseScopeEnum;
+import com.techplant.yoga.membercard.enums.MemberCardPublicStatusEnum;
 import com.techplant.yoga.membercard.enums.MemberCardTypeEnum;
 import com.techplant.yoga.membercard.vo.MemberCardDetailVO;
 import com.techplant.yoga.membercard.vo.MemberCardListItemVO;
+import com.techplant.yoga.membercard.vo.MemberCardPublicItemVO;
 
 /**
  * 会员卡对象转换。
  *
- * <p>转换是<b>纯函数</b>：不查库、不查服务。卡号、有效期与剩余次数由 service 按业务规则算好后传入；
+ * <p>转换是<b>纯函数</b>：不查库、不查服务。卡号、有效期、剩余次数与展示状态由 service 按业务规则算好后传入；
  * 会员名与门店名由 service 批量查好后以入参传入，关联对象已删除时传 {@code null}（翻译为空字符串）。</p>
  */
 public final class MemberCardConverter
@@ -53,6 +55,43 @@ public final class MemberCardConverter
     {
         MemberCardDetailVO vo = new MemberCardDetailVO();
         fill(vo, card, memberName, openStoreNo, openStoreName, storeName, remainingDays);
+        return vo;
+    }
+
+    /**
+     * 单行 → 我的会员卡列表项
+     *
+     * @param status 展示状态（service 按停卡、开卡、有效期与剩余次数判定）
+     * @param storeName 适用门店名称；年卡或门店已删除时传 {@code null}
+     * @param storeScopeText 适用门店文案（门店名称／适用门店已删除／全部门店通用）
+     * @param remainingDays 年卡剩余天数，其余情况传 {@code null}
+     */
+    public static MemberCardPublicItemVO toPublicItemVO(MemberCardDO card, MemberCardPublicStatusEnum status,
+            String storeName, String storeScopeText, Integer remainingDays)
+    {
+        MemberCardPublicItemVO vo = new MemberCardPublicItemVO();
+        vo.setId(card.getId());
+        vo.setCardNo(card.getCardNo());
+        vo.setCardName(card.getCardName());
+        vo.setCardType(card.getCardType());
+        vo.setCardTypeText(MemberCardTypeEnum.nameOf(card.getCardType()));
+        vo.setCardCategoryText(MemberCardTypeEnum.categoryNameOf(card.getCardType()));
+        vo.setStatus(status.getCode());
+        vo.setStatusText(status.getText());
+        vo.setCourseScope(card.getCourseScope());
+        vo.setCourseScopeName(CourseScopeEnum.nameOf(card.getCourseScope()));
+        vo.setStoreId(card.getStoreId());
+        // 年卡没有适用门店，名称为 null；次数卡的适用门店被删除时同样为 null（文案由 storeScopeText 承担）
+        vo.setStoreName(card.getStoreId() == null ? null : storeName);
+        vo.setStoreScopeText(storeScopeText);
+        vo.setPurchaseTimes(card.getPurchaseTimes());
+        vo.setGiftTimes(card.getGiftTimes());
+        vo.setTotalTimes(totalTimes(card));
+        vo.setRemainingTimes(card.getRemainingTimes());
+        vo.setRemainingDays(remainingDays);
+        vo.setActivateTime(card.getActivateTime());
+        vo.setValidStartTime(card.getValidStartTime());
+        vo.setValidEndTime(card.getValidEndTime());
         return vo;
     }
 

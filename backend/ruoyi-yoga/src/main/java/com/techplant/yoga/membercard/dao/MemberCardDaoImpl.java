@@ -8,6 +8,7 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.techplant.yoga.membercard.domain.MemberCardDO;
 import com.techplant.yoga.membercard.mapper.MemberCardMapper;
+import com.techplant.yoga.membercard.query.MemberCardPublicQuery;
 import com.techplant.yoga.membercard.query.MemberCardQuery;
 
 /**
@@ -34,6 +35,16 @@ public class MemberCardDaoImpl implements MemberCardDao
                 .like(cardNo != null, MemberCardDO::getCardNo, cardNo)
                 .eq(query.getCardType() != null, MemberCardDO::getCardType, query.getCardType())
                 .eq(query.getStoreId() != null, MemberCardDO::getStoreId, query.getStoreId())
+                // 稳定排序：最新发卡在前
+                .orderByDesc(MemberCardDO::getId);
+        return memberCardMapper.selectPage(new Page<MemberCardDO>(query.getPageNum(), query.getPageSize()), wrapper);
+    }
+
+    @Override
+    public IPage<MemberCardDO> selectPageForMember(Long memberId, MemberCardPublicQuery query)
+    {
+        LambdaQueryWrapper<MemberCardDO> wrapper = Wrappers.<MemberCardDO>lambdaQuery()
+                .eq(MemberCardDO::getMemberId, memberId)
                 // 稳定排序：最新发卡在前
                 .orderByDesc(MemberCardDO::getId);
         return memberCardMapper.selectPage(new Page<MemberCardDO>(query.getPageNum(), query.getPageSize()), wrapper);

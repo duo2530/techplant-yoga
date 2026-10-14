@@ -3,7 +3,7 @@ package com.techplant.yoga.membercard.enums;
 import com.ruoyi.common.exception.ServiceException;
 
 /**
- * 卡类型固定枚举，同时承载「卡类型 → 有效期映射」。
+ * 卡类型固定枚举，同时承载「卡类型 → 有效期映射」与用户端的卡片分类文案。
  *
  * <p>新增卡类型（如周卡）只需在这里加一条枚举与它的单位／每单位天数；
  * 有效期天数 = 有效期数量 × 每单位天数。</p>
@@ -11,10 +11,10 @@ import com.ruoyi.common.exception.ServiceException;
 public enum MemberCardTypeEnum
 {
     /** 次数卡：按月计，每月 30 天，有效期数量只能取 3／6／12 */
-    TIMES(1, "次数卡", ValidPeriodUnitEnum.MONTH, 30),
+    TIMES(1, "次数卡", "次数卡", ValidPeriodUnitEnum.MONTH, 30),
 
-    /** 年卡：按年计，固定 365 天，有效期数量固定 1 */
-    ANNUAL(2, "年卡", ValidPeriodUnitEnum.YEAR, 365);
+    /** 年卡：按年计，固定 365 天，有效期数量固定 1；用户端按期限卡展示 */
+    ANNUAL(2, "年卡", "期限卡", ValidPeriodUnitEnum.YEAR, 365);
 
     /** 取值非法时统一使用的参数校验提示语（业务码 500） */
     public static final String INVALID_MESSAGE = "卡类型取值为 1 或 2";
@@ -31,16 +31,21 @@ public enum MemberCardTypeEnum
     /** 卡类型名称 */
     private final String name;
 
+    /** 用户端卡片分类文案（UI 角标）：次数卡／期限卡 */
+    private final String categoryName;
+
     /** 开卡时写入的有效期单位 */
     private final ValidPeriodUnitEnum validPeriodUnit;
 
     /** 每个有效期单位对应的天数 */
     private final int daysPerUnit;
 
-    MemberCardTypeEnum(Integer code, String name, ValidPeriodUnitEnum validPeriodUnit, int daysPerUnit)
+    MemberCardTypeEnum(Integer code, String name, String categoryName, ValidPeriodUnitEnum validPeriodUnit,
+            int daysPerUnit)
     {
         this.code = code;
         this.name = name;
+        this.categoryName = categoryName;
         this.validPeriodUnit = validPeriodUnit;
         this.daysPerUnit = daysPerUnit;
     }
@@ -53,6 +58,11 @@ public enum MemberCardTypeEnum
     public String getName()
     {
         return name;
+    }
+
+    public String getCategoryName()
+    {
+        return categoryName;
     }
 
     public ValidPeriodUnitEnum getValidPeriodUnit()
@@ -111,6 +121,13 @@ public enum MemberCardTypeEnum
     {
         MemberCardTypeEnum item = of(code);
         return item == null ? null : item.name;
+    }
+
+    /** 「码 → 卡片分类文案」翻译：用户端角标成对返回 {@code cardType} + {@code cardCategoryText} */
+    public static String categoryNameOf(Integer code)
+    {
+        MemberCardTypeEnum item = of(code);
+        return item == null ? null : item.categoryName;
     }
 
     /**

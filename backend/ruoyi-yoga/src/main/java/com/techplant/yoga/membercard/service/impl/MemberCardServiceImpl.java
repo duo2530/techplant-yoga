@@ -25,12 +25,15 @@ import com.techplant.yoga.membercard.domain.MemberCardDO;
 import com.techplant.yoga.membercard.dto.MemberCardCreateDTO;
 import com.techplant.yoga.membercard.dto.MemberCardStopDTO;
 import com.techplant.yoga.membercard.enums.CourseScopeEnum;
+import com.techplant.yoga.membercard.enums.MemberCardPublicStatusEnum;
 import com.techplant.yoga.membercard.enums.MemberCardTypeEnum;
+import com.techplant.yoga.membercard.query.MemberCardPublicQuery;
 import com.techplant.yoga.membercard.query.MemberCardQuery;
 import com.techplant.yoga.membercard.service.CardNoGenerator;
 import com.techplant.yoga.membercard.service.MemberCardService;
 import com.techplant.yoga.membercard.vo.MemberCardDetailVO;
 import com.techplant.yoga.membercard.vo.MemberCardListItemVO;
+import com.techplant.yoga.membercard.vo.MemberCardPublicItemVO;
 import com.techplant.yoga.store.service.StoreService;
 import com.techplant.yoga.store.vo.StoreSummaryVO;
 
@@ -80,6 +83,15 @@ public class MemberCardServiceImpl implements MemberCardService
     public MemberCardDetailVO getById(Long cardId)
     {
         return detailOf(requireCard(cardId));
+    }
+
+    @Override
+    public PageResult<MemberCardPublicItemVO> pageForMember(Long memberId, MemberCardPublicQuery query)
+    {
+        IPage<MemberCardDO> page = memberCardDao.selectPageForMember(memberId, query);
+        // IPage 不出 service 层
+        return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(),
+                toPublicItemVOList(page.getRecords()));
     }
 
     /**
@@ -233,6 +245,68 @@ public class MemberCardServiceImpl implements MemberCardService
                 storeNoOf(stores, card.getOpenStoreId()), storeNameOf(stores, card.getOpenStoreId()),
                 storeNameOf(stores, card.getStoreId()),
                 remainingDays(card, LocalDate.now(CardNoGenerator.CARD_ZONE)));
+    }
+
+    /**
+     * 批量转用户端列表项：只翻译次数卡的适用门店，展示状态与剩余天数按本次请求的统一时间计算
+     */
+    private List<MemberCardPublicItemVO> toPublicItemVOList(List<MemberCardDO> cards)
+    {
+        List<MemberCardPublicItemVO> rows = new ArrayList<MemberCardPublicItemVO>();
+        if (cards == null || cards.isEmpty())
+        {
+            return rows;
+        }
+        // 年卡不把开卡门店作为适用门店，只有次数卡的非空 storeId 需要翻译
+        List<Long> storeIds = new ArrayList<Long>();
+        for (MemberCardDO card : cards)
+        {
+            addIfPresent(storeIds, card.getStoreId());
+        }
+        Map<Long, StoreSummaryVO> stores = indexStores(storeService.summaries(storeIds));
+        LocalDateTime now = LocalDateTime.now(CardNoGenerator.CARD_ZONE);
+        LocalDate today = now.toLocalDate();
+        for (MemberCardDO card : cards)
+        {
+            rows.add(MemberCardConverter.toPublicItemVO(card, publicStatus(card, now),
+                    storeNameOf(stores, card.getStoreId()), storeScopeText(card, stores),
+                    remainingDays(card, today)));
+        }
+        return rows;
+    }
+
+    /** 展示状态：停卡 → 未开卡 → 过期 → 已用尽 → 正常 */
+    private MemberCardPublicStatusEnum publicStatus(MemberCardDO card, LocalDateTime now)
+    {
+        if (card.getStopTime() != null)
+        {
+            return MemberCardPublicStatusEnum.STOPPED;
+        }
+        if (card.getActivateTime() == null)
+        {
+            return MemberCardPublicStatusEnum.PENDING;
+        }
+        if (card.getValidEndTime() != null && now.isAfter(card.getValidEndTime()))
+        {
+            return MemberCardPublicStatusEnum.EXPIRED;
+        }
+        if (MemberCardTypeEnum.TIMES.getCode().equals(card.getCardType()) && card.getRemainingTimes() != null
+                && card.getRemainingTimes() <= 0)
+        {
+            return MemberCardPublicStatusEnum.EXHAUSTED;
+        }
+        return MemberCardPublicStatusEnum.ACTIVE;
+    }
+
+    /** 适用门店文案：年卡全部门店通用；次数卡的适用门店被删除时给缺失文案 */
+    private String storeScopeText(MemberCardDO card, Map<Long, StoreSummaryVO> stores)
+    {
+        if (card.getStoreId() == null)
+        {
+            return "全部门店通用";
+        }
+        StoreSummaryVO store = stores.get(card.getStoreId());
+        return store == null ? "适用门店已删除" : store.getName();
     }
 
     /** 会员卡上的次数类字段组合校验，规则随卡类型分流 */

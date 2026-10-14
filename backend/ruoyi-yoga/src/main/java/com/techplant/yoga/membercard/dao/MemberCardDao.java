@@ -3,6 +3,7 @@ package com.techplant.yoga.membercard.dao;
 import java.time.LocalDateTime;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.techplant.yoga.membercard.domain.MemberCardDO;
+import com.techplant.yoga.membercard.query.MemberCardPublicQuery;
 import com.techplant.yoga.membercard.query.MemberCardQuery;
 
 /**
@@ -15,6 +16,13 @@ public interface MemberCardDao
 {
     /** 管理端分页：筛选 memberId（精确）／cardNo（模糊）／cardType（精确）／storeId（适用门店精确），排序 id DESC */
     IPage<MemberCardDO> selectPage(MemberCardQuery query);
+
+    /**
+     * 用户端分页：固定按「所属会员」筛选，排序 id DESC
+     *
+     * <p>不带门店或状态条件：本人所有门店的现存卡都要返回。</p>
+     */
+    IPage<MemberCardDO> selectPageForMember(Long memberId, MemberCardPublicQuery query);
 
     /** 按主键查询（物理删除后查不到） */
     MemberCardDO selectById(Long cardId);
