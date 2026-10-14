@@ -30,7 +30,7 @@ mvn -f backend/pom.xml -pl ruoyi-yoga -am test
 
 - 测试入口位于 `backend/ruoyi-yoga/src/test/`，公共装配位于 `common/testcontainers/`。
 - Maven 从启动模块复用 `application.yml` 和 MyBatis XML，相关资源配置见 [业务模块 POM](../../backend/ruoyi-yoga/pom.xml)。
-- 建表语句由 `YogaSchema` 从 [yoga.sql](../../backend/sql/yoga.sql) 读取。夹具只准备当前用例需要的数据，避免依赖种子数据。
+- 建表语句由 `YogaSchema` 从 [yoga.sql](../../backend/sql/yoga.sql) 读取，业务脚本里没有的若依基础表（如 `sys_dict_data`）回退到 [ry_20260417.sql](../../backend/sql/ry_20260417.sql)。夹具只准备当前用例需要的数据，避免依赖种子数据。
 - 共享容器时确保表与数据互不干扰；启用并行执行前验证隔离和清理方式。
 
 ### 当前覆盖边界

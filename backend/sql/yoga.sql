@@ -1,6 +1,6 @@
 -- ============================================================================
 -- 瑜伽普拉提 · 业务库脚本
--- 版本：v2.1（新增会员登录表）   日期：2026-10-12
+-- 版本：v2.3（新增会员等级字典）   日期：2026-10-14
 --
 -- 用法：在已经导入若依基础库（ry_20260417.sql + quartz.sql）的库上执行本脚本。
 --       本脚本只负责「业务表 + 业务菜单 + 业务字典」，不涉及 sys_* 的结构。
@@ -11,6 +11,11 @@
 --   · §3.6 t_member：会员与登录信息表（唯一依据是会员管理详细设计 §1.2.1／§1.3.1）
 --   · 1 条**已注册**的种子会员，密码 yoga1234（BCrypt），小程序端可以直接登录
 --     手机号 13800138000 → 显示名「忻会员8000」（= 忻会员 + 手机号后 4 位，BR-会员-010）
+--
+-- v2.2 新增：菜单 2006「会员管理」，指向 frontend/pc/src/views/member/index.vue，
+--   对应管理端 /admin/members 的建档／编辑／删除；表结构不变，仍复用 t_member。
+--
+-- v2.3 新增：字典 member_level「会员等级」（码值 0~4），前端下拉与接口 levelText 翻译的唯一来源。
 --
 -- 六条硬口径（一期既有口径，v2.1 不变）：
 --   1. 业务表一律【物理删除】—— 不建 `deleted` 列、不用 @TableLogic（t_member 同样如此）
@@ -26,10 +31,10 @@
 SET NAMES utf8mb4;
 
 -- ============================================================================
--- 1. 菜单：一级目录「经营基础」+ 五个业务菜单
+-- 1. 菜单：一级目录「经营基础」+ 六个业务菜单
 --    （只清理 2000~2009，不动若依自带的「系统管理」那套菜单）
---    2006=会员管理 / 2007=会员卡管理 / 2008=预约管理 / 2009=账号管理 为二期预留：
---    此处先把它们纳入清理范围，菜单行的 INSERT 由二期各自模块的 SQL 交付时补。
+--    2006=会员管理 已随本脚本交付；2007=会员卡管理 / 2008=预约管理 / 2009=账号管理 仍未交付：
+--    未交付菜单一并纳入清理范围，菜单行的 INSERT 由各自模块的 SQL 交付时补。
 -- ============================================================================
 
 DELETE FROM `sys_role_menu` WHERE `menu_id` IN (2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009);
@@ -44,6 +49,7 @@ INSERT INTO `sys_menu` VALUES ('2002', '教室管理', '2000', '2', 'classroom',
 INSERT INTO `sys_menu` VALUES ('2003', '教练管理', '2000', '3', 'coach',     'coach/index',     '', '', 1, 0, 'C', '0', '0', '', 'user',      'admin', SYSDATE(), '', NULL, '教练管理菜单');
 INSERT INTO `sys_menu` VALUES ('2004', '课程管理', '2000', '4', 'course',    'course/index',    '', '', 1, 0, 'C', '0', '0', '', 'education', 'admin', SYSDATE(), '', NULL, '课程管理菜单');
 INSERT INTO `sys_menu` VALUES ('2005', '排课管理', '2000', '5', 'schedule',  'schedule/index',  '', '', 1, 0, 'C', '0', '0', '', 'date',      'admin', SYSDATE(), '', NULL, '排课管理菜单');
+INSERT INTO `sys_menu` VALUES ('2006', '会员管理', '2000', '6', 'member',    'member/index',    '', '', 1, 0, 'C', '0', '0', '', 'peoples',   'admin', SYSDATE(), '', NULL, '会员管理菜单');
 
 -- 绑定若依内置管理员角色（role_id = 1）
 INSERT INTO `sys_role_menu` VALUES ('1', '2000');
@@ -52,12 +58,17 @@ INSERT INTO `sys_role_menu` VALUES ('1', '2002');
 INSERT INTO `sys_role_menu` VALUES ('1', '2003');
 INSERT INTO `sys_role_menu` VALUES ('1', '2004');
 INSERT INTO `sys_role_menu` VALUES ('1', '2005');
+INSERT INTO `sys_role_menu` VALUES ('1', '2006');
 
 -- ============================================================================
--- 2. 字典：门店「所在区域」（上海市 16 个市辖区的行政区划代码）
---    前端下拉与后端「code → 区名」翻译都以这里为唯一来源。
---    ⚠️ 代码里的 16 条属于暂定，上线前请逐条核对。
+-- 2. 字典
+--    前端下拉与后端「码 → 名」翻译都以这里为唯一来源。
 -- ============================================================================
+
+-- ---------------------------------------------------------------------------
+-- 2.1 门店「所在区域」（上海市 16 个市辖区的行政区划代码）
+--     ⚠️ 代码里的 16 条属于暂定，上线前请逐条核对。
+-- ---------------------------------------------------------------------------
 
 DELETE FROM `sys_dict_data` WHERE `dict_type` = 'store_region';
 DELETE FROM `sys_dict_type` WHERE `dict_type` = 'store_region';
@@ -84,6 +95,28 @@ VALUES
   (14, '青浦区',   '310118', 'store_region', '', 'default', 'N', '0', 'admin', SYSDATE(), NULL),
   (15, '奉贤区',   '310120', 'store_region', '', 'default', 'N', '0', 'admin', SYSDATE(), NULL),
   (16, '崇明区',   '310151', 'store_region', '', 'default', 'N', '0', 'admin', SYSDATE(), NULL);
+
+-- ---------------------------------------------------------------------------
+-- 2.2 会员等级（member_level）：码值 0~4
+--     管理端会员管理的新增／修改下拉、列表筛选，以及接口 levelText 的翻译都读这里；
+--     字典里停用（status = '1'）的等级既不能提交，也不再参与翻译。
+--     等级码写入 t_member.level，因此【调整码值等于改数据】，只增不改。
+-- ---------------------------------------------------------------------------
+
+DELETE FROM `sys_dict_data` WHERE `dict_type` = 'member_level';
+DELETE FROM `sys_dict_type` WHERE `dict_type` = 'member_level';
+
+INSERT INTO `sys_dict_type` (`dict_name`, `dict_type`, `status`, `create_by`, `create_time`, `remark`)
+VALUES ('会员等级', 'member_level', '0', 'admin', SYSDATE(), '会员等级：0 V0普通会员 ~ 4 V4黑金会员');
+
+INSERT INTO `sys_dict_data`
+  (`dict_sort`, `dict_label`, `dict_value`, `dict_type`, `css_class`, `list_class`, `is_default`, `status`, `create_by`, `create_time`, `remark`)
+VALUES
+  (1, 'V0 普通会员', '0', 'member_level', '', 'default', 'N', '0', 'admin', SYSDATE(), NULL),
+  (2, 'V1 忻会员',   '1', 'member_level', '', 'default', 'N', '0', 'admin', SYSDATE(), NULL),
+  (3, 'V2 银会员',   '2', 'member_level', '', 'default', 'N', '0', 'admin', SYSDATE(), NULL),
+  (4, 'V3 金会员',   '3', 'member_level', '', 'default', 'N', '0', 'admin', SYSDATE(), NULL),
+  (5, 'V4 黑金会员', '4', 'member_level', '', 'default', 'N', '0', 'admin', SYSDATE(), NULL);
 
 -- ============================================================================
 -- 3. 业务表

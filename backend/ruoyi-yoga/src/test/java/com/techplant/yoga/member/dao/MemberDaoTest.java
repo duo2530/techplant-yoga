@@ -8,16 +8,21 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.test.context.ContextConfiguration;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.techplant.yoga.common.testcontainers.AbstractYogaIntegrationTest;
 import com.techplant.yoga.common.testcontainers.YogaMyBatisTestConfig;
 import com.techplant.yoga.common.testcontainers.YogaSchema;
 import com.techplant.yoga.member.domain.MemberDO;
+import com.techplant.yoga.member.query.MemberQuery;
 
 /** 会员数据访问的集成测试（Testcontainers MySQL，表结构取自 backend/sql/yoga.sql，不连开发库）。 */
 @ContextConfiguration(classes = { YogaMyBatisTestConfig.class, MemberDaoImpl.class })
@@ -118,6 +123,111 @@ class MemberDaoTest extends AbstractYogaIntegrationTest
         assertNull(memberDao.selectById(999L));
         assertNull(memberDao.selectById(null));
         assertFalse(memberDao.existsRegisteredById(null));
+    }
+
+    @Test
+    @DisplayName("当前读：存在的会员返回该行，不存在返回 null")
+    void selectByIdForUpdate_shouldReturnRowOrNull()
+    {
+        memberDao.insert(newMember(1001L, PHONE, HASH_1));
+
+        MemberDO found = memberDao.selectByIdForUpdate(1001L);
+        assertNotNull(found);
+        assertEquals(PHONE, found.getPhone());
+        assertNull(memberDao.selectByIdForUpdate(999L));
+        assertNull(memberDao.selectByIdForUpdate(null));
+    }
+
+    @Test
+    @DisplayName("列表：后四位精确、显示名模糊、等级精确；按 ID 降序分页；password 用于推导 registered")
+    void selectPage_shouldFilterByConditionsAndOrderByIdDesc()
+    {
+        memberDao.insert(newMember(1001L, "13800138001", null));
+        memberDao.insert(newMember(1002L, "13800138002", HASH_1));
+        MemberDO other = newMember(1003L, "13900139003", null);
+        other.setLevel(1);
+        memberDao.insert(other);
+
+        IPage<MemberDO> firstPage = memberDao.selectPage(query(1, 2));
+        assertEquals(3L, firstPage.getTotal());
+        assertEquals(2, firstPage.getRecords().size());
+        assertEquals(Arrays.asList(1003L, 1002L), ids(firstPage.getRecords()));
+        assertFalse(firstPage.getRecords().get(0).isRegistered());
+        assertTrue(firstPage.getRecords().get(1).isRegistered(), "列表需要 password 才能推导 registered");
+
+        IPage<MemberDO> secondPage = memberDao.selectPage(query(2, 2));
+        assertEquals(3L, secondPage.getTotal());
+        assertEquals(Arrays.asList(1001L), ids(secondPage.getRecords()));
+
+        MemberQuery byLast4 = query(1, 10);
+        byLast4.setPhoneLast4("8002");
+        assertEquals(Arrays.asList(1002L), ids(memberDao.selectPage(byLast4).getRecords()));
+
+        MemberQuery byName = query(1, 10);
+        byName.setName("会员800");
+        assertEquals(Arrays.asList(1002L, 1001L), ids(memberDao.selectPage(byName).getRecords()));
+
+        MemberQuery byLevel = query(1, 10);
+        byLevel.setLevel(0);
+        assertEquals(Arrays.asList(1002L, 1001L), ids(memberDao.selectPage(byLevel).getRecords()));
+    }
+
+    @Test
+    @DisplayName("修改档案：只更新已提交字段，未提交字段保持原值")
+    void updateProfile_shouldUpdateSubmittedFieldsOnly()
+    {
+        MemberDO member = newMember(1001L, PHONE, null);
+        member.setGender(1);
+        memberDao.insert(member);
+
+        assertEquals(1, memberDao.updateProfile(1001L, 2, null, OPERATOR_ID));
+
+        MemberDO found = memberDao.selectById(1001L);
+        assertEquals(Integer.valueOf(2), found.getGender(), "已提交的性别应被更新");
+        assertEquals(Integer.valueOf(0), found.getLevel(), "未提交的等级应保持原值");
+        assertEquals("忻会员8000", found.getName(), "显示名不由档案更新维护");
+        assertEquals(OPERATOR_ID, found.getUpdateBy());
+        assertNotNull(found.getUpdateTime());
+    }
+
+    @Test
+    @DisplayName("删除：物理删除会员行，行内登录凭证一并消失")
+    void deleteById_shouldRemoveRow()
+    {
+        MemberDO member = newMember(1001L, PHONE, HASH_1);
+        memberDao.insert(member);
+
+        assertEquals(1, memberDao.deleteById(1001L));
+        assertNull(memberDao.selectById(1001L));
+        assertNull(memberDao.selectByPhone(PHONE));
+        assertFalse(memberDao.existsRegisteredById(1001L));
+
+        assertEquals(0, memberDao.deleteById(1001L));
+    }
+
+    private MemberQuery query(int pageNum, int pageSize)
+    {
+        MemberQuery query = new MemberQuery();
+        query.setPageNum(pageNum);
+        query.setPageSize(pageSize);
+        return query;
+    }
+
+    private List<Long> ids(List<MemberDO> members)
+    {
+        List<Long> ids = new ArrayList<Long>();
+        for (MemberDO member : members)
+        {
+            ids.add(member.getId());
+        }
+        return ids;
+    }
+
+    private MemberDO newMember(Long id, String phone, String passwordHash)
+    {
+        MemberDO member = newMember(phone, passwordHash);
+        member.setId(id);
+        return member;
     }
 
     private MemberDO newMember(String phone, String passwordHash)

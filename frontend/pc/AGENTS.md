@@ -4,7 +4,7 @@
 
 ## 1. 这是什么
 
-管理端（运营后台）Web 应用，基于 **RuoYi-Vue3 3.9.2 脚手架**。除若依自带的系统管理 / 系统监控 / 系统工具页面外，**已有 5 个瑜伽业务页面**（`views/course`、`views/coach`、`views/store`、`views/schedule`、`views/booking`，对应 `sys_menu` 2001~2005，路由前缀 `/operation`）；**教室管理页面待新增**（菜单建议 2006，见《教室管理详细设计》3.6）。
+管理端（运营后台）Web 应用，基于 **RuoYi-Vue3 3.9.2 脚手架**。除若依自带的系统管理 / 系统监控 / 系统工具页面外，**已有 7 个瑜伽业务页面**（`views/course`、`views/coach`、`views/store`、`views/schedule`、`views/classroom`、`views/member` 对应 `sys_menu` 2001~2006 与路由前缀 `/operation`，另有 `views/booking` 无菜单入口）。
 
 ## 2. 技术栈（已核对 package.json）
 

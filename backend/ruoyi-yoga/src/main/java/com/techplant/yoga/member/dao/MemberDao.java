@@ -1,7 +1,9 @@
 package com.techplant.yoga.member.dao;
 
 import java.time.LocalDateTime;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.techplant.yoga.member.domain.MemberDO;
+import com.techplant.yoga.member.query.MemberQuery;
 
 /**
  * 会员数据访问。
@@ -10,11 +12,21 @@ import com.techplant.yoga.member.domain.MemberDO;
  */
 public interface MemberDao
 {
+    /** 分页查询会员列表：后四位精确、显示名模糊、等级精确，按会员 ID 降序稳定排序 */
+    IPage<MemberDO> selectPage(MemberQuery query);
+
     /** 按手机号查会员（唯一键 uk_member_phone，登录／注册／忘记密码的入口查询） */
     MemberDO selectByPhone(String phone);
 
     /** 按会员 ID 查会员 */
     MemberDO selectById(Long memberId);
+
+    /**
+     * 按会员 ID 做当前读（{@code SELECT ... FOR UPDATE}）取会员；不存在返回 {@code null}
+     *
+     * <p>与 {@link #selectById(Long)} 的快照读不同：并发删除已提交时当前读能看到行已不存在。</p>
+     */
+    MemberDO selectByIdForUpdate(Long memberId);
 
     /** 该会员是否存在且已注册（{@code password} 非空）——请求鉴权用 */
     boolean existsRegisteredById(Long memberId);
@@ -33,4 +45,12 @@ public interface MemberDao
 
     /** 刷新最后登录时间 */
     int updateLastLoginTime(Long memberId, LocalDateTime lastLoginTime);
+
+    /**
+     * 只更新已提交的档案字段：传 {@code null} 表示该字段不更新，返回影响行数
+     */
+    int updateProfile(Long memberId, Integer gender, Integer level, Long updateBy);
+
+    /** 按会员 ID 物理删除会员行（登录凭证随行删除） */
+    int deleteById(Long memberId);
 }
