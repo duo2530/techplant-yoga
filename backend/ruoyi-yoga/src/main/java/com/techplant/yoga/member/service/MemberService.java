@@ -1,11 +1,14 @@
 package com.techplant.yoga.member.service;
 
+import java.util.Collection;
+import java.util.List;
 import com.techplant.yoga.common.response.PageResult;
 import com.techplant.yoga.member.dto.MemberCreateDTO;
 import com.techplant.yoga.member.dto.MemberUpdateDTO;
 import com.techplant.yoga.member.query.MemberQuery;
 import com.techplant.yoga.member.vo.MemberDetailVO;
 import com.techplant.yoga.member.vo.MemberListItemVO;
+import com.techplant.yoga.member.vo.MemberSummaryVO;
 
 /**
  * 会员基础能力。
@@ -57,6 +60,14 @@ public interface MemberService
 
     /** 会员是否存在（会员卡／预约等跨模块存在性校验用） */
     boolean existsById(Long memberId);
+
+    /**
+     * 批量查询会员摘要（id + 显示名），供会员卡模块批量补 {@code memberName}
+     *
+     * @param memberIds 会员 ID 集合，可为 null／空
+     * @return 命中的会员摘要；已删除会员不在结果中，入参为空时返回空列表（不返回 null）
+     */
+    List<MemberSummaryVO> summaries(Collection<Long> memberIds);
 
     /** 会员是否存在且已注册（{@code password} 非空）——请求鉴权用 */
     boolean isRegistered(Long memberId);

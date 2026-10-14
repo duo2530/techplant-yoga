@@ -1,6 +1,11 @@
 package com.techplant.yoga.member.service.impl;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,6 +24,7 @@ import com.techplant.yoga.member.query.MemberQuery;
 import com.techplant.yoga.member.service.MemberService;
 import com.techplant.yoga.member.vo.MemberDetailVO;
 import com.techplant.yoga.member.vo.MemberListItemVO;
+import com.techplant.yoga.member.vo.MemberSummaryVO;
 
 /** 会员基础能力实现。 */
 @Service
@@ -215,6 +221,28 @@ public class MemberServiceImpl implements MemberService
     public boolean isRegistered(Long memberId)
     {
         return memberDao.existsRegisteredById(memberId);
+    }
+
+    @Override
+    public List<MemberSummaryVO> summaries(Collection<Long> memberIds)
+    {
+        if (memberIds == null || memberIds.isEmpty())
+        {
+            return new ArrayList<MemberSummaryVO>();
+        }
+        Set<Long> distinctIds = new LinkedHashSet<Long>();
+        for (Long memberId : memberIds)
+        {
+            if (memberId != null)
+            {
+                distinctIds.add(memberId);
+            }
+        }
+        if (distinctIds.isEmpty())
+        {
+            return new ArrayList<MemberSummaryVO>();
+        }
+        return MemberConverter.toSummaryVOList(memberDao.selectByIds(distinctIds));
     }
 
     /**

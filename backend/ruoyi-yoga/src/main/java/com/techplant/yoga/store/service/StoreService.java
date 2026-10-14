@@ -25,18 +25,23 @@ public interface StoreService
     StoreDetailVO getById(Long storeId);
 
     /** 新增门店：名称唯一校验；成功不返回新 ID */
+    /**
+     * 新增门店：名称唯一校验；门店编号在事务内从编号计数器分配；成功不返回新 ID
+     *
+     * @throws com.ruoyi.common.exception.ServiceException 名称重复（409）、编号已用尽或冲突（409）、取值非法（500）
+     */
     void create(StoreCreateDTO dto);
 
-    /** 修改门店（全量编辑）：名称唯一校验排除自身；<b>不做引用检查</b> */
+    /** 修改门店（全量编辑）：名称唯一校验排除自身，门店编号保持不变；<b>不做引用检查</b> */
     StoreDetailVO update(Long storeId, StoreUpdateDTO dto);
 
-    /** 删除门店（物理删除，带门禁，fail-closed） */
+    /** 删除门店（物理删除，带门禁，fail-closed）；门店编号不回收 */
     void delete(Long storeId);
 
     /**
-     * 批量查询门店摘要（id + name），供教室模块与排课模块批量补名称
+     * 批量查询门店摘要（id + 门店编号 + name），供教室、排课与会员卡模块批量补名称
      *
-     * @param ids 门店编号集合，可为 null／空
+     * @param ids 门店 ID 集合，可为 null／空
      * @return 命中的门店摘要；入参为空时返回空列表（不返回 null）
      */
     List<StoreSummaryVO> summaries(Collection<Long> ids);

@@ -61,7 +61,7 @@ public class StoreController extends BaseController
         return AjaxResult.success(detail);
     }
 
-    /** 新增门店：名称重复 → 409；成功只返回 {@code {code:200,msg:操作成功}}，不返回新 ID */
+    /** 新增门店：名称重复或编号已用尽 → 409，门店编号由服务端分配；成功只返回 {@code {code:200,msg:操作成功}}，不返回新 ID */
     @ApiOperation("新增门店")
     @PostMapping
     public AjaxResult create(@Valid @RequestBody StoreCreateDTO dto)

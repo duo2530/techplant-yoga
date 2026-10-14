@@ -15,6 +15,9 @@ public class StoreDO
     @TableId(value = "id", type = IdType.ASSIGN_ID)
     private Long id;
 
+    /** 门店编号（服务端分配的四位数字，创建后不可修改，uk_store_no） */
+    private String storeNo;
+
     /** 门店名称（全平台唯一，uk_store_name） */
     private String name;
 
@@ -54,6 +57,8 @@ public class StoreDO
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
+    public String getStoreNo() { return storeNo; }
+    public void setStoreNo(String storeNo) { this.storeNo = storeNo; }
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
     public Integer getStoreType() { return storeType; }

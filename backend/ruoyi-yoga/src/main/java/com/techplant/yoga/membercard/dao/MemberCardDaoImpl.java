@@ -1,0 +1,115 @@
+package com.techplant.yoga.membercard.dao;
+
+import java.time.LocalDateTime;
+import org.springframework.stereotype.Repository;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.techplant.yoga.membercard.domain.MemberCardDO;
+import com.techplant.yoga.membercard.mapper.MemberCardMapper;
+import com.techplant.yoga.membercard.query.MemberCardQuery;
+
+/**
+ * 会员卡数据访问实现。
+ *
+ * <p>本表<b>没有 deleted 字段</b>，所有查询天然返回全部有效行；删除走物理 {@code DELETE}。</p>
+ */
+@Repository
+public class MemberCardDaoImpl implements MemberCardDao
+{
+    private final MemberCardMapper memberCardMapper;
+
+    public MemberCardDaoImpl(MemberCardMapper memberCardMapper)
+    {
+        this.memberCardMapper = memberCardMapper;
+    }
+
+    @Override
+    public IPage<MemberCardDO> selectPage(MemberCardQuery query)
+    {
+        String cardNo = trimToNull(query.getCardNo());
+        LambdaQueryWrapper<MemberCardDO> wrapper = Wrappers.<MemberCardDO>lambdaQuery()
+                .eq(query.getMemberId() != null, MemberCardDO::getMemberId, query.getMemberId())
+                .like(cardNo != null, MemberCardDO::getCardNo, cardNo)
+                .eq(query.getCardType() != null, MemberCardDO::getCardType, query.getCardType())
+                .eq(query.getStoreId() != null, MemberCardDO::getStoreId, query.getStoreId())
+                // 稳定排序：最新发卡在前
+                .orderByDesc(MemberCardDO::getId);
+        return memberCardMapper.selectPage(new Page<MemberCardDO>(query.getPageNum(), query.getPageSize()), wrapper);
+    }
+
+    @Override
+    public MemberCardDO selectById(Long cardId)
+    {
+        if (cardId == null)
+        {
+            return null;
+        }
+        return memberCardMapper.selectById(cardId);
+    }
+
+    @Override
+    public MemberCardDO selectByIdForUpdate(Long cardId)
+    {
+        if (cardId == null)
+        {
+            return null;
+        }
+        return memberCardMapper.selectOne(Wrappers.<MemberCardDO>lambdaQuery()
+                .eq(MemberCardDO::getId, cardId)
+                .last("FOR UPDATE"));
+    }
+
+    @Override
+    public int insert(MemberCardDO card)
+    {
+        return memberCardMapper.insert(card);
+    }
+
+    @Override
+    public int activate(Long cardId, Integer validPeriodUnit, LocalDateTime validStartTime,
+            LocalDateTime validEndTime, LocalDateTime activateTime, Long updateBy)
+    {
+        return memberCardMapper.update(null, Wrappers.<MemberCardDO>lambdaUpdate()
+                .eq(MemberCardDO::getId, cardId)
+                .isNull(MemberCardDO::getActivateTime)
+                .isNull(MemberCardDO::getStopTime)
+                .set(MemberCardDO::getActivateTime, activateTime)
+                .set(MemberCardDO::getValidPeriodUnit, validPeriodUnit)
+                .set(MemberCardDO::getValidStartTime, validStartTime)
+                .set(MemberCardDO::getValidEndTime, validEndTime)
+                .set(MemberCardDO::getUpdateBy, updateBy)
+                .set(MemberCardDO::getUpdateTime, LocalDateTime.now()));
+    }
+
+    @Override
+    public int stop(Long cardId, LocalDateTime stopTime, String stopReason, Long updateBy)
+    {
+        return memberCardMapper.update(null, Wrappers.<MemberCardDO>lambdaUpdate()
+                .eq(MemberCardDO::getId, cardId)
+                .isNull(MemberCardDO::getStopTime)
+                .set(MemberCardDO::getStopTime, stopTime)
+                .set(MemberCardDO::getStopReason, stopReason)
+                .set(MemberCardDO::getUpdateBy, updateBy)
+                .set(MemberCardDO::getUpdateTime, LocalDateTime.now()));
+    }
+
+    @Override
+    public int deleteById(Long cardId)
+    {
+        // 物理删除：MemberCardDO 没有 @TableLogic，生成 DELETE FROM t_member_card WHERE id = ?
+        return memberCardMapper.deleteById(cardId);
+    }
+
+    /** 去除字符串前后空格；空串归一为 {@code null}（空值条件不参与筛选） */
+    private String trimToNull(String value)
+    {
+        if (value == null)
+        {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+}

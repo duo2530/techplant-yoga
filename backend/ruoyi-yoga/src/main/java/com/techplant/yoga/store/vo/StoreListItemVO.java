@@ -18,6 +18,9 @@ public class StoreListItemVO
     @ApiModelProperty(value = "门店ID（雪花ID，字符串）", example = "1856739201475235901")
     private Long id;
 
+    @ApiModelProperty(value = "门店编号（四位数字，服务端分配、创建后不可修改）", example = "0001")
+    private String storeNo;
+
     @ApiModelProperty(value = "门店名称", example = "徐汇店")
     private String name;
 
@@ -55,6 +58,8 @@ public class StoreListItemVO
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
+    public String getStoreNo() { return storeNo; }
+    public void setStoreNo(String storeNo) { this.storeNo = storeNo; }
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
     public Integer getStoreType() { return storeType; }

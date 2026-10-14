@@ -53,6 +53,7 @@ public final class StoreConverter
     {
         StoreListItemVO vo = new StoreListItemVO();
         vo.setId(store.getId());
+        vo.setStoreNo(store.getStoreNo());
         vo.setName(store.getName());
         vo.setStoreType(store.getStoreType());
         // 枚举成对返回：storeType + storeTypeName（前端不维护码 → 名映射）
@@ -87,6 +88,7 @@ public final class StoreConverter
     {
         StoreDetailVO vo = new StoreDetailVO();
         vo.setId(store.getId());
+        vo.setStoreNo(store.getStoreNo());
         vo.setName(store.getName());
         vo.setStoreType(store.getStoreType());
         vo.setStoreTypeName(StoreTypeEnum.nameOf(store.getStoreType()));
@@ -132,7 +134,7 @@ public final class StoreConverter
         return result;
     }
 
-    /** 批量 → 门店摘要（跨模块 summaries，只给 id 与 name） */
+    /** 批量 → 门店摘要（跨模块 summaries，给 id、门店编号与名称） */
     public static List<StoreSummaryVO> toSummaryVOList(List<StoreDO> stores)
     {
         List<StoreSummaryVO> result = new ArrayList<StoreSummaryVO>();
@@ -140,7 +142,7 @@ public final class StoreConverter
         {
             for (StoreDO store : stores)
             {
-                result.add(new StoreSummaryVO(store.getId(), store.getName()));
+                result.add(new StoreSummaryVO(store.getId(), store.getStoreNo(), store.getName()));
             }
         }
         return result;

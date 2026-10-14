@@ -1,6 +1,8 @@
 package com.techplant.yoga.member.dao;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import org.springframework.stereotype.Repository;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -62,6 +64,20 @@ public class MemberDaoImpl implements MemberDao
             return null;
         }
         return memberMapper.selectById(memberId);
+    }
+
+    @Override
+    public List<MemberDO> selectByIds(Collection<Long> memberIds)
+    {
+        if (memberIds == null || memberIds.isEmpty())
+        {
+            return Collections.emptyList();
+        }
+        LambdaQueryWrapper<MemberDO> wrapper = Wrappers.<MemberDO>lambdaQuery()
+                .select(MemberDO::getId, MemberDO::getName)
+                .in(MemberDO::getId, memberIds);
+        List<MemberDO> members = memberMapper.selectList(wrapper);
+        return members == null ? Collections.<MemberDO>emptyList() : members;
     }
 
     @Override

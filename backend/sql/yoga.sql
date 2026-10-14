@@ -1,6 +1,6 @@
 -- ============================================================================
 -- 瑜伽普拉提 · 业务库脚本
--- 版本：v2.3（新增会员等级字典）   日期：2026-10-14
+-- 版本：v2.4（门店编号 + 会员卡）   日期：2026-10-14
 --
 -- 用法：在已经导入若依基础库（ry_20260417.sql + quartz.sql）的库上执行本脚本。
 --       本脚本只负责「业务表 + 业务菜单 + 业务字典」，不涉及 sys_* 的结构。
@@ -17,6 +17,11 @@
 --
 -- v2.3 新增：字典 member_level「会员等级」（码值 0~4），前端下拉与接口 levelText 翻译的唯一来源。
 --
+-- v2.4 新增：
+--   · t_store 增加 store_no（门店编号，服务端分配、创建后不可修改），并新增编号计数器 t_store_no_counter
+--   · t_member_card：会员卡表（唯一依据是会员卡管理详细设计 §1.2.1／§1.3.1）
+--   · 菜单 2007「会员卡管理」，指向 frontend/pc/src/views/membercard/index.vue
+--
 -- 六条硬口径（一期既有口径，v2.1 不变）：
 --   1. 业务表一律【物理删除】—— 不建 `deleted` 列、不用 @TableLogic（t_member 同样如此）
 --   2. 门店「所在区域」存【行政区划 code】，区名由字典 `store_region` 翻译
@@ -31,9 +36,9 @@
 SET NAMES utf8mb4;
 
 -- ============================================================================
--- 1. 菜单：一级目录「经营基础」+ 六个业务菜单
+-- 1. 菜单：一级目录「经营基础」+ 七个业务菜单
 --    （只清理 2000~2009，不动若依自带的「系统管理」那套菜单）
---    2006=会员管理 已随本脚本交付；2007=会员卡管理 / 2008=预约管理 / 2009=账号管理 仍未交付：
+--    2006=会员管理、2007=会员卡管理 已随本脚本交付；2008=预约管理 / 2009=账号管理 仍未交付：
 --    未交付菜单一并纳入清理范围，菜单行的 INSERT 由各自模块的 SQL 交付时补。
 -- ============================================================================
 
@@ -50,6 +55,7 @@ INSERT INTO `sys_menu` VALUES ('2003', '教练管理', '2000', '3', 'coach',    
 INSERT INTO `sys_menu` VALUES ('2004', '课程管理', '2000', '4', 'course',    'course/index',    '', '', 1, 0, 'C', '0', '0', '', 'education', 'admin', SYSDATE(), '', NULL, '课程管理菜单');
 INSERT INTO `sys_menu` VALUES ('2005', '排课管理', '2000', '5', 'schedule',  'schedule/index',  '', '', 1, 0, 'C', '0', '0', '', 'date',      'admin', SYSDATE(), '', NULL, '排课管理菜单');
 INSERT INTO `sys_menu` VALUES ('2006', '会员管理', '2000', '6', 'member',    'member/index',    '', '', 1, 0, 'C', '0', '0', '', 'peoples',   'admin', SYSDATE(), '', NULL, '会员管理菜单');
+INSERT INTO `sys_menu` VALUES ('2007', '会员卡管理', '2000', '7', 'membercard', 'membercard/index', '', '', 1, 0, 'C', '0', '0', '', 'money', 'admin', SYSDATE(), '', NULL, '会员卡管理菜单');
 
 -- 绑定若依内置管理员角色（role_id = 1）
 INSERT INTO `sys_role_menu` VALUES ('1', '2000');
@@ -59,6 +65,7 @@ INSERT INTO `sys_role_menu` VALUES ('1', '2003');
 INSERT INTO `sys_role_menu` VALUES ('1', '2004');
 INSERT INTO `sys_role_menu` VALUES ('1', '2005');
 INSERT INTO `sys_role_menu` VALUES ('1', '2006');
+INSERT INTO `sys_role_menu` VALUES ('1', '2007');
 
 -- ============================================================================
 -- 2. 字典
@@ -125,12 +132,14 @@ VALUES
 -- ---------------------------------------------------------------------------
 -- 3.1 门店 t_store
 --     无状态、无经营类型、无省市区三级 code（只有区级 region_code）、无 deleted
+--     store_no 由服务端按创建顺序分配（0001~9999，全平台唯一），创建后不可修改、删除后不复用
 --     既有表的 region / province_code / city_code / district_code / business_type /
 --     status / deleted 全部不再保留
 -- ---------------------------------------------------------------------------
 DROP TABLE IF EXISTS `t_store`;
 CREATE TABLE `t_store` (
   `id`             bigint unsigned NOT NULL COMMENT '门店ID',
+  `store_no`       char(4)      NOT NULL COMMENT '门店编号（服务端分配，0001~9999，不复用）',
   `name`           varchar(64)  NOT NULL COMMENT '门店名称（全平台唯一）',
   `store_type`     tinyint      NOT NULL COMMENT '门店类型：1主力店 2精品店',
   `region_code`    varchar(6)   NOT NULL COMMENT '所在区域：上海市市辖区行政区划代码（字典 store_region）',
@@ -143,15 +152,31 @@ CREATE TABLE `t_store` (
   `update_by`      bigint unsigned       DEFAULT NULL COMMENT '更新人ID',
   `update_time`    datetime     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_store_no` (`store_no`),
   UNIQUE KEY `uk_store_name` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='门店基础信息表';
 
 INSERT INTO `t_store`
-  (`id`, `name`, `store_type`, `region_code`, `phone`, `business_hours`, `address`, `image_url`, `create_by`, `create_time`, `update_by`, `update_time`)
+  (`id`, `store_no`, `name`, `store_type`, `region_code`, `phone`, `business_hours`, `address`, `image_url`, `create_by`, `create_time`, `update_by`, `update_time`)
 VALUES
-  (1856739201475235901, '徐汇店',     1, '310104', '021-12345678', '周一至周日 09:00-22:00', '漕溪北路 88 号',   'https://cdn.example.com/store/xuhui.jpg',  1, '2026-09-20 09:00:00', 1, '2026-09-20 09:00:00'),
-  (1856739201475235902, '静安精品店', 2, '310106', '021-87654321', '周一至周日 10:00-21:00', '愚园路 168 号',    NULL,                                       1, '2026-09-20 09:10:00', 1, '2026-09-20 09:10:00'),
-  (1856739201475235903, '浦东店',     1, '310115', '021-66668888', '周一至周日 08:30-22:00', '世纪大道 1000 号', NULL,                                       1, '2026-09-20 09:20:00', 1, '2026-09-20 09:20:00');
+  (1856739201475235901, '0001', '徐汇店',     1, '310104', '021-12345678', '周一至周日 09:00-22:00', '漕溪北路 88 号',   'https://cdn.example.com/store/xuhui.jpg',  1, '2026-09-20 09:00:00', 1, '2026-09-20 09:00:00'),
+  (1856739201475235902, '0002', '静安精品店', 2, '310106', '021-87654321', '周一至周日 10:00-21:00', '愚园路 168 号',    NULL,                                       1, '2026-09-20 09:10:00', 1, '2026-09-20 09:10:00'),
+  (1856739201475235903, '0003', '浦东店',     1, '310115', '021-66668888', '周一至周日 08:30-22:00', '世纪大道 1000 号', NULL,                                       1, '2026-09-20 09:20:00', 1, '2026-09-20 09:20:00');
+
+-- ---------------------------------------------------------------------------
+-- 3.1.1 门店编号计数器 t_store_no_counter
+--     新增门店时在同一个事务里 SELECT ... FOR UPDATE 锁定本行、检查上限后递增；
+--     下面的初值 3 对应本脚本 3 条示例门店已占用 0001~0003。
+--     已有数据的库若从旧版本升级，初值必须不低于任何历史已分配编号（见门店管理详细设计 §4.3.1）。
+-- ---------------------------------------------------------------------------
+DROP TABLE IF EXISTS `t_store_no_counter`;
+CREATE TABLE `t_store_no_counter` (
+  `id`      tinyint unsigned NOT NULL COMMENT '固定为1',
+  `last_no` int unsigned     NOT NULL COMMENT '已分配的最大门店编号',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='门店编号计数器';
+
+INSERT INTO `t_store_no_counter` (`id`, `last_no`) VALUES (1, 3);
 
 -- ---------------------------------------------------------------------------
 -- 3.2 教室 t_classroom
@@ -362,9 +387,72 @@ VALUES
    0, 0, 1, '2026-10-12 09:00:00', 1, '2026-10-12 09:00:00');
 
 -- ============================================================================
+-- 3.7 会员卡 t_member_card（会员卡管理）
+--     唯一依据：会员卡管理详细设计 §1.2.1 字段定义、§1.3.1 建表语句
+--     卡号 = yyyyMMdd + 开卡门店编号(4) + HHmmss，共 18 位，由服务端按 Asia/Shanghai 生成；
+--     uk_card_no 是「同门店同秒最多一张卡」的最终兜底。
+--     开卡前（activate_time 为空）不写有效期起止；停卡只写停卡时间与原因，保留剩余次数与有效期。
+--     没有 deleted 列 —— 与其余业务表一致，删除一律物理删除。
+-- ============================================================================
+DROP TABLE IF EXISTS `t_member_card`;
+CREATE TABLE `t_member_card` (
+  `id`                 bigint unsigned NOT NULL COMMENT '会员卡ID',
+  `member_id`          bigint unsigned NOT NULL COMMENT '所属会员ID',
+  `open_store_id`      bigint unsigned NOT NULL COMMENT '开卡门店ID（卡号里的门店编号取自它）',
+  `card_no`            varchar(64)  NOT NULL COMMENT '卡号',
+  `card_name`          varchar(64)  NOT NULL COMMENT '卡名称',
+  `card_type`          tinyint      NOT NULL COMMENT '卡类型：1次数卡 2年卡',
+  `course_scope`       tinyint      NOT NULL COMMENT '适用课种范围：1团课类 2私教课',
+  `store_id`           bigint unsigned DEFAULT NULL COMMENT '适用门店（次数卡必填，年卡为空）',
+  `purchase_times`     int          DEFAULT NULL COMMENT '购买次数（仅次数卡）',
+  `gift_times`         int          DEFAULT NULL COMMENT '赠送次数（仅次数卡）',
+  `remaining_times`    int          DEFAULT NULL COMMENT '剩余次数（仅次数卡，初值=购买+赠送）',
+  `valid_period_unit`  tinyint      DEFAULT NULL COMMENT '有效期单位：1月 2年（开卡前为空）',
+  `valid_period_count` int          DEFAULT NULL COMMENT '有效期数量（次数卡3/6/12月；年卡固定1年）',
+  `valid_start_time`   datetime     DEFAULT NULL COMMENT '有效期起（开卡时写入，开卡日00:00:00）',
+  `valid_end_time`     datetime     DEFAULT NULL COMMENT '有效期止（开卡时写入，含首尾日）',
+  `activate_time`      datetime     DEFAULT NULL COMMENT '开卡时间',
+  `stop_time`          datetime     DEFAULT NULL COMMENT '停卡时间',
+  `stop_reason`        varchar(255) DEFAULT NULL COMMENT '停卡原因',
+  `create_by`          bigint unsigned DEFAULT NULL COMMENT '创建人ID',
+  `create_time`        datetime     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_by`          bigint unsigned DEFAULT NULL COMMENT '更新人ID',
+  `update_time`        datetime     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_card_no` (`card_no`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='会员卡表';
+
+-- 示例会员卡（3 条分别覆盖「待开卡」「使用中」「已停卡」三种展示形态）：
+--   卡号里的门店编号必须与 t_store.store_no 一致；有效期见会员卡管理详细设计 §1.2.3
+INSERT INTO `t_member_card`
+  (`id`, `member_id`, `open_store_id`, `card_no`, `card_name`, `card_type`, `course_scope`, `store_id`,
+   `purchase_times`, `gift_times`, `remaining_times`, `valid_period_unit`, `valid_period_count`,
+   `valid_start_time`, `valid_end_time`, `activate_time`, `stop_time`, `stop_reason`,
+   `create_by`, `create_time`, `update_by`, `update_time`)
+VALUES
+  -- 次数卡 · 待开卡：剩余次数 = 购买 10 + 赠送 2，未写有效期
+  (1856739201475235911, 1856739201475235902, 1856739201475235901, '202610030001100000', '普拉提次卡',
+   1, 1, 1856739201475235901, 10, 2, 12, NULL, 12,
+   NULL, NULL, NULL, NULL, NULL,
+   1, '2026-10-03 10:00:00', 1, '2026-10-03 10:00:00'),
+
+  -- 次数卡 · 使用中：12 个月 = 360 天，含首尾日 → 2026-10-05 00:00:00 ~ 2027-09-29 23:59:59
+  (1856739201475235912, 1856739201475235902, 1856739201475235902, '202610050002093000', '瑜伽团课次卡',
+   1, 1, 1856739201475235902, 20, 2, 22, 1, 12,
+   '2026-10-05 00:00:00', '2027-09-29 23:59:59', '2026-10-05 09:30:00', NULL, NULL,
+   1, '2026-10-05 09:00:00', 1, '2026-10-05 09:30:00'),
+
+  -- 年卡 · 已停卡：365 天，含首尾日 → 2026-10-06 00:00:00 ~ 2027-10-05 23:59:59
+  (1856739201475235913, 1856739201475235902, 1856739201475235903, '202610060003101500', '私教年卡',
+   2, 2, NULL, NULL, NULL, NULL, 2, 1,
+   '2026-10-06 00:00:00', '2027-10-05 23:59:59', '2026-10-06 10:15:00', '2026-10-08 09:00:00', '客户申请停卡',
+   1, '2026-10-06 10:00:00', 1, '2026-10-08 09:00:00');
+
+-- ============================================================================
 -- 4. 暂不建的表
---    会员卡、预约（t_booking）、私教排班、营业时间登记、教练×门店关联、教练技能、
+--    预约（t_booking）、会员卡扣次流水、私教排班、营业时间登记、教练×门店关联、教练技能、
 --    会员等级/权益、优惠券、礼包、积分、合同、体测、公告、消息、活动
 --    —— 全部不在本期范围（见 docs/需求文档/业务规则.md 的 BR-全局-005）。
---    注：会员表 t_member 已在 §3.6 落地（二期用户端登录需要），会员卡与预约仍未交付。
+--    注：会员表 t_member 已在 §3.6 落地（二期用户端登录需要），会员卡 t_member_card 已在 §3.7 落地；
+--    预约仍未交付，会员卡的扣次／返次流水随预约模块一并交付。
 -- ============================================================================

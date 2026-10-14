@@ -10,7 +10,9 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.techplant.yoga.store.domain.StoreDO;
+import com.techplant.yoga.store.domain.StoreNoCounterDO;
 import com.techplant.yoga.store.mapper.StoreMapper;
+import com.techplant.yoga.store.mapper.StoreNoCounterMapper;
 import com.techplant.yoga.store.query.StorePublicQuery;
 import com.techplant.yoga.store.query.StoreQuery;
 
@@ -22,11 +24,17 @@ import com.techplant.yoga.store.query.StoreQuery;
 @Repository
 public class StoreDaoImpl implements StoreDao
 {
+    /** 门店编号计数器只有固定 id = 1 的一行 */
+    private static final int COUNTER_ID = 1;
+
     private final StoreMapper storeMapper;
 
-    public StoreDaoImpl(StoreMapper storeMapper)
+    private final StoreNoCounterMapper storeNoCounterMapper;
+
+    public StoreDaoImpl(StoreMapper storeMapper, StoreNoCounterMapper storeNoCounterMapper)
     {
         this.storeMapper = storeMapper;
+        this.storeNoCounterMapper = storeNoCounterMapper;
     }
 
     @Override
@@ -88,7 +96,7 @@ public class StoreDaoImpl implements StoreDao
             return Collections.emptyList();
         }
         LambdaQueryWrapper<StoreDO> wrapper = Wrappers.<StoreDO>lambdaQuery()
-                .select(StoreDO::getId, StoreDO::getName)
+                .select(StoreDO::getId, StoreDO::getStoreNo, StoreDO::getName)
                 .in(StoreDO::getId, ids);
         List<StoreDO> stores = storeMapper.selectList(wrapper);
         return stores == null ? Collections.<StoreDO>emptyList() : stores;
@@ -103,7 +111,8 @@ public class StoreDaoImpl implements StoreDao
     @Override
     public int updateById(StoreDO store)
     {
-        // 全量编辑：显式 SET 每个业务字段，保证 imageUrl 能被清空（MP 的 updateById 会忽略 null）
+        // 全量编辑：显式 SET 每个业务字段，保证 imageUrl 能被清空（MP 的 updateById 会忽略 null）；
+        // store_no 由服务端分配且创建后不可修改，不在更新列里
         return storeMapper.update(null, Wrappers.<StoreDO>lambdaUpdate()
                 .eq(StoreDO::getId, store.getId())
                 .set(StoreDO::getName, store.getName())
@@ -120,8 +129,24 @@ public class StoreDaoImpl implements StoreDao
     @Override
     public int deleteById(Long id)
     {
-        // 物理删除：本表无 deleted 字段、无 @TableLogic
+        // 物理删除：本表无 deleted 字段、无 @TableLogic；门店编号不回收，计数器不回落
         return storeMapper.deleteById(id);
+    }
+
+    @Override
+    public StoreNoCounterDO selectCounterForUpdate()
+    {
+        return storeNoCounterMapper.selectOne(Wrappers.<StoreNoCounterDO>lambdaQuery()
+                .eq(StoreNoCounterDO::getId, COUNTER_ID)
+                .last("FOR UPDATE"));
+    }
+
+    @Override
+    public int updateCounterLastNo(int lastNo)
+    {
+        return storeNoCounterMapper.update(null, Wrappers.<StoreNoCounterDO>lambdaUpdate()
+                .eq(StoreNoCounterDO::getId, COUNTER_ID)
+                .set(StoreNoCounterDO::getLastNo, lastNo));
     }
 
     private boolean hasText(String value)

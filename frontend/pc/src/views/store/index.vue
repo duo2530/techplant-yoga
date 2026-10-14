@@ -49,6 +49,7 @@
         </template>
       </el-table-column>
       <el-table-column label="门店名称" align="center" prop="name" min-width="140" show-overflow-tooltip />
+      <el-table-column label="门店编号" align="center" prop="storeNo" width="100" />
       <!-- 所在区域用后端返回的 regionName，不在前端做 code → 区名翻译 -->
       <el-table-column label="所在区域" align="center" prop="regionName" width="110" />
       <el-table-column label="地址" align="center" prop="address" min-width="200" show-overflow-tooltip />
@@ -75,7 +76,16 @@
 
     <!-- 新增 / 修改门店：一期没有状态、经营类型、联系人，也没有任何行政区划级联 -->
     <el-dialog :title="title" v-model="open" width="680px" append-to-body>
+      <el-alert
+        title="门店编号由系统按创建顺序自动分配（0001~9999），创建后不可修改。"
+        type="info"
+        :closable="false"
+        class="mb20"
+      />
       <el-form ref="storeRef" :model="form" :rules="rules" label-width="100px">
+        <el-form-item v-if="form.storeNo" label="门店编号">
+          <el-input v-model="form.storeNo" disabled />
+        </el-form-item>
         <el-form-item label="门店名称" prop="name">
           <el-input v-model="form.name" placeholder="请输入门店名称" maxlength="64" show-word-limit />
         </el-form-item>

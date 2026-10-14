@@ -4,6 +4,7 @@ import java.util.Collection;
 import java.util.List;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.techplant.yoga.store.domain.StoreDO;
+import com.techplant.yoga.store.domain.StoreNoCounterDO;
 import com.techplant.yoga.store.query.StorePublicQuery;
 import com.techplant.yoga.store.query.StoreQuery;
 
@@ -27,15 +28,25 @@ public interface StoreDao
     /** 按名称精确查询（名称唯一校验用，返回第一条，供 service 排除自身） */
     StoreDO selectByName(String name);
 
-    /** 按主键集合批量查询，仅取 id 与 name（跨模块 summaries 用） */
+    /** 按主键集合批量查询，仅取 id、store_no 与 name（跨模块 summaries 用） */
     List<StoreDO> selectByIds(Collection<Long> ids);
 
     /** 新增 */
     int insert(StoreDO store);
 
-    /** 全量更新业务字段（显式 SET，保证 imageUrl 能被清空） */
+    /** 全量更新业务字段（显式 SET，保证 imageUrl 能被清空；门店编号不参与更新） */
     int updateById(StoreDO store);
 
     /** 物理删除 */
     int deleteById(Long id);
+
+    /**
+     * 当前读锁定门店编号计数器（{@code SELECT ... FOR UPDATE}）
+     *
+     * <p>必须在新增门店的事务内调用；计数器行尚未初始化时返回 {@code null}。</p>
+     */
+    StoreNoCounterDO selectCounterForUpdate();
+
+    /** 覆盖计数器已分配的最大编号，返回影响行数 */
+    int updateCounterLastNo(int lastNo);
 }

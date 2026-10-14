@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import org.springframework.context.annotation.Lazy;
@@ -20,6 +21,7 @@ import com.techplant.yoga.store.convert.StoreConverter;
 import com.techplant.yoga.store.dao.StoreDao;
 import com.techplant.yoga.store.dao.StoreRegionDictDao;
 import com.techplant.yoga.store.domain.StoreDO;
+import com.techplant.yoga.store.domain.StoreNoCounterDO;
 import com.techplant.yoga.store.dto.StoreCreateDTO;
 import com.techplant.yoga.store.dto.StoreUpdateDTO;
 import com.techplant.yoga.store.enums.StoreTypeEnum;
@@ -38,11 +40,20 @@ public class StoreServiceImpl implements StoreService
     /** 资源不存在 */
     private static final int NOT_FOUND = 404;
 
-    /** 状态冲突：名称重复、删除门禁未通过 */
+    /** 状态冲突：名称重复、编号冲突或已用尽、删除门禁未通过 */
     private static final int CONFLICT = 409;
 
     /** 参数校验失败／系统异常 */
     private static final int PARAM_INVALID = 500;
+
+    /** 门店编号上限（从 0001 起连续分配，0000 不使用） */
+    private static final int MAX_STORE_NO = 9999;
+
+    /** 门店名称唯一索引名（唯一键冲突归类用） */
+    private static final String UK_STORE_NAME = "uk_store_name";
+
+    /** 门店编号唯一索引名（唯一键冲突归类用） */
+    private static final String UK_STORE_NO = "uk_store_no";
 
     private final StoreDao storeDao;
 
@@ -105,6 +116,7 @@ public class StoreServiceImpl implements StoreService
         checkNameUnique(dto.getName(), null);
 
         StoreDO store = StoreConverter.toDO(dto);
+        store.setStoreNo(allocateStoreNo());
         int rows;
         try
         {
@@ -112,8 +124,8 @@ public class StoreServiceImpl implements StoreService
         }
         catch (DuplicateKeyException e)
         {
-            // uk_store_name 并发兜底：唯一键冲突同样返回 409
-            throw nameDuplicated(e);
+            // 名称与编号各有唯一键，按违反的索引区分；其他数据库异常不归为编号冲突
+            throw conflictOf(e);
         }
         if (rows != 1 || store.getId() == null)
         {
@@ -224,6 +236,48 @@ public class StoreServiceImpl implements StoreService
             return;
         }
         throw new ServiceException("门店名称已存在", CONFLICT);
+    }
+
+    /**
+     * 在本事务内分配下一个门店编号
+     *
+     * <p>锁定计数器后检查上限再递增，编号与门店记录同事务提交或回滚；
+     * 计数器未初始化时拒绝新增，不退回按门店表最大值推算。</p>
+     */
+    private String allocateStoreNo()
+    {
+        StoreNoCounterDO counter = storeDao.selectCounterForUpdate();
+        if (counter == null || counter.getLastNo() == null)
+        {
+            throw new ServiceException("门店编号计数器未初始化，无法新增门店", PARAM_INVALID);
+        }
+        int nextNo = counter.getLastNo() + 1;
+        if (nextNo > MAX_STORE_NO)
+        {
+            throw new ServiceException("门店编号已用尽", CONFLICT);
+        }
+        if (storeDao.updateCounterLastNo(nextNo) != 1)
+        {
+            throw new ServiceException("门店编号生成冲突，请稍后重试", CONFLICT);
+        }
+        return String.format(Locale.ROOT, "%04d", nextNo);
+    }
+
+    /** 唯一键冲突归类：门店编号冲突与名称重复各自成对提示，其余数据库异常原样抛出 */
+    private RuntimeException conflictOf(DuplicateKeyException cause)
+    {
+        String message = cause.getMessage() == null ? "" : cause.getMessage();
+        if (message.contains(UK_STORE_NO))
+        {
+            ServiceException exception = new ServiceException("门店编号生成冲突，请稍后重试", CONFLICT);
+            exception.initCause(cause);
+            return exception;
+        }
+        if (message.contains(UK_STORE_NAME))
+        {
+            return nameDuplicated(cause);
+        }
+        return cause;
     }
 
     /**

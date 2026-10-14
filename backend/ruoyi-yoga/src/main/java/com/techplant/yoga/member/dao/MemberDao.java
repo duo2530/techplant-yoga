@@ -1,6 +1,8 @@
 package com.techplant.yoga.member.dao;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
+import java.util.List;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.techplant.yoga.member.domain.MemberDO;
 import com.techplant.yoga.member.query.MemberQuery;
@@ -20,6 +22,9 @@ public interface MemberDao
 
     /** 按会员 ID 查会员 */
     MemberDO selectById(Long memberId);
+
+    /** 按会员 ID 集合批量查询，仅取 id 与显示名（跨模块 summaries 用） */
+    List<MemberDO> selectByIds(Collection<Long> memberIds);
 
     /**
      * 按会员 ID 做当前读（{@code SELECT ... FOR UPDATE}）取会员；不存在返回 {@code null}

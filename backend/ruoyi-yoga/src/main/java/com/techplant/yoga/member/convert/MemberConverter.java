@@ -8,6 +8,7 @@ import com.techplant.yoga.member.dto.MemberCreateDTO;
 import com.techplant.yoga.member.enums.MemberGenderEnum;
 import com.techplant.yoga.member.vo.MemberDetailVO;
 import com.techplant.yoga.member.vo.MemberListItemVO;
+import com.techplant.yoga.member.vo.MemberSummaryVO;
 
 /**
  * 会员对象转换。
@@ -86,6 +87,22 @@ public final class MemberConverter
         vo.setCreateTime(member.getCreateTime());
         vo.setUpdateTime(member.getUpdateTime());
         return vo;
+    }
+
+    /**
+     * 数据对象集合 → 会员摘要集合（跨模块补显示名用，只给 id 与显示名）
+     */
+    public static List<MemberSummaryVO> toSummaryVOList(List<MemberDO> members)
+    {
+        List<MemberSummaryVO> list = new ArrayList<MemberSummaryVO>();
+        if (members != null)
+        {
+            for (MemberDO member : members)
+            {
+                list.add(new MemberSummaryVO(member.getId(), nameOrEmpty(member.getName())));
+            }
+        }
+        return list;
     }
 
     /**
