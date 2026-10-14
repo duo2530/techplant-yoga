@@ -172,6 +172,11 @@ function onMenuTap(item) {
     uni.showToast({ title: '该功能页面暂未提供', icon: 'none' })
     return
   }
+  // 我的会员卡要先有会员登录态：未登录直接去登录页，不先进页面再被弹回
+  if (item.key === 'cards' && !isSessionValid()) {
+    uni.navigateTo({ url: LOGIN_PAGE })
+    return
+  }
   if (item.key === 'bookings') {
     uni.switchTab({ url: item.path })
     return

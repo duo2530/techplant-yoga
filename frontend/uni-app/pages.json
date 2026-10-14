@@ -63,6 +63,13 @@
       }
     },
     {
+      "path": "pages/member-cards/index",
+      "style": {
+        "navigationBarTitleText": "会员卡",
+        "enablePullDownRefresh": true
+      }
+    },
+    {
       "path": "pages/share-poster/index",
       "style": {
         "navigationStyle": "custom",

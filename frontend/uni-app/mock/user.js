@@ -44,20 +44,6 @@ export const memberBenefits = [
   }
 ]
 
-/** 我的会员卡 */
-export const memberCards = [
-  {
-    id: 5001,
-    name: '10 次卡',
-    cardType: '次卡',
-    totalTimes: 10,
-    usedTimes: 4,
-    expireDate: '2027-03-12',
-    status: 1,
-    statusLabel: '使用中'
-  }
-]
-
 /** 我的优惠券 */
 export const coupons = [
   { id: 6001, name: '新客体验券', amount: 99, threshold: 0, expireDate: '2026-10-31', status: 1, statusLabel: '未使用' },
@@ -96,7 +82,7 @@ export const bodyTests = [
 
 /** 「我的」页菜单（照原型顺序；path 为 null 的表示原型没有对应页面） */
 export const profileMenus = [
-  { key: 'cards', label: '我的会员卡', path: null },
+  { key: 'cards', label: '我的会员卡', path: '/pages/member-cards/index' },
   { key: 'coupons', label: '我的优惠券', path: null },
   { key: 'gifts', label: '我的礼包', path: null },
   { key: 'points', label: '我的积分', path: null },
