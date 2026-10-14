@@ -4,6 +4,7 @@
 # HBuilderX 的构建缓存
 /unpackage/*
 /node_modules/*
+/.vite/
 # 命令行构建输出目录
 /dist/*
 
