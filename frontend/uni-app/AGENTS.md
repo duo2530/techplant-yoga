@@ -4,9 +4,7 @@
 
 ## 1. 这是什么
 
-面向 **微信小程序**（用户端；**教练端已整体不做**）的 uni-app 工程，基于 **RuoYi-App 模板**二次开发。目前**已按高保真原型实现用户端 16 个页面**（4 个 tabBar 一级页 + 12 个二级页 + 3 个登录相关页，见第 6 节），**原型事实源是 `docs/需求文档/用户端/高保真原型/*.html`**（设置页另见截图 `docs/产品分析/用户端小程序截图/P4-我的-02-设置.png`）。数据层正处于「从 mock 切向真实后端」的过渡期：**账号域（发验证码／注册／登录／忘记密码／退出）已接真实后端**（`api/auth.js` → `POST /api/auth/**`，见《用户端接口详细设计》§2.2.4～§2.2.8），其余域仍是本地 mock。若依自带的登录/注册/首页/工作台/我的等演示页面**已删除**。
-
-这是 Vue 3 + uni-app，支持 npm 命令行与 HBuilderX，源码保留在工程根目录。
+微信小程序用户端，基于 Vue 3 + uni-app 和 RuoYi-App 模板，支持 npm CLI 与 HBuilderX 编译为 H5、微信小程序。账号与会员卡使用真实后端，其余业务域使用 mock；不开发教练端。
 
 ## 2. 运行方式
 
@@ -35,51 +33,53 @@
 |---|---|
 | `pages.json` | **页面注册表**：`pages` 数组（第一项是启动页 `pages/home/index` 首页）、`tabBar`（首页/约课/已约/我的，文字色两态都固定 `#717579`，选中只换图标）、`globalStyle` |
 | `manifest.json` | 应用名/appid/微信 appid/`vueVersion`/各端配置（改动这里后要重新编译） |
-| `config.js` | 全局配置：`baseUrl`（后端地址，mock 阶段用不到）、`appInfo`（名称、logo、协议链接） |
-| `main.js` / `App.vue` | 应用入口；`App.vue` 里 `onLaunch` 只初始化配置，**不做登录检查**（mock 阶段无登录态，见第 6 节） |
-| `permission.js` | 页面跳转拦截 + 免登录白名单；当前 `MOCK_MODE = true`，**不拦截** |
-| `pages/**` | 页面：`home`、`booking`、`my-bookings`、`profile`（4 个一级页）+ `settings`、`trial-apply`、`my-trials`、`coaches`、`activities`、`messages`、`share-poster`、`terms`、`privacy`、`auth/*` + `common/webview`、`common/textview` |
-| `mock/**` | **唯一数据源**：`config.js`（`MOCK.delay` / `MOCK.empty.*` 空态开关）+ 各业务域的 mock 数组 |
-| `api/**` | **假接口**（业务域同名文件，返回 Promise、内部读 `mock/`）。页面只依赖这一层，接真实后端时只改这里。另存的 `api/login.js`、`api/system/**` 是脚手架遗留、当前无人调用 |
-| `components/ys-*/` | 自写业务组件（easycom 自动注册）：`ys-nav-brand`、`ys-section-head`、`ys-notice-bar`、`ys-empty`、`ys-course-card`、`ys-booking-card` |
-| `store/modules/**` | `user`（token/角色/权限）、`config`、`dict`（mock 阶段只有 `config` 在用） |
+| `config.js` | 全局配置：`baseUrl`（真实接口地址）、`appInfo`（名称、logo、协议链接） |
+| `main.js` / `App.vue` | 应用入口；`onLaunch` 初始化配置，不做登录检查 |
+| `permission.js` | 页面导航拦截器，当前放行所有跳转 |
+| `pages/**` | 用户端页面，登记在 `pages.json`；业务页面清单见第 6 节 |
+| `mock/**` | 尚未接入后端的业务数据与 `MOCK.delay`、`MOCK.empty.*` 配置 |
+| `api/**` | 页面数据访问层，按业务域封装真实请求或 mock；`api/login.js`、`api/system/**` 为未使用的脚手架接口 |
+| `components/ys-*/` | 自写业务组件（easycom 自动注册）：`ys-nav-brand`、`ys-section-head`、`ys-notice-bar`、`ys-empty`、`ys-course-card`、`ys-booking-card`、`ys-member-card` |
+| `store/modules/**` | `user`（会员会话）、`config`（应用配置）、`dict`（字典缓存） |
 | `utils/**` | `request`、`session`（**本地登录态唯一来源**：`isSessionValid` / `saveSession` / `clearSessionStorage` / `LOGIN_PAGE`）、`auth`（token 与会员展示信息存取）、`dict`（`useDict`）、`storage`、`permission`、`upload`、`validate`、`common`（`toast`/`showConfirm`/`tansParams`）、`constant`、`errorCode` |
 | `plugins/**` | `proxy.$tab`、`proxy.$auth`、`proxy.$modal` |
 | `static/**` | 静态资源（`images/` 业务资产 + 清单 `images/README.md`、字体、`scss/index.scss`、`uni.scss` 设计 token、`static/index.html` H5 模板） |
 | `uni_modules/**` | 第三方插件代码，**不要手改** |
 | `scripts/check-static.js` | 本工程静态自检脚本（使用本地 Vue 编译器和 Sass，见测试手册） |
 | `scripts/check-request.js` | 请求与会话逻辑的本地自检，运行方式见测试手册 |
+| `tests/e2e/**` | 用户端 H5 端到端测试；运行说明见测试手册 |
 
 ## 5. 代码约定
 
 - **必须显式 import**：没有自动导入，`ref`/`computed` 要从 `vue` 引入，页面生命周期（`onLoad`/`onShow`/`onLaunch`/`onPullDownRefresh`）要从 `@dcloudio/uni-app` 引入。参考 `pages/booking/index.vue`、`App.vue`。
 - **组件 easycom**：`components/组件名/组件名.vue` 与 `uni_modules/**` 自动注册，模板里直接 `<uni-icons type="person-filled" />`、`<ys-empty />`，不需要 import。
 - **页面必须登记**：新建页面要在 `pages.json` 的 `pages` 数组里加一项（否则跳转失败）；新增 tabBar 页要同时改 `pages.json` 的 `tabBar.list` 并提供 `static/images/tabbar/*.png` 图标（未选中/选中两张）。
-- **数据只走 `@/api/*`（当前是 mock 假接口）**：页面里**不要** `uni.request`、不要 import `@/utils/request`、不要 import `@/api/login` 或 `@/api/system/**`。接真实后端时改 `api/*` 一层即可（那时才恢复走 `@/utils/request` 与 `config.js` 的 `baseUrl`）。
+- **页面数据只走 `@/api/*`**：页面不直接调用 `uni.request` 或导入 `@/utils/request`、`@/api/login`、`@/api/system/**`。真实请求由业务 API 通过 `utils/request.js` 发起。
 - **状态**：`const userStore = useUserStore()`（`@/store` 或 `@/store/modules/user`）；**会员登录态只用 `@/utils/session` 判断**（`isSessionValid()` / `LOGIN_PAGE`），不要直接 `getToken()` 判空 —— 后端 7 天到期不自动续期，只有带 `expireTime` 的会话才算已登录；登录写入用 `userStore.applySession()`，清理统一用 `userStore.clearSession()`（401、会话过期、退出登录共用）。
 - **样式**：尺寸一律用 `rpx`（原型逻辑画布 390pt → 750rpx，`rpx = pt × 1.9231`），只有 1px 边框写 `px`；颜色用 `uni.scss` 末尾的设计 token（`$ys-*`，实测值）；全局类在 `static/scss/yoga.scss`（`.ys-page`/`.ys-card`/`.ys-pad`/`.press` 等），在 `App.vue` 里随 `index.scss` 一起引入。
 - **静态资源路径**：`/static/images/xxx`（页面里统一用绝对路径；资产清单见 `static/images/README.md`）。
 - **外壳不要自己画**：状态栏、导航栏、微信胶囊、tabBar 都由系统绘制（唯一例外是首页 `navigationStyle:custom` + `<ys-nav-brand>`）。
 - 中文文案与注释遵循根目录 [AGENTS.md](../../AGENTS.md) 的源码注释约定；原型测量、还原过程及差异说明集中维护在设计文档中。
 
-## 6. 当前状态（原型还原 + mock 数据）
+## 6. 页面与数据状态
+
+原型依据为 `docs/需求文档/用户端/高保真原型/*.html`；设置页另见 `docs/产品分析/用户端小程序截图/P4-我的-02-设置.png`，会员卡页另见同目录的 `P4-我的-04-会员卡-*.jpg`。
 
 **页面**（全部登记在 `pages.json`，路径即文件路径）：
 
 | 类型 | 页面 |
 |---|---|
 | tabBar 一级页（4） | `pages/home/index` 首页（`navigationStyle:custom`，用 `<ys-nav-brand>`）、`pages/booking/index` 约课、`pages/my-bookings/index` 我的预约、`pages/profile/index` 我的 |
-| 二级页（12） | `settings` 设置（入口：「我的」页点头像——**已登录**进设置页、**未登录**进登录页；设置页含退出登录）、`trial-apply` 申请体验、`my-trials` 我的体验课、`coaches` 约教练、`activities` 活动列表、`messages` 消息、`share-poster` 分享海报、`terms` 用户协议、`privacy` 隐私政策、`auth/quick-login` 快速登录、`auth/phone-auth` 手机号登录/注册、`auth/forgot-password` 忘记密码 |
+| 二级页（13） | `settings` 设置（入口：「我的」页点头像——**已登录**进设置页、**未登录**进登录页；设置页含退出登录）、`trial-apply` 申请体验、`my-trials` 我的体验课、`coaches` 约教练、`activities` 活动列表、`messages` 消息、`member-cards` 我的会员卡（入口：「我的」页四宫格第一项；未登录先去登录页）、`share-poster` 分享海报、`terms` 用户协议、`privacy` 隐私政策、`auth/quick-login` 快速登录、`auth/phone-auth` 手机号登录/注册、`auth/forgot-password` 忘记密码 |
 
-**数据层（不碰后端）**：
+**数据来源**：
 
-- `mock/` 是**尚未接后端的域**的数据源：`config.js`（开关）、`store/course/booking/trial/activity/message/user.js`。**账号域已接真实后端**（`api/auth.js` → `/api/auth/**`，`mock/auth.js` 只剩协议正文）；`api/member.js` 的登录态以**本地有效会员会话**为准（`@/utils/session`：有 token、有 `expireTime` 且未过期 → 真实显示名/手机号，否则游客态），其余会员资料仍是 mock。
-- `api/` 是同名域的**假接口**，全部返回 Promise、内部读 `mock/`。**页面只依赖 `@/api/*`**；将来接真实后端就改这一层，页面不用动。
+- `api/auth.js` 调用 `/api/auth/**`；`api/member.js` 的 `listMemberCards` 调用 `GET /api/member-cards`。接口契约见[用户端接口详细设计](../../docs/详细设计/用户端接口详细设计.md)。
+- 会员显示名与手机号来自本地有效会话，其余会员资料及门店、课程、预约等业务数据使用 `mock/`；`mock/auth.js` 保存协议正文。
 - `mock/config.js` 里的开关：
   - `MOCK.delay` 模拟网络延迟；
   - `MOCK.empty.*` **空态开关**（`homeTodayCourses / homeHotCourses / homeNotices / bookings / trials / activities / messages`）—— 默认 `true`，即**按原型显示空态**（原型截图里这些位置就是空态）；改成 `false` 可看到 mock 数据的列表视图。
-  - 原来的 `MOCK.loggedIn`（假装已登录）**已随真实登录上线删除**：「我的」页的登录态现在只看本地会员 token；要看已登录态就用种子账号真登录一次。
-- **`permission.js` 目前不做登录拦截**（`MOCK_MODE = true`），任何页面都能直接打开，方便逐页对照原型验收；接真实后端时改回 `false`。
+- 会员卡等需要身份的页面自行校验会员会话，真实接口由后端鉴权。
 
 **外壳口径**：原型是「整机复刻」（含 iOS 状态栏、导航栏、微信胶囊、TabBar），小程序里这些**由系统绘制**，所以页面只实现内容区；首页因为要还原「书法一 Logo + 品牌字左对齐」，用了 `navigationStyle:custom` + `<ys-nav-brand>`。
 
@@ -87,13 +87,10 @@
 
 **已知缺口 / 偏差**（详见 `static/images/README.md` 与各页面注释）：
 
-- 课程详情页、会员卡/优惠券/礼包/积分/合同/体测等子页面**原型里没有**，本轮未建；「我的」页对应菜单项点击只 toast「该功能页面暂未提供」。
+- 课程详情页、优惠券、礼包、积分、合同、体测等子页面暂未实现；「我的」页对应菜单项提示“该功能页面暂未提供”。
+- 会员卡截图中的次数卡有两种配色，页面统一使用蓝色渐变，期限卡使用米金渐变。
 - 门店定位不跳地图（mock 没有经纬度）、约课页品类 Tab 与日期条的选中态、部分图标用 `uni-icons` 近似原型线稿（原型是内联 SVG，小程序不支持）。
 - 几个页面在原型里是**空态**，有数据时的卡片样式是按设计 token 推导的（已在组件与页面注释里标明）。
-
-**品牌化已完成**：`config.js` 的 `appInfo`、`manifest.json` 的 `name`/`description`/H5 `title`、`index.html` 的 `<title>`、`pages.json` 的 `globalStyle` 与各页标题都已是「瑜伽普拉提」；`baseUrl` 仍留在 `config.js`（当前 mock 阶段用不到，接后端时用）。
-
-> 注意：`baseUrl` 将来改成 `localhost` 只对本机 H5/开发者工具有效；真机预览和发布都要换成可访问的 https 域名（见第 7 节）。
 
 ## 7. 小程序联调 / 发布注意
 
