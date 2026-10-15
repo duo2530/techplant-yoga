@@ -238,7 +238,7 @@ class ScheduleDaoTest extends AbstractYogaIntegrationTest
     }
 
     @Test
-    @DisplayName("管理端列表：日期区间按派生列 schedule_date 筛，排序 start_time ASC, id ASC")
+    @DisplayName("管理端列表：日期区间按派生列 schedule_date 筛，排序 start_time DESC, id DESC")
     void selectPage_shouldFilterByScheduleDateAndKeepStableOrder() throws Exception
     {
         LocalDate today = LocalDate.now();
@@ -258,8 +258,8 @@ class ScheduleDaoTest extends AbstractYogaIntegrationTest
         IPage<ScheduleDO> page = scheduleDao.selectPage(query);
 
         assertEquals(2L, page.getTotal(), "日期区间按 schedule_date 筛，只命中明天那两条");
-        assertEquals(9701L, page.getRecords().get(0).getId(), "start_time 早的排前面");
-        assertEquals(9702L, page.getRecords().get(1).getId(), "start_time 相同时按 id ASC（稳定排序）");
+        assertEquals(9702L, page.getRecords().get(0).getId(), "start_time 晚的排前面");
+        assertEquals(9701L, page.getRecords().get(1).getId());
     }
 
     /** 直插测试数据（避开审计填充与雪花 ID，断言才稳定） */
