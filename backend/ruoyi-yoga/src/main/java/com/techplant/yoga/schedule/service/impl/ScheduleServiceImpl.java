@@ -28,6 +28,7 @@ import com.techplant.yoga.common.util.CurrentUserUtils;
 import com.techplant.yoga.course.enums.CourseTypeEnum;
 import com.techplant.yoga.course.service.CourseService;
 import com.techplant.yoga.course.vo.CourseSummaryVO;
+import com.techplant.yoga.reservation.service.ReservationService;
 import com.techplant.yoga.schedule.convert.ScheduleConverter;
 import com.techplant.yoga.schedule.dao.ScheduleDao;
 import com.techplant.yoga.schedule.domain.ScheduleDO;
@@ -73,17 +74,21 @@ public class ScheduleServiceImpl implements ScheduleService
 
     private final CourseService courseService;
 
+    private final ReservationService reservationService;
+
     public ScheduleServiceImpl(ScheduleDao scheduleDao,
             @Lazy StoreService storeService,
             @Lazy ClassroomService classroomService,
             @Lazy CoachService coachService,
-            @Lazy CourseService courseService)
+            @Lazy CourseService courseService,
+            @Lazy ReservationService reservationService)
     {
         this.scheduleDao = scheduleDao;
         this.storeService = storeService;
         this.classroomService = classroomService;
         this.coachService = coachService;
         this.courseService = courseService;
+        this.reservationService = reservationService;
     }
 
     // ------------------------------------------------------------------
@@ -345,6 +350,7 @@ public class ScheduleServiceImpl implements ScheduleService
             vo.setCoachName(nameOf(coachNames, schedule.getCoachId()));
             vo.setClassroomName(nameOf(classroomNames, schedule.getClassroomId()));
             vo.setStoreName(nameOf(storeNames, schedule.getStoreId()));
+            vo.setBookable(isBookable(schedule, now));
             list.add(vo);
         }
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), list);
@@ -390,7 +396,9 @@ public class ScheduleServiceImpl implements ScheduleService
                 schedule.getStoreId()));
         vo.setClassroomName(nameOf(classroomNameMap(Collections.singletonList(schedule.getClassroomId())),
                 schedule.getClassroomId()));
-        vo.setBookers(new ArrayList<String>());
+        vo.setStoreAddress(storeAddressOf(schedule.getStoreId()));
+        vo.setBookable(isBookable(schedule, now));
+        vo.setBookers(reservationService.bookerDisplayNames(schedule.getId()));
         return vo;
     }
 
@@ -521,6 +529,45 @@ public class ScheduleServiceImpl implements ScheduleService
     private boolean isPending(Integer status)
     {
         return ScheduleStatusEnum.of(status) == ScheduleStatusEnum.PENDING;
+    }
+
+    /**
+     * 用户端是否可约：已上架、尚未开始、上课日期落在今天起 14 天内（含今天）且剩余名额大于 0
+     *
+     * <p>只表示排课本身可约，不代表当前会员已满足卡资格。</p>
+     */
+    private boolean isBookable(ScheduleDO schedule, LocalDateTime now)
+    {
+        int bookedPersons = schedule.getBookedPersons() == null ? 0 : schedule.getBookedPersons();
+        int remainingPlaces = ScheduleConverter.remainingPlaces(schedule.getMaxPersons(), bookedPersons);
+        if (!ScheduleStatusEnum.isBookable(schedule.getStatus(), schedule.getStartTime(), schedule.getEndTime(),
+                remainingPlaces, now))
+        {
+            return false;
+        }
+        LocalDate scheduleDate = schedule.getScheduleDate() != null ? schedule.getScheduleDate()
+                : (schedule.getStartTime() == null ? null : schedule.getStartTime().toLocalDate());
+        if (scheduleDate == null)
+        {
+            return false;
+        }
+        LocalDate today = now.toLocalDate();
+        return !scheduleDate.isBefore(today) && !scheduleDate.isAfter(today.plusDays(SCHEDULE_WINDOW_DAYS - 1L));
+    }
+
+    /** 门店地址：门店资料已删除时返回空字符串（契约允许为空，但不返回 null） */
+    private String storeAddressOf(Long storeId)
+    {
+        if (storeId == null)
+        {
+            return "";
+        }
+        List<StoreSummaryVO> summaries = storeService.summaries(Collections.singletonList(storeId));
+        if (summaries == null || summaries.isEmpty() || summaries.get(0) == null)
+        {
+            return "";
+        }
+        return text(summaries.get(0).getAddress());
     }
 
     private ScheduleDO requireSchedule(Long scheduleId)

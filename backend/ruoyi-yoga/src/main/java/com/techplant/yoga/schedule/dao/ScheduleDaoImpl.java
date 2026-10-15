@@ -2,6 +2,9 @@ package com.techplant.yoga.schedule.dao;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 import org.springframework.stereotype.Repository;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -69,6 +72,28 @@ public class ScheduleDaoImpl implements ScheduleDao
     }
 
     @Override
+    public List<ScheduleDO> selectByIds(Collection<Long> ids)
+    {
+        if (ids == null || ids.isEmpty())
+        {
+            return new ArrayList<ScheduleDO>();
+        }
+        return scheduleMapper.selectBatchIds(ids);
+    }
+
+    @Override
+    public ScheduleDO selectByIdForUpdate(Long id)
+    {
+        if (id == null)
+        {
+            return null;
+        }
+        return scheduleMapper.selectOne(Wrappers.<ScheduleDO>lambdaQuery()
+                .eq(ScheduleDO::getId, id)
+                .last("FOR UPDATE"));
+    }
+
+    @Override
     public ScheduleDO selectVisibleById(Long id)
     {
         return scheduleMapper.selectOne(buildVisibleCondition().eq(ScheduleDO::getId, id));
@@ -107,6 +132,17 @@ public class ScheduleDaoImpl implements ScheduleDao
                 .eq(ScheduleDO::getId, id)
                 .set(ScheduleDO::getStatus, status)
                 .set(ScheduleDO::getUpdateBy, updateBy)
+                .set(ScheduleDO::getUpdateTime, LocalDateTime.now()));
+    }
+
+    @Override
+    public int updateBookedPersons(Long id, Integer bookedPersons)
+    {
+        return scheduleMapper.update(null, Wrappers.<ScheduleDO>lambdaUpdate()
+                .eq(ScheduleDO::getId, id)
+                // 条件更新保证不超额：写入值超过最大人数时不更新
+                .apply("max_persons >= {0}", bookedPersons)
+                .set(ScheduleDO::getBookedPersons, bookedPersons)
                 .set(ScheduleDO::getUpdateTime, LocalDateTime.now()));
     }
 

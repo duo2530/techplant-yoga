@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.techplant.yoga.reservation.mapper.ReservationMapper">
+
+    <!--
+      管理端预约列表：只做筛选与分页，课程／教练／门店／教室／会员／会员卡的展示字段由 service 批量补齐。
+      门店、课程、卡类型的筛选必须在 SQL 里关联判断（ID 集合无法穷举），因此这里 JOIN 排课与会员卡；
+      两处 JOIN 都是 1:1（主键关联），不会放大行数。
+    -->
+    <select id="selectAdminPage" resultType="com.techplant.yoga.reservation.domain.ReservationDO">
+        SELECT r.id, r.request_id, r.member_id, r.schedule_id, r.start_time, r.end_time, r.persons,
+               r.member_card_id, r.status, r.reservation_time, r.cancel_time, r.cancel_reason, r.check_in_time,
+               r.create_by, r.create_time, r.update_by, r.update_time
+        FROM t_reservation r
+        LEFT JOIN t_schedule s ON s.id = r.schedule_id
+        LEFT JOIN t_member_card c ON c.id = r.member_card_id
+        <where>
+            <if test="query.storeId != null">
+                AND s.store_id = #{query.storeId}
+            </if>
+            <if test="query.courseId != null">
+                AND s.course_id = #{query.courseId}
+            </if>
+            <if test="query.cardType != null">
+                AND c.card_type = #{query.cardType}
+            </if>
+            <if test="query.scheduleId != null">
+                AND r.schedule_id = #{query.scheduleId}
+            </if>
+            <if test="query.memberId != null">
+                AND r.member_id = #{query.memberId}
+            </if>
+            <if test="query.status != null">
+                AND r.status = #{query.status}
+            </if>
+            <if test="startTime != null">
+                AND r.start_time &gt;= #{startTime}
+            </if>
+            <if test="endTimeExclusive != null">
+                AND r.start_time &lt; #{endTimeExclusive}
+            </if>
+        </where>
+        ORDER BY r.reservation_time DESC, r.id DESC
+    </select>
+</mapper>

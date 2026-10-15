@@ -35,7 +35,7 @@ mvn -f backend/pom.xml -pl ruoyi-yoga -am test
 
 ### 当前覆盖边界
 
-现有测试覆盖 MyBatis 装配及教练、会员、排课的数据访问。HTTP 接口、安全过滤链、业务事务及 Redis 行为尚未建立对应集成测试；涉及这些能力的改动应补充测试或明确报告验证缺口。
+现有测试覆盖 MyBatis 装配、教练／会员／排课的数据访问，以及会员、会员卡与预约的 HTTP 接口和预约事务（MockMvc ＋ Testcontainers MySQL）；安全过滤链、Redis 行为与并发竞争场景尚未建立对应集成测试。涉及这些能力的改动应补充测试或明确报告验证缺口。
 
 接口级验证应检查统一响应、参数校验、ID 字符串化、身份隔离和失败分支。菜单相关改动应验证路由返回及页面入口，接口文档相关改动应检查 Swagger 中的接口是否可见。
 
@@ -43,7 +43,7 @@ mvn -f backend/pom.xml -pl ruoyi-yoga -am test
 
 ### Playwright
 
-用户端 H5 套件位于 `frontend/uni-app/tests/e2e`，覆盖会员卡页面。运行命令、环境变量、用例及失败产物见[套件 README](../../frontend/uni-app/tests/e2e/README.md)。管理端尚未接入。
+用户端 H5 套件位于 `frontend/uni-app/tests/e2e`，覆盖会员卡与预约页面。运行命令、环境变量、用例及失败产物见[套件 README](../../frontend/uni-app/tests/e2e/README.md)。管理端尚未接入。
 
 - 管理端覆盖登录、退出、表单校验、增删改查和异常反馈；涉及权限或字典时验证相应页面行为。
 - 使用稳定的类名或结构定位元素，通过可见结果断言和自动等待同步操作，避免固定延时。

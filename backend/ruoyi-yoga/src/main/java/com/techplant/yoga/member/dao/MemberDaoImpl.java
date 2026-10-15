@@ -74,7 +74,7 @@ public class MemberDaoImpl implements MemberDao
             return Collections.emptyList();
         }
         LambdaQueryWrapper<MemberDO> wrapper = Wrappers.<MemberDO>lambdaQuery()
-                .select(MemberDO::getId, MemberDO::getName)
+                .select(MemberDO::getId, MemberDO::getName, MemberDO::getPhone)
                 .in(MemberDO::getId, memberIds);
         List<MemberDO> members = memberMapper.selectList(wrapper);
         return members == null ? Collections.<MemberDO>emptyList() : members;

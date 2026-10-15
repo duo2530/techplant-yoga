@@ -345,7 +345,7 @@ function onBook(item) {
   if (!item.bookable) {
     return
   }
-  uni.showToast({ title: '敬请期待', icon: 'none' })
+  uni.navigateTo({ url: '/pages/booking-confirm/index?scheduleId=' + String(item.id) })
 }
 
 function goHome() {

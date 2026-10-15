@@ -2,6 +2,8 @@ package com.techplant.yoga.schedule.dao;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Collection;
+import java.util.List;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.techplant.yoga.schedule.domain.ScheduleDO;
 import com.techplant.yoga.schedule.query.PublicScheduleQuery;
@@ -24,6 +26,12 @@ public interface ScheduleDao
     /** 按主键查（管理端，物理删除后查不到） */
     ScheduleDO selectById(Long id);
 
+    /** 按主键集合批量查（预约列表批量装配课程与门店信息） */
+    List<ScheduleDO> selectByIds(Collection<Long> ids);
+
+    /** 按主键做当前读（{@code SELECT ... FOR UPDATE}）取排课；不存在返回 {@code null} */
+    ScheduleDO selectByIdForUpdate(Long id);
+
     /** 用户端详情：未删除且 {@code status <> 1} 才返回，否则 null（不区分「不存在」与「不可见」） */
     ScheduleDO selectVisibleById(Long id);
 
@@ -35,6 +43,13 @@ public interface ScheduleDao
 
     /** 只更新 {@code status} 列（状态流转的唯一写入口） */
     int updateStatus(Long id, Integer status, Long updateBy);
+
+    /**
+     * 写入已预约人数（只由预约事务的条件更新调用）
+     *
+     * @param bookedPersons 写入后的已预约人数；超过 {@code max_persons} 时不更新
+     */
+    int updateBookedPersons(Long id, Integer bookedPersons);
 
     /** 物理删除 */
     int deleteById(Long id);

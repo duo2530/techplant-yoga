@@ -8,7 +8,7 @@ public enum ScheduleStatusEnum
     /** 1 待上架：用户端不可见，可编辑、可物理删除 */
     PENDING(1, "待上架"),
 
-    /** 2 已上架：用户端可见（未结束即可约），须先下架才能编辑／删除 */
+    /** 2 已上架：用户端可见（未开始且有名额即可约），须先下架才能编辑／删除 */
     PUBLISHED(2, "已上架"),
 
     /** 3 已取消：用户端可见，终态（不可编辑／不可改状态／不可删除） */
@@ -135,10 +135,15 @@ public enum ScheduleStatusEnum
         return isFinished(status, endTime, now) ? FINISHED_TEXT : BOOKABLE_TEXT;
     }
 
-    /** 用户端是否可发起预约：{@code status == 2} 且 {@code end_time > now} */
-    public static boolean isBookable(Integer status, LocalDateTime endTime, LocalDateTime now)
+    /**
+     * 用户端是否可发起预约：{@code status == 2}、尚未开始且剩余名额大于 0
+     *
+     * <p>「今天起 14 天内」的窗口由排课服务按上课日期判定，这里只看状态、开始时间与名额。</p>
+     */
+    public static boolean isBookable(Integer status, LocalDateTime startTime, LocalDateTime endTime,
+            Integer remainingPlaces, LocalDateTime now)
     {
-        return status != null && status == PUBLISHED.code && endTime != null && now != null
-                && endTime.isAfter(now);
+        return status != null && status == PUBLISHED.code && startTime != null && endTime != null && now != null
+                && startTime.isAfter(now) && remainingPlaces != null && remainingPlaces > 0;
     }
 }

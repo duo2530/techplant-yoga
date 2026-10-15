@@ -26,6 +26,18 @@
       }
     },
     {
+      "path": "pages/booking-confirm/index",
+      "style": {
+        "navigationBarTitleText": "立即预约"
+      }
+    },
+    {
+      "path": "pages/booking-success/index",
+      "style": {
+        "navigationBarTitleText": "预约成功"
+      }
+    },
+    {
       "path": "pages/profile/index",
       "style": {
         "navigationBarTitleText": "一水瑜伽"

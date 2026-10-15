@@ -63,6 +63,7 @@ function normalizeDetail(row) {
     coachId: toId(raw.coachId),
     coachAvatarUrl: toImageUrl(raw.coachAvatarUrl),
     coachIntro: toText(raw.coachIntro),
+    storeAddress: toText(raw.storeAddress),
     minPersons: toNum(raw.minPersons),
     bookers: Array.isArray(raw.bookers) ? raw.bookers : []
   })

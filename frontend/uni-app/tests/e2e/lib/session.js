@@ -36,6 +36,61 @@ async function apiMemberCards(token, params = {})
   return body
 }
 
+/** 按 token 取「我的预约」，用作端到端断言的期望值来源 */
+async function apiReservations(token, params = {})
+{
+  const query = new URLSearchParams({
+    pageNum: params.pageNum || 1,
+    pageSize: params.pageSize || 100
+  })
+  if (params.status) {
+    query.set('status', params.status)
+  }
+  const response = await fetch(`${config.apiBase}/api/reservations?${query.toString()}`, {
+    headers: { Authorization: `Bearer ${token}` }
+  })
+  const body = await response.json()
+  if (body.code !== 200)
+  {
+    throw new Error(`查询我的预约失败：${JSON.stringify(body)}`)
+  }
+  return body
+}
+
+/** 取消预约（用例准备数据用：同一排课不允许重复预约） */
+async function apiCancelReservation(token, reservationId)
+{
+  const response = await fetch(`${config.apiBase}/api/reservations/${reservationId}/cancel`, {
+    method: 'PUT',
+    headers: { Authorization: `Bearer ${token}` }
+  })
+  const body = await response.json()
+  if (body.code !== 200)
+  {
+    throw new Error(`取消预约失败：${JSON.stringify(body)}`)
+  }
+  return body
+}
+
+/** 免登录查询排课列表，用作预约流程的期望值来源 */
+async function apiSchedules(params = {})
+{
+  const query = new URLSearchParams({
+    storeId: params.storeId,
+    courseType: params.courseType,
+    date: params.date,
+    pageNum: 1,
+    pageSize: 100
+  })
+  const response = await fetch(`${config.apiBase}/api/schedules?${query.toString()}`)
+  const body = await response.json()
+  if (body.code !== 200)
+  {
+    throw new Error(`查询排课失败：${JSON.stringify(body)}`)
+  }
+  return body
+}
+
 /**
  * 写入 H5 本地会话
  *
@@ -66,4 +121,12 @@ async function clearSession(page)
   })
 }
 
-module.exports = { apiLogin, apiMemberCards, seedSession, clearSession }
+module.exports = {
+  apiLogin,
+  apiMemberCards,
+  apiReservations,
+  apiCancelReservation,
+  apiSchedules,
+  seedSession,
+  clearSession
+}

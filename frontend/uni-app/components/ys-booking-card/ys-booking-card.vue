@@ -1,48 +1,94 @@
 <template>
-  <view class="ys-booking press" @tap="onTap">
-    <view class="ys-booking__head">
-      <text class="ys-booking__name">{{ item.courseName }}</text>
-      <text class="ys-booking__status" :class="statusClass">{{ item.statusLabel }}</text>
+  <view class="ys-booking">
+    <view class="ys-booking__left">
+      <image class="ys-booking__cover" :src="coverOf" mode="aspectFill" />
+      <text class="ys-booking__coach">{{ item.coachName || '教练待定' }}</text>
     </view>
 
-    <view class="ys-booking__row">
-      <text class="ys-booking__row-text">{{ item.date }} {{ item.startTime }}-{{ item.endTime }}</text>
-    </view>
+    <view class="ys-booking__main">
+      <view class="ys-booking__head">
+        <text class="ys-booking__tag">{{ item.courseTypeName }}</text>
+        <text class="ys-booking__name">{{ item.courseName }}</text>
+      </view>
 
-    <view class="ys-booking__row">
-      <text class="ys-booking__row-text">{{ item.coachName }} · {{ item.room }}</text>
-    </view>
+      <view class="ys-booking__line">
+        <text class="ys-booking__status" :class="statusClass">{{ item.statusText }}</text>
+        <text class="ys-booking__date">{{ item.scheduleDate }}</text>
+      </view>
 
-    <view class="ys-booking__row ys-booking__row--last">
-      <text class="ys-booking__row-text">{{ item.storeName }}</text>
-    </view>
+      <text class="ys-booking__line">上课 {{ item.startHm }} - {{ item.endHm }}</text>
+      <text class="ys-booking__line ys-booking__line--addr">{{ item.storeAddress || '门店地址待定' }}</text>
 
-    <view class="ys-booking__foot">
-      <text class="ys-booking__card">{{ item.cardName }}</text>
-      <view v-if="canCancel" class="ys-booking__btn" @tap.stop="onCancel">
-        <text>取消预约</text>
+      <view v-if="isBooked" class="ys-booking__actions">
+        <view class="ys-booking__cancel press" @tap="onCancel">
+          <text class="ys-booking__cancel-text">取消预约</text>
+        </view>
+        <view
+          class="ys-booking__checkin press"
+          :class="{ 'ys-booking__checkin--off': !canCheckIn }"
+          @tap="onCheckIn"
+        >
+          <text class="ys-booking__checkin-text">签到</text>
+        </view>
       </view>
     </view>
   </view>
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 
 /**
  * 我的预约卡片
  *
- * 注意：原型「我的预约」页在截图里是空态，**没有给卡片样式**，
- * 这里的排版按设计 token 推导；原型补出卡片后以此处为唯一改动点。
+ * 取数范围是 GET /api/reservations 的 ReservationPublicItemVO；
+ * 整卡不响应点击，只有「取消预约」与「签到」两个按钮可交互；
+ * 签到窗口（课前 30 分钟起、课程结束前）按响应式时钟预判，后端签到仍会再校验。
  */
 const props = defineProps({
   item: { type: Object, required: true }
 })
 
-const emit = defineEmits(['tap', 'cancel'])
+const emit = defineEmits(['cancel', 'checkin'])
 
-/** 已预约（1）可取消；已取消（2）/已签到（3）不可 */
-const canCancel = computed(() => Number(props.item.status) === 1)
+/** 签到窗口：课程开始前 30 分钟开放 */
+const CHECK_IN_OPEN_MINUTES = 30
+
+/** 时钟刷新间隔：页面停留在签到窗口前时，窗口一到按钮就能点 */
+const CLOCK_TICK_MS = 10000
+
+const now = ref(Date.now())
+
+let clockTimer = null
+
+onMounted(() => {
+  clockTimer = setInterval(() => {
+    now.value = Date.now()
+  }, CLOCK_TICK_MS)
+})
+
+onUnmounted(() => {
+  if (clockTimer) {
+    clearInterval(clockTimer)
+    clockTimer = null
+  }
+})
+
+/** 已预约（1）可取消、可签到；已取消（2）/已签到（3）都不再显示操作 */
+const isBooked = computed(() => Number(props.item.status) === 1)
+
+/** 到签到窗口才让点：当前时间 >= 开课时间 - 30 分钟，且 < 结束时间 */
+const canCheckIn = computed(() => {
+  const start = parseTime(props.item.startTime)
+  const end = parseTime(props.item.endTime)
+  if (start === null || end === null) {
+    return false
+  }
+  const current = now.value
+  return current >= start - CHECK_IN_OPEN_MINUTES * 60 * 1000 && current < end
+})
+
+const coverOf = computed(() => props.item.courseCoverUrl || '/static/images/booking/cover-1.jpg')
 
 const statusClass = computed(() => {
   const status = Number(props.item.status)
@@ -55,31 +101,99 @@ const statusClass = computed(() => {
   return 'ys-booking__status--cancel'
 })
 
-function onTap() {
-  emit('tap', props.item)
+/** 把 yyyy-MM-dd HH:mm:ss 解析成毫秒时间戳；解析不出来返回 null */
+function parseTime(value) {
+  const text = String(value || '').replace(/-/g, '/')
+  const stamp = new Date(text).getTime()
+  return isNaN(stamp) ? null : stamp
 }
 
 function onCancel() {
   emit('cancel', props.item)
 }
+
+function onCheckIn() {
+  if (!canCheckIn.value) {
+    return
+  }
+  emit('checkin', props.item)
+}
 </script>
 
 <style lang="scss" scoped>
 .ys-booking {
+  display: flex;
   padding: 25rpx;
   background: #fff;
   border-radius: $ys-radius-lg;
 
+  &__left {
+    flex: none;
+    width: 152rpx;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  &__cover {
+    width: 152rpx;
+    height: 152rpx;
+    border-radius: $ys-radius-md;
+    background: $ys-line;
+  }
+
+  &__coach {
+    margin-top: 12rpx;
+    max-width: 152rpx;
+    font-size: 23rpx;
+    line-height: 1.3;
+    color: $ys-ink-2;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__main {
+    flex: 1;
+    margin-left: 22rpx;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
   &__head {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+  }
+
+  &__tag {
+    flex: none;
+    padding: 2rpx 10rpx;
+    font-size: 21rpx;
+    line-height: 1.4;
+    color: #fff;
+    background: $ys-brand;
+    border-radius: 8rpx;
   }
 
   &__name {
+    flex: 1;
+    margin-left: 12rpx;
     font-size: 31rpx;
     font-weight: 600;
+    line-height: 1.3;
     color: $ys-ink-1;
+  }
+
+  &__line {
+    margin-top: 12rpx;
+    font-size: 25rpx;
+    line-height: 1.4;
+    color: $ys-ink-2;
+
+    &--addr {
+      color: $ys-ink-3;
+    }
   }
 
   &__status {
@@ -94,42 +208,50 @@ function onCancel() {
     }
 
     &--cancel {
-      color: $ys-ink-4;
+      color: #e54545;
     }
   }
 
-  &__row {
-    margin-top: 13rpx;
-
-    &--last {
-      margin-bottom: 20rpx;
-    }
-  }
-
-  &__row-text {
+  &__date {
+    margin-left: 10rpx;
     font-size: 25rpx;
+    line-height: 1.4;
     color: $ys-ink-3;
   }
 
-  &__foot {
+  &__actions {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    padding-top: 20rpx;
-    border-top: 1px solid $ys-line;
+    justify-content: flex-end;
+    margin-top: 18rpx;
   }
 
-  &__card {
-    font-size: 23rpx;
-    color: $ys-ink-3;
+  &__cancel {
+    padding: 0 18rpx;
   }
 
-  &__btn {
-    padding: 8rpx 23rpx;
+  &__cancel-text {
     font-size: 25rpx;
+    line-height: 1.4;
     color: $ys-ink-2;
-    border: 1px solid $ys-line;
-    border-radius: 27rpx;
+  }
+
+  &__checkin {
+    margin-left: 18rpx;
+    padding: 10rpx 40rpx;
+    background: $ys-brand;
+    border-radius: 56rpx;
+
+    /* 未到签到窗口：置灰且不可点 */
+    &--off {
+      background: #c9d3dd;
+    }
+  }
+
+  &__checkin-text {
+    font-size: 25rpx;
+    line-height: 1;
+    color: #fff;
   }
 }
 </style>

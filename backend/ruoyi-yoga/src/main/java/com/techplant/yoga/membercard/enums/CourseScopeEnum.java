@@ -1,6 +1,7 @@
 package com.techplant.yoga.membercard.enums;
 
 import com.ruoyi.common.exception.ServiceException;
+import com.techplant.yoga.course.enums.CourseTypeEnum;
 
 /** 适用课种范围固定枚举。 */
 public enum CourseScopeEnum
@@ -75,6 +76,21 @@ public enum CourseScopeEnum
     {
         CourseScopeEnum item = of(code);
         return item == null ? null : item.name;
+    }
+
+    /**
+     * 适用范围内是否包含给定课种
+     *
+     * <p>团课类含团课、精品课与特色课，私教课只含私教课；课种取值非法时不适用。</p>
+     */
+    public boolean covers(Integer courseType)
+    {
+        CourseTypeEnum type = CourseTypeEnum.of(courseType);
+        if (type == null)
+        {
+            return false;
+        }
+        return this == PERSONAL ? type == CourseTypeEnum.PERSONAL : type != CourseTypeEnum.PERSONAL;
     }
 
     /**

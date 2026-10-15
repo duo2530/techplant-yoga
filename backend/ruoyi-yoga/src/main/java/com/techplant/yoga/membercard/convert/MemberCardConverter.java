@@ -1,13 +1,17 @@
 package com.techplant.yoga.membercard.convert;
 
+import java.util.ArrayList;
+import java.util.List;
 import com.techplant.yoga.membercard.domain.MemberCardDO;
 import com.techplant.yoga.membercard.dto.MemberCardCreateDTO;
 import com.techplant.yoga.membercard.enums.CourseScopeEnum;
 import com.techplant.yoga.membercard.enums.MemberCardPublicStatusEnum;
 import com.techplant.yoga.membercard.enums.MemberCardTypeEnum;
+import com.techplant.yoga.membercard.vo.MemberCardBookingSnapshot;
 import com.techplant.yoga.membercard.vo.MemberCardDetailVO;
 import com.techplant.yoga.membercard.vo.MemberCardListItemVO;
 import com.techplant.yoga.membercard.vo.MemberCardPublicItemVO;
+import com.techplant.yoga.membercard.vo.MemberCardSummaryVO;
 
 /**
  * 会员卡对象转换。
@@ -93,6 +97,39 @@ public final class MemberCardConverter
         vo.setValidStartTime(card.getValidStartTime());
         vo.setValidEndTime(card.getValidEndTime());
         return vo;
+    }
+
+    /** 单行 → 预约事务用的锁卡快照（只带资格校验与扣返次需要的字段） */
+    public static MemberCardBookingSnapshot toBookingSnapshot(MemberCardDO card)
+    {
+        MemberCardBookingSnapshot snapshot = new MemberCardBookingSnapshot();
+        snapshot.setId(card.getId());
+        snapshot.setMemberId(card.getMemberId());
+        snapshot.setCardName(card.getCardName());
+        snapshot.setCardType(card.getCardType());
+        snapshot.setCourseScope(card.getCourseScope());
+        snapshot.setStoreId(card.getStoreId());
+        snapshot.setValidStartTime(card.getValidStartTime());
+        snapshot.setValidEndTime(card.getValidEndTime());
+        snapshot.setActivateTime(card.getActivateTime());
+        snapshot.setStopTime(card.getStopTime());
+        snapshot.setRemainingTimes(card.getRemainingTimes());
+        return snapshot;
+    }
+
+    /** 批量 → 会员卡摘要（跨模块 summaries，给卡号、卡名与卡类型） */
+    public static List<MemberCardSummaryVO> toSummaryVOList(List<MemberCardDO> cards)
+    {
+        List<MemberCardSummaryVO> list = new ArrayList<MemberCardSummaryVO>();
+        if (cards != null)
+        {
+            for (MemberCardDO card : cards)
+            {
+                list.add(new MemberCardSummaryVO(card.getId(), card.getCardNo(), card.getCardName(),
+                        card.getCardType()));
+            }
+        }
+        return list;
     }
 
     private static void fill(MemberCardListItemVO vo, MemberCardDO card, String memberName, String openStoreNo,

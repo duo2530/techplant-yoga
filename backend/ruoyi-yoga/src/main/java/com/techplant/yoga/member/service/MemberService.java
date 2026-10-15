@@ -62,7 +62,7 @@ public interface MemberService
     boolean existsById(Long memberId);
 
     /**
-     * 批量查询会员摘要（id + 显示名），供会员卡模块批量补 {@code memberName}
+     * 批量查询会员摘要（id + 显示名 + 手机号），供会员卡与预约模块批量补 {@code memberName}／{@code memberPhone}
      *
      * @param memberIds 会员 ID 集合，可为 null／空
      * @return 命中的会员摘要；已删除会员不在结果中，入参为空时返回空列表（不返回 null）
@@ -71,4 +71,11 @@ public interface MemberService
 
     /** 会员是否存在且已注册（{@code password} 非空）——请求鉴权用 */
     boolean isRegistered(Long memberId);
+
+    /**
+     * 在事务中当前读锁定会员行，用于同会员的预约创建串行校验重复与时间冲突
+     *
+     * @return 会员行存在时为 {@code true}
+     */
+    boolean lockForBooking(Long memberId);
 }

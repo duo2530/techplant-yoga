@@ -1,6 +1,6 @@
 -- ============================================================================
 -- 瑜伽普拉提 · 业务库脚本
--- 版本：v2.4（门店编号 + 会员卡）   日期：2026-10-14
+-- 版本：v2.5（用户端预约）          日期：2026-10-15
 --
 -- 用法：在已经导入若依基础库（ry_20260417.sql + quartz.sql）的库上执行本脚本。
 --       本脚本只负责「业务表 + 业务菜单 + 业务字典」，不涉及 sys_* 的结构。
@@ -22,13 +22,19 @@
 --   · t_member_card：会员卡表（唯一依据是会员卡管理详细设计 §1.2.1／§1.3.1）
 --   · 菜单 2007「会员卡管理」，指向 frontend/pc/src/views/membercard/index.vue
 --
+-- v2.5 新增：
+--   · t_reservation：课程预约单（唯一依据是预约管理详细设计 §1.2.1／§1.3.1）
+--   · t_member_card_transaction：会员卡次数流水（同上）
+--   · t_schedule.booked_persons 由预约创建与取消事务维护，不再固定 0
+--   · 菜单 2008「预约管理」，指向 frontend/pc/src/views/reservation/index.vue
+--
 -- 六条硬口径（一期既有口径，v2.1 不变）：
 --   1. 业务表一律【物理删除】—— 不建 `deleted` 列、不用 @TableLogic（t_member 同样如此）
 --   2. 门店「所在区域」存【行政区划 code】，区名由字典 `store_region` 翻译
 --   3. 排课表保存【课种快照 course_type】与【上课日期 schedule_date】两个派生列
 --   4. 排课状态：1 待上架 / 2 已上架 / 3 已取消；「已结束」按 end_time 推导，不落库
 --   5. 示例排课用 CURDATE() 相对日期生成，保证任何时候导入都能演示「四种状态」
---   6. 一期不启用预约：本脚本【不含 t_booking】，也【不含预约管理菜单】
+--   6. 预约用 t_reservation：本脚本不含旧表 t_booking
 --
 -- 业务菜单放在独立的一级目录「经营基础」下，与若依自带的「系统管理」目录互不干扰。
 -- ============================================================================
@@ -36,9 +42,9 @@
 SET NAMES utf8mb4;
 
 -- ============================================================================
--- 1. 菜单：一级目录「经营基础」+ 七个业务菜单
+-- 1. 菜单：一级目录「经营基础」+ 八个业务菜单
 --    （只清理 2000~2009，不动若依自带的「系统管理」那套菜单）
---    2006=会员管理、2007=会员卡管理 已随本脚本交付；2008=预约管理 / 2009=账号管理 仍未交付：
+--    2001~2008 已随本脚本交付；2009=账号管理 仍未交付：
 --    未交付菜单一并纳入清理范围，菜单行的 INSERT 由各自模块的 SQL 交付时补。
 -- ============================================================================
 
@@ -56,6 +62,7 @@ INSERT INTO `sys_menu` VALUES ('2004', '课程管理', '2000', '4', 'course',   
 INSERT INTO `sys_menu` VALUES ('2005', '排课管理', '2000', '5', 'schedule',  'schedule/index',  '', '', 1, 0, 'C', '0', '0', '', 'date',      'admin', SYSDATE(), '', NULL, '排课管理菜单');
 INSERT INTO `sys_menu` VALUES ('2006', '会员管理', '2000', '6', 'member',    'member/index',    '', '', 1, 0, 'C', '0', '0', '', 'peoples',   'admin', SYSDATE(), '', NULL, '会员管理菜单');
 INSERT INTO `sys_menu` VALUES ('2007', '会员卡管理', '2000', '7', 'membercard', 'membercard/index', '', '', 1, 0, 'C', '0', '0', '', 'money', 'admin', SYSDATE(), '', NULL, '会员卡管理菜单');
+INSERT INTO `sys_menu` VALUES ('2008', '预约管理', '2000', '8', 'reservation', 'reservation/index', '', '', 1, 0, 'C', '0', '0', '', 'date', 'admin', SYSDATE(), '', NULL, '预约管理菜单');
 
 -- 绑定若依内置管理员角色（role_id = 1）
 INSERT INTO `sys_role_menu` VALUES ('1', '2000');
@@ -66,6 +73,7 @@ INSERT INTO `sys_role_menu` VALUES ('1', '2004');
 INSERT INTO `sys_role_menu` VALUES ('1', '2005');
 INSERT INTO `sys_role_menu` VALUES ('1', '2006');
 INSERT INTO `sys_role_menu` VALUES ('1', '2007');
+INSERT INTO `sys_role_menu` VALUES ('1', '2008');
 
 -- ============================================================================
 -- 2. 字典
@@ -290,7 +298,7 @@ CREATE TABLE `t_schedule` (
   `end_time`       datetime     NOT NULL COMMENT '结束时间（须与开始时间同一自然日）',
   `max_persons`    int          NOT NULL COMMENT '最大人数（>0）',
   `min_persons`    int          NOT NULL DEFAULT 2 COMMENT '最低开课人数（1<=min<=max；一期不做自动取消）',
-  `booked_persons` int          NOT NULL DEFAULT 0 COMMENT '已预约人数（一期固定0）',
+  `booked_persons` int          NOT NULL DEFAULT 0 COMMENT '已预约人数（未取消预约的 persons 总和，由预约事务维护）',
   `status`         tinyint      NOT NULL DEFAULT 1 COMMENT '状态：1待上架 2已上架 3已取消',
   `create_by`      bigint unsigned       DEFAULT NULL COMMENT '创建人ID',
   `create_time`    datetime     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
@@ -449,10 +457,68 @@ VALUES
    1, '2026-10-06 10:00:00', 1, '2026-10-08 09:00:00');
 
 -- ============================================================================
+-- 3.8 课程预约单 t_reservation（用户端预约课程／取消预约／预约签到／我的预约）
+--     唯一依据：预约管理详细设计 §1.2.1 字段定义、§1.3.1 建表语句
+--     状态：1 已预约 / 2 已取消 / 3 已签到；课程结束不改变预约状态
+--     request_id 是客户端提交幂等标识，uk_member_request 保证重试不重复下单；
+--     不能对 (member_id, schedule_id) 建全量唯一约束 —— 取消后允许重新预约，
+--     未取消预约的唯一性由会员行锁串行校验。
+--     没有 deleted 列 —— 与其余业务表一致，删除一律物理删除。
+-- ============================================================================
+DROP TABLE IF EXISTS `t_reservation`;
+CREATE TABLE `t_reservation` (
+  `id`               bigint unsigned NOT NULL COMMENT '预约ID',
+  `request_id`       varchar(36)  NOT NULL COMMENT '请求幂等标识',
+  `member_id`        bigint unsigned NOT NULL COMMENT '会员ID',
+  `schedule_id`      bigint unsigned NOT NULL COMMENT '排课ID',
+  `start_time`       datetime     NOT NULL COMMENT '开始时间（预约时的排课快照）',
+  `end_time`         datetime     NOT NULL COMMENT '结束时间（预约时的排课快照）',
+  `persons`          int          NOT NULL COMMENT '预约人数',
+  `member_card_id`   bigint unsigned NOT NULL COMMENT '会员卡ID',
+  `status`           tinyint      NOT NULL DEFAULT 1 COMMENT '状态：1已预约 2已取消 3已签到',
+  `reservation_time` datetime     NOT NULL COMMENT '预约时间',
+  `cancel_time`      datetime     DEFAULT NULL COMMENT '取消时间',
+  `cancel_reason`    tinyint      DEFAULT NULL COMMENT '取消原因：1会员主动取消 2排课取消',
+  `check_in_time`    datetime     DEFAULT NULL COMMENT '签到时间',
+  `create_by`        bigint unsigned DEFAULT NULL COMMENT '创建人ID',
+  `create_time`      datetime     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_by`        bigint unsigned DEFAULT NULL COMMENT '更新人ID',
+  `update_time`      datetime     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_member_request` (`member_id`, `request_id`),
+  KEY `idx_reservation_member_status` (`member_id`, `status`),
+  KEY `idx_reservation_schedule` (`schedule_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='课程预约单';
+
+-- ============================================================================
+-- 3.9 会员卡次数流水 t_member_card_transaction（预约扣次／取消返次）
+--     唯一依据：预约管理详细设计 §1.2.3 字段定义、§1.3.1 建表语句
+--     change_times 扣次为负数、返次为正数；before/after 为变动前后的剩余次数；
+--     uk_reservation_type 保证同一预约的扣次、返次流水分别至多一笔。
+--     本表只追加，不修改、不删除。
+-- ============================================================================
+DROP TABLE IF EXISTS `t_member_card_transaction`;
+CREATE TABLE `t_member_card_transaction` (
+  `id`             bigint unsigned NOT NULL COMMENT '流水ID',
+  `member_card_id` bigint unsigned NOT NULL COMMENT '会员卡ID',
+  `member_id`      bigint unsigned NOT NULL COMMENT '会员ID',
+  `reservation_id` bigint unsigned NOT NULL COMMENT '预约ID',
+  `change_type`    tinyint      NOT NULL COMMENT '类型：1预约扣次 2取消返次',
+  `persons`        int          NOT NULL COMMENT '预约人数',
+  `change_times`   int          NOT NULL COMMENT '变动次数（扣次为负、返次为正）',
+  `before_times`   int          NOT NULL COMMENT '变动前剩余次数',
+  `after_times`    int          NOT NULL COMMENT '变动后剩余次数',
+  `create_time`    datetime     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '变动时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_reservation_type` (`reservation_id`, `change_type`),
+  KEY `idx_transaction_card` (`member_card_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='会员卡次数流水';
+
+-- ============================================================================
 -- 4. 暂不建的表
---    预约（t_booking）、会员卡扣次流水、私教排班、营业时间登记、教练×门店关联、教练技能、
+--    旧预约表 t_booking、私教排班、营业时间登记、教练×门店关联、教练技能、
 --    会员等级/权益、优惠券、礼包、积分、合同、体测、公告、消息、活动
 --    —— 全部不在本期范围（见 docs/需求文档/业务规则.md 的 BR-全局-005）。
---    注：会员表 t_member 已在 §3.6 落地（二期用户端登录需要），会员卡 t_member_card 已在 §3.7 落地；
---    预约仍未交付，会员卡的扣次／返次流水随预约模块一并交付。
+--    注：会员表 t_member 已在 §3.6 落地，会员卡 t_member_card 已在 §3.7 落地，
+--    预约单与会员卡扣次／返次流水已在 §3.8、§3.9 落地。
 -- ============================================================================

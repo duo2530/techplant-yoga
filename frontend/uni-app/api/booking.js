@@ -1,61 +1,157 @@
-import { mockResult, isEmpty } from '@/mock/config'
-import { bookings, BOOKING_STATUS, BOOKING_COURSE_FILTERS, BOOKING_CARD_FILTERS } from '@/mock/booking'
+import request from '@/utils/request'
+import config from '@/config'
+
+/** 用户端预约接口：我的预约列表、取消、签到与提交预约。 */
+
+const MAX_PAGE_SIZE = 100
+
+/** 状态筛选：与后端的 status 取值一致 */
+const STATUS_TABS = [
+  { value: 0, label: '全部' },
+  { value: 1, label: '已预约' },
+  { value: 2, label: '已取消' },
+  { value: 3, label: '已签到' }
+]
+
+/** 卡类型筛选：与后端的 cardType 取值一致 */
+const CARD_TYPE_FILTERS = [
+  { value: 0, label: '全部' },
+  { value: 1, label: '次数卡' },
+  { value: 2, label: '年卡' }
+]
+
+function toId(value) {
+  return value === null || value === undefined ? '' : String(value)
+}
+
+function toText(value) {
+  return value === null || value === undefined ? '' : String(value)
+}
+
+function toNum(value) {
+  const n = Number(value)
+  return isNaN(n) ? 0 : n
+}
+
+/** 封面可能是相对路径，按 baseUrl 拼成可直接渲染的地址 */
+function toImageUrl(value) {
+  const url = toText(value).trim()
+  if (!url || /^(?:[a-z][a-z\d+.-]*:|\/\/|\/?static\/)/i.test(url)) {
+    return url
+  }
+  return config.baseUrl.replace(/\/+$/, '') + '/' + url.replace(/^\/+/, '')
+}
+
+/** 完整时间（yyyy-MM-dd HH:mm:ss）取 HH:mm；长度不足时原样返回 */
+function toHm(value) {
+  const text = toText(value)
+  return text.length >= 16 ? text.slice(11, 16) : text
+}
+
+/** 归一化 ReservationPublicItemVO，字段与后端契约一一对应 */
+function normalizeBooking(row) {
+  const item = row || {}
+  return {
+    id: toId(item.id),
+    scheduleId: toId(item.scheduleId),
+    courseId: toId(item.courseId),
+    courseName: toText(item.courseName),
+    courseCoverUrl: toImageUrl(item.courseCoverUrl),
+    courseType: item.courseType,
+    courseTypeName: toText(item.courseTypeName),
+    coachName: toText(item.coachName),
+    storeAddress: toText(item.storeAddress),
+    scheduleDate: toText(item.scheduleDate),
+    startTime: toText(item.startTime),
+    endTime: toText(item.endTime),
+    startHm: toHm(item.startTime),
+    endHm: toHm(item.endTime),
+    status: item.status,
+    statusText: toText(item.statusText)
+  }
+}
 
 /** 状态筛选 Tab（全部 / 已预约 / 已取消 / 已签到） */
 export function getBookingStatusTabs() {
-  return mockResult(BOOKING_STATUS)
+  return STATUS_TABS.slice()
+}
+
+/** 卡类型筛选选项（全部 / 次数卡 / 年卡） */
+export function getCardTypeFilters() {
+  return CARD_TYPE_FILTERS.slice()
 }
 
 /** 状态码 → 文案 */
 export function bookingStatusLabel(status) {
-  const hit = BOOKING_STATUS.find((item) => item.value === Number(status))
+  const hit = STATUS_TABS.find((item) => item.value === Number(status))
   return hit ? hit.label : ''
 }
 
-/** 课种 / 卡种下拉选项 */
-export function getBookingFilters() {
-  return mockResult({
-    courseTypes: BOOKING_COURSE_FILTERS,
-    cardTypes: BOOKING_CARD_FILTERS
+/**
+ * 我的预约列表 —— GET /api/reservations
+ *
+ * @param {Object} params { status, cardType, pageNum, pageSize }
+ * @returns {Promise<{list: Array, total: number}>}
+ */
+export function listBookings(params = {}) {
+  const pageSize = Math.min(Number(params.pageSize) || 20, MAX_PAGE_SIZE)
+  return request({
+    url: '/api/reservations',
+    method: 'get',
+    params: {
+      status: params.status || '',
+      cardType: params.cardType || '',
+      pageNum: params.pageNum || 1,
+      pageSize: pageSize
+    }
+  }).then((res) => {
+    const rows = res && Array.isArray(res.rows) ? res.rows : []
+    return {
+      list: rows.map(normalizeBooking),
+      total: Number((res && res.total) || 0)
+    }
   })
 }
 
+/** 取消预约 —— PUT /api/reservations/{reservationId}/cancel */
+export function cancelBooking(reservationId) {
+  return request({
+    url: '/api/reservations/' + encodeURIComponent(toId(reservationId)) + '/cancel',
+    method: 'put'
+  }).then((res) => toText(res && res.msg))
+}
+
+/** 签到 —— PUT /api/reservations/{reservationId}/check-in */
+export function checkInBooking(reservationId) {
+  return request({
+    url: '/api/reservations/' + encodeURIComponent(toId(reservationId)) + '/check-in',
+    method: 'put'
+  }).then((res) => toText(res && res.msg))
+}
+
 /**
- * 我的预约列表（mock）
+ * 提交预约 —— POST /api/reservations
  *
- * 原型「我的预约」页是空态（暂无符合条件的预约），默认由 MOCK.empty.bookings 控制；
- * 把开关改成 false 就会返回 mock 数据。
- *
- * @param {Object} params { status, courseType, cardType }
+ * requestId 由调用方生成并在同一笔预约的重试间复用，后端按它做幂等。
  */
-export function listBookings(params = {}) {
-  if (isEmpty('bookings')) {
-    return mockResult([])
-  }
-  let list = bookings.slice()
-  if (params.status) {
-    list = list.filter((item) => item.status === Number(params.status))
-  }
-  return mockResult(list.map((item) => Object.assign({}, item, { statusLabel: bookingStatusLabel(item.status) })))
+export function createReservation(params = {}) {
+  return request({
+    url: '/api/reservations',
+    method: 'post',
+    data: {
+      requestId: toText(params.requestId),
+      scheduleId: toId(params.scheduleId),
+      memberCardId: toId(params.memberCardId),
+      persons: toNum(params.persons)
+    }
+  }).then((res) => toText(res && res.msg))
 }
 
-/** 预约详情 */
-export function getBookingDetail(bookingId) {
-  const booking = bookings.find((item) => String(item.id) === String(bookingId)) || null
-  if (!booking) {
-    return mockResult(null)
-  }
-  return mockResult(Object.assign({}, booking, { statusLabel: bookingStatusLabel(booking.status) }))
-}
-
-/** 取消预约（mock）：只返回成功，不落库 */
-export function cancelBooking(bookingId) {
-  const booking = bookings.find((item) => String(item.id) === String(bookingId))
-  if (!booking) {
-    return mockResult({ success: false, message: '预约不存在' })
-  }
-  if (booking.status === 3) {
-    return mockResult({ success: false, message: '已签到的课程不能取消' })
-  }
-  return mockResult({ success: true, message: '已取消预约' })
+/** 生成 RFC4122 v4 请求号 */
+export function generateRequestId() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0
+    const v = c === 'x' ? r : (r & 0x3) | 0x8
+    return v.toString(16)
+  })
 }

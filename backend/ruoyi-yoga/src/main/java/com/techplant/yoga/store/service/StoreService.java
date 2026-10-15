@@ -39,7 +39,7 @@ public interface StoreService
     void delete(Long storeId);
 
     /**
-     * 批量查询门店摘要（id + 门店编号 + name），供教室、排课与会员卡模块批量补名称
+     * 批量查询门店摘要（id + 门店编号 + name + address），供教室、排课、预约与会员卡模块批量补展示字段
      *
      * @param ids 门店 ID 集合，可为 null／空
      * @return 命中的门店摘要；入参为空时返回空列表（不返回 null）

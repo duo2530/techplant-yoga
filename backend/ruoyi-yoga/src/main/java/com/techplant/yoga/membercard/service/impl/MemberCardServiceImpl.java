@@ -10,6 +10,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,9 +32,11 @@ import com.techplant.yoga.membercard.query.MemberCardPublicQuery;
 import com.techplant.yoga.membercard.query.MemberCardQuery;
 import com.techplant.yoga.membercard.service.CardNoGenerator;
 import com.techplant.yoga.membercard.service.MemberCardService;
+import com.techplant.yoga.membercard.vo.MemberCardBookingSnapshot;
 import com.techplant.yoga.membercard.vo.MemberCardDetailVO;
 import com.techplant.yoga.membercard.vo.MemberCardListItemVO;
 import com.techplant.yoga.membercard.vo.MemberCardPublicItemVO;
+import com.techplant.yoga.membercard.vo.MemberCardSummaryVO;
 import com.techplant.yoga.store.service.StoreService;
 import com.techplant.yoga.store.vo.StoreSummaryVO;
 
@@ -212,6 +215,89 @@ public class MemberCardServiceImpl implements MemberCardService
         {
             // 并发下已被删除：影响行数为 0
             throw notFound();
+        }
+    }
+
+    @Override
+    public MemberCardBookingSnapshot lockCard(Long memberCardId, Long memberId)
+    {
+        MemberCardDO card = memberCardDao.selectByIdForUpdate(memberCardId);
+        if (card == null || !Objects.equals(card.getMemberId(), memberId))
+        {
+            throw new ServiceException("会员卡不存在或不属于本人", NOT_FOUND);
+        }
+        return MemberCardConverter.toBookingSnapshot(card);
+    }
+
+    @Override
+    public List<Long> cardIdsOfMember(Long memberId, Integer cardType)
+    {
+        return memberCardDao.selectIdsByMemberAndType(memberId, cardType);
+    }
+
+    @Override
+    public List<MemberCardSummaryVO> summaries(Collection<Long> cardIds)
+    {
+        return MemberCardConverter.toSummaryVOList(memberCardDao.selectByIds(cardIds));
+    }
+
+    @Override
+    public MemberCardBookingSnapshot lockBookableCard(Long memberCardId, Long memberId, Integer courseType,
+            Long scheduleStoreId, LocalDateTime startTime, LocalDateTime endTime)
+    {
+        MemberCardBookingSnapshot snapshot = lockCard(memberCardId, memberId);
+        validateBookable(snapshot, courseType, scheduleStoreId, startTime, endTime);
+        return snapshot;
+    }
+
+    @Override
+    public boolean deductTimes(Long memberCardId, Integer persons)
+    {
+        return memberCardDao.deductTimes(memberCardId, persons) == 1;
+    }
+
+    @Override
+    public boolean refundTimes(Long memberCardId, Integer times)
+    {
+        return memberCardDao.refundTimes(memberCardId, times) == 1;
+    }
+
+    /** 预约资格校验：归属已在锁卡时校验，这里依次校验开卡、停卡、有效期、门店与课种 */
+    private void validateBookable(MemberCardBookingSnapshot card, Integer courseType, Long scheduleStoreId,
+            LocalDateTime startTime, LocalDateTime endTime)
+    {
+        if (card.getActivateTime() == null)
+        {
+            throw new ServiceException("会员卡未开卡，不能预约", CONFLICT);
+        }
+        if (card.getStopTime() != null)
+        {
+            throw new ServiceException("会员卡已停卡，不能预约", CONFLICT);
+        }
+        LocalDateTime now = LocalDateTime.now(CardNoGenerator.CARD_ZONE);
+        if (card.getValidStartTime() == null || card.getValidEndTime() == null || now.isBefore(card.getValidStartTime())
+                || now.isAfter(card.getValidEndTime()))
+        {
+            throw new ServiceException("会员卡已过期，不能预约", CONFLICT);
+        }
+        if (startTime == null || endTime == null)
+        {
+            throw new ServiceException("排课时间缺失，不能预约", CONFLICT);
+        }
+        if (endTime.isAfter(card.getValidEndTime()))
+        {
+            throw new ServiceException("会员卡有效期不覆盖本次课程，不能预约", CONFLICT);
+        }
+        CourseScopeEnum scope = CourseScopeEnum.of(card.getCourseScope());
+        if (scope == null || !scope.covers(courseType))
+        {
+            throw new ServiceException("会员卡不适用于该课程", CONFLICT);
+        }
+        // 次数卡限定适用门店，年卡全部门店通用
+        if (MemberCardTypeEnum.TIMES.getCode().equals(card.getCardType())
+                && !Objects.equals(card.getStoreId(), scheduleStoreId))
+        {
+            throw new ServiceException("会员卡不适用于该门店", CONFLICT);
         }
     }
 

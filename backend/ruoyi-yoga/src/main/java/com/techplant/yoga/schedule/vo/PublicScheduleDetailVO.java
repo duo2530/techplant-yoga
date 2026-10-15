@@ -24,10 +24,13 @@ public class PublicScheduleDetailVO extends ScheduleCardVO
     @ApiModelProperty(value = "教练简介")
     private String coachIntro;
 
+    @ApiModelProperty(value = "门店地址（关联门店已删除时为空）")
+    private String storeAddress;
+
     @ApiModelProperty(value = "最低开课人数（需求里的「开课人数」）", example = "2")
     private Integer minPersons;
 
-    @ApiModelProperty(value = "预约人员列表（一期固定空数组）", example = "[]")
+    @ApiModelProperty(value = "预约会员显示名（脱敏，最多 10 位）", example = "[\"张*\"]")
     private List<String> bookers = new ArrayList<String>();
 
     public Long getCourseId()
@@ -88,6 +91,16 @@ public class PublicScheduleDetailVO extends ScheduleCardVO
     public void setMinPersons(Integer minPersons)
     {
         this.minPersons = minPersons;
+    }
+
+    public String getStoreAddress()
+    {
+        return storeAddress;
+    }
+
+    public void setStoreAddress(String storeAddress)
+    {
+        this.storeAddress = storeAddress;
     }
 
     public List<String> getBookers()

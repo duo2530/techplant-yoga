@@ -99,7 +99,7 @@ public final class MemberConverter
         {
             for (MemberDO member : members)
             {
-                list.add(new MemberSummaryVO(member.getId(), nameOrEmpty(member.getName())));
+                list.add(new MemberSummaryVO(member.getId(), nameOrEmpty(member.getName()), member.getPhone()));
             }
         }
         return list;

@@ -1,6 +1,9 @@
 package com.techplant.yoga.membercard.dao;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 import org.springframework.stereotype.Repository;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -61,6 +64,34 @@ public class MemberCardDaoImpl implements MemberCardDao
     }
 
     @Override
+    public List<Long> selectIdsByMemberAndType(Long memberId, Integer cardType)
+    {
+        List<MemberCardDO> cards = memberCardMapper.selectList(Wrappers.<MemberCardDO>lambdaQuery()
+                .select(MemberCardDO::getId)
+                .eq(MemberCardDO::getMemberId, memberId)
+                .eq(cardType != null, MemberCardDO::getCardType, cardType));
+        List<Long> ids = new ArrayList<Long>();
+        for (MemberCardDO card : cards)
+        {
+            ids.add(card.getId());
+        }
+        return ids;
+    }
+
+    @Override
+    public List<MemberCardDO> selectByIds(Collection<Long> cardIds)
+    {
+        if (cardIds == null || cardIds.isEmpty())
+        {
+            return new ArrayList<MemberCardDO>();
+        }
+        return memberCardMapper.selectList(Wrappers.<MemberCardDO>lambdaQuery()
+                .select(MemberCardDO::getId, MemberCardDO::getCardNo, MemberCardDO::getCardName,
+                        MemberCardDO::getCardType)
+                .in(MemberCardDO::getId, cardIds));
+    }
+
+    @Override
     public MemberCardDO selectByIdForUpdate(Long cardId)
     {
         if (cardId == null)
@@ -113,8 +144,27 @@ public class MemberCardDaoImpl implements MemberCardDao
         return memberCardMapper.deleteById(cardId);
     }
 
-    /** 去除字符串前后空格；空串归一为 {@code null}（空值条件不参与筛选） */
-    private String trimToNull(String value)
+    @Override
+    public int deductTimes(Long cardId, Integer persons)
+    {
+        return memberCardMapper.update(null, Wrappers.<MemberCardDO>lambdaUpdate()
+                .eq(MemberCardDO::getId, cardId)
+                // 条件更新保证余额与并发安全：扣后为负的行不更新
+                .apply("remaining_times >= {0}", persons)
+                .setSql("remaining_times = remaining_times - " + persons)
+                .set(MemberCardDO::getUpdateTime, LocalDateTime.now()));
+    }
+
+    @Override
+    public int refundTimes(Long cardId, Integer times)
+    {
+        return memberCardMapper.update(null, Wrappers.<MemberCardDO>lambdaUpdate()
+                .eq(MemberCardDO::getId, cardId)
+                .setSql("remaining_times = remaining_times + " + times)
+                .set(MemberCardDO::getUpdateTime, LocalDateTime.now()));
+    }
+
+    /** 去除字符串前后空格；空串归一为 {@code null}（空值条件不参与筛选） */    private String trimToNull(String value)
     {
         if (value == null)
         {

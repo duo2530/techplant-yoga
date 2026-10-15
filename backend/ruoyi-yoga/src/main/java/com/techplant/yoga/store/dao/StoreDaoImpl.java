@@ -88,6 +88,7 @@ public class StoreDaoImpl implements StoreDao
         return stores == null || stores.isEmpty() ? null : stores.get(0);
     }
 
+    /** 批量查摘要：只取 id、门店编号、名称与地址（跨模块 summaries 用） */
     @Override
     public List<StoreDO> selectByIds(Collection<Long> ids)
     {
@@ -96,7 +97,7 @@ public class StoreDaoImpl implements StoreDao
             return Collections.emptyList();
         }
         LambdaQueryWrapper<StoreDO> wrapper = Wrappers.<StoreDO>lambdaQuery()
-                .select(StoreDO::getId, StoreDO::getStoreNo, StoreDO::getName)
+                .select(StoreDO::getId, StoreDO::getStoreNo, StoreDO::getName, StoreDO::getAddress)
                 .in(StoreDO::getId, ids);
         List<StoreDO> stores = storeMapper.selectList(wrapper);
         return stores == null ? Collections.<StoreDO>emptyList() : stores;

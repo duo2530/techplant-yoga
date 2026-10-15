@@ -11,8 +11,6 @@ export const MOCK = {
     homeHotCourses: true,
     /** 首页公告栏（原型显示「暂无公告」） */
     homeNotices: true,
-    /** 我的预约（原型显示「暂无符合条件的预约」） */
-    bookings: true,
     /** 我的体验课（原型显示「暂无数据」） */
     trials: true,
     /** 活动列表（原型整屏空态） */

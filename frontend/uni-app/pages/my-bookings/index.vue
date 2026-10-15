@@ -1,15 +1,15 @@
 <template>
   <!--
-    我的预约（严格照 docs/原型/my-bookings.html）
+    我的预约
 
-    状态栏 / 导航栏 / 微信胶囊 / TabBar 由小程序绘制，本页不画。
-    导航栏标题「我的预约」已在 pages.json 配好；原型这一页导航栏左侧没有任何控件。
+    数据：GET /api/reservations（status ＋ cardType ＋ 分页），取消与签到都是真实接口。
+    状态栏 / 导航栏 / 微信胶囊 / TabBar 由系统绘制，本页只画内容区。
   -->
   <view class="bookings">
-    <!-- ===== 上方白色区：状态筛选 Tab + 计数/下拉筛选栏 ===== -->
+    <!-- ===== 上方白色区：状态筛选 Tab + 卡类型筛选 ===== -->
     <view class="head">
       <!-- 状态筛选 Tab：全部 / 已预约 / 已取消 / 已签到
-           选中态 = 文字加深加粗 + 其下 24×3pt 蓝色圆角下划线 -->
+           选中态 = 文字加深加粗 + 其下蓝色圆角下划线 -->
       <view class="status">
         <view
           v-for="tab in statusTabs"
@@ -24,140 +24,193 @@
         </view>
       </view>
 
-      <!-- 计数 + 两个下拉筛选 -->
+      <!-- 卡类型下拉：次数卡 / 年卡 -->
       <view class="filters">
-        <view class="filters__count">
-          <text class="filters__num">{{ bookings.length }}</text>
-          <text class="filters__unit">条预约</text>
-        </view>
-        <view class="filters__right">
-          <!-- 下拉 1：课种。原型左侧是蓝色「文档/列表」图标；
-               uni-icons 没有文档图标，取形状最接近的 compose（纸+笔），说明见交付报告 -->
-          <view class="filters__btn press" @tap="onCourseTypeTap">
-            <uni-icons class="filters__icon" type="compose" size="15" color="#609CE9" />
-            <text class="filters__label">{{ courseTypeLabel }}</text>
-            <uni-icons class="filters__caret" type="bottom" size="9" color="#999999" />
-          </view>
-          <!-- 下拉 2：卡种。原型左侧是蓝色漏斗图标；
-               uni-icons 没有漏斗，取语义最接近的 tune（筛选/调节） -->
-          <view class="filters__btn filters__btn--last press" @tap="onCardTypeTap">
-            <uni-icons class="filters__icon" type="tune" size="15" color="#609CE9" />
-            <text class="filters__label">{{ cardTypeLabel }}</text>
-            <uni-icons class="filters__caret" type="bottom" size="9" color="#999999" />
-          </view>
+        <view class="filters__btn press" @tap="onCardTypeTap">
+          <uni-icons class="filters__icon" type="tune" size="15" color="#609CE9" />
+          <text class="filters__label">{{ cardTypeLabel }}</text>
+          <uni-icons class="filters__caret" type="bottom" size="9" color="#999999" />
         </view>
       </view>
     </view>
 
-    <!-- ===== 空态（原型：白盒 + 插画 + 两行文案，白盒距内容区顶 181pt） ===== -->
-    <view v-if="!bookings.length" class="empty-box">
+    <!-- 未登录、加载失败与「确实没有预约」是三种状态：只有成功且结果为空才显示空态 -->
+    <view v-if="needLogin" class="state">
+      <text class="state__text">登录后查看我的预约</text>
+      <view class="state__btn press" @tap="goLogin">
+        <text class="state__btn-text">去登录</text>
+      </view>
+    </view>
+    <view v-else-if="error && !bookings.length" class="state">
+      <text class="state__text">预约记录加载失败，请稍后重试</text>
+      <view class="state__btn press" @tap="reload">
+        <text class="state__btn-text">重新加载</text>
+      </view>
+    </view>
+    <view v-else-if="!bookings.length && !loading" class="empty-box">
       <ys-empty
         image="/static/images/empty/booking.png"
         image-width="265rpx"
         image-height="108rpx"
         title="暂无符合条件的预约"
-        subtitle="可切换预约状态、课种或卡种查看"
+        subtitle="可切换预约状态或卡类型查看"
         :padding-top="181"
       />
     </view>
 
-    <!-- ===== 有数据时（MOCK.empty.bookings = false）的预约卡列表 ===== -->
     <view v-else class="list">
       <ys-booking-card
         v-for="item in bookings"
         :key="item.id"
         :item="item"
-        @tap="onBookingTap"
         @cancel="onCancel"
+        @checkin="onCheckIn"
       />
     </view>
+
+    <view v-if="loading" class="foot">
+      <text class="foot__text">加载中...</text>
+    </view>
+    <view v-else-if="error && bookings.length && !needLogin" class="foot foot--retry" @tap="reload">
+      <text class="foot__text">加载失败，点击重试</text>
+    </view>
+    <view v-else-if="bookings.length && !hasMore && !needLogin" class="foot">
+      <view class="foot__line" />
+      <text class="foot__text">已经到底了</text>
+      <view class="foot__line" />
+    </view>
+
+    <view class="bottom" />
   </view>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
-import { onShow } from '@dcloudio/uni-app'
-import { getBookingStatusTabs, getBookingFilters, listBookings, cancelBooking } from '@/api/booking'
+import { computed, ref } from 'vue'
+import { onReachBottom, onShow } from '@dcloudio/uni-app'
+import {
+  getBookingStatusTabs,
+  getCardTypeFilters,
+  listBookings,
+  cancelBooking,
+  checkInBooking
+} from '@/api/booking'
+import { isSessionValid, LOGIN_PAGE } from '@/utils/session'
 
-/**
- * 我的预约
- *
- * 数据全部来自 @/api/booking（内部读 mock），不发任何网络请求。
- * 原型这一页是空态（暂无符合条件的预约），由 MOCK.empty.bookings 控制；
- * 把开关改成 false 就会走 ys-booking-card 列表分支。
- */
+/** 我的预约 */
 
-const statusTabs = ref([])
-const courseTypes = ref([])
-const cardTypes = ref([])
+const PAGE_SIZE = 20
+
+const statusTabs = ref(getBookingStatusTabs())
+const cardTypes = ref(getCardTypeFilters())
+
 const bookings = ref([])
+const pageNum = ref(0)
+const total = ref(0)
+const loading = ref(false)
+const error = ref(false)
+const needLogin = ref(false)
 
 const activeStatus = ref(0)
-const activeCourseType = ref(0)
 const activeCardType = ref(0)
 
-/** 原型两个下拉都显示原文「全部...」（末尾三个点，不是省略号字符） */
-function filterLabel(list, value) {
-  const hit = list.value.find((item) => item.value === value)
-  if (!hit || value === 0) {
-    return '全部...'
+const cardTypeLabel = computed(() => {
+  if (!activeCardType.value) {
+    return '全部卡类型'
   }
-  return hit.label + '...'
-}
-
-const courseTypeLabel = computed(() => filterLabel(courseTypes, activeCourseType.value))
-const cardTypeLabel = computed(() => filterLabel(cardTypes, activeCardType.value))
-
-async function loadBookings() {
-  bookings.value = await listBookings({
-    status: activeStatus.value,
-    courseType: activeCourseType.value,
-    cardType: activeCardType.value
-  })
-}
-
-async function init() {
-  const [tabs, filters] = await Promise.all([getBookingStatusTabs(), getBookingFilters()])
-  statusTabs.value = tabs
-  courseTypes.value = filters.courseTypes
-  cardTypes.value = filters.cardTypes
-  await loadBookings()
-}
-
-// 用 onShow：从约课页预约成功切回来时列表要刷新
-onShow(() => {
-  init()
+  const hit = cardTypes.value.find((item) => item.value === activeCardType.value)
+  return hit ? hit.label : '全部卡类型'
 })
+
+/** 后端已按预约时间倒序返回，翻页只按已加载条数与 total 比较 */
+const hasMore = computed(() => bookings.value.length < total.value)
+
+/** 未登录只跳一次登录页，避免 onShow 反复入栈 */
+let loginRedirected = false
+
+/** 请求序号：只有最新一次请求的结果能写回列表，过期响应直接丢弃 */
+let requestSeq = 0
+
+function requireLogin() {
+  if (isSessionValid()) {
+    loginRedirected = false
+    return true
+  }
+  if (!loginRedirected) {
+    loginRedirected = true
+    uni.navigateTo({ url: LOGIN_PAGE })
+  }
+  return false
+}
+
+async function loadPage(reset = false) {
+  if (!requireLogin()) {
+    needLogin.value = true
+    error.value = false
+    bookings.value = []
+    total.value = 0
+    pageNum.value = 0
+    return
+  }
+  // 追加下一页时不重复发起；筛选变化（reset）允许插队重新加载
+  if (!reset && (loading.value || (pageNum.value > 0 && !hasMore.value))) {
+    return
+  }
+  needLogin.value = false
+  const seq = ++requestSeq
+  const nextPage = reset ? 1 : pageNum.value + 1
+  loading.value = true
+  error.value = false
+  try {
+    const result = await listBookings({
+      status: activeStatus.value,
+      cardType: activeCardType.value,
+      pageNum: nextPage,
+      pageSize: PAGE_SIZE
+    })
+    if (seq !== requestSeq) {
+      return
+    }
+    bookings.value = reset ? result.list : bookings.value.concat(result.list)
+    pageNum.value = nextPage
+    total.value = result.total
+  } catch (requestError) {
+    // 401 已由 request 统一清理登录态并提示重新登录；其余失败留在页面上给重试入口，不当成空列表
+    if (seq === requestSeq) {
+      error.value = true
+    }
+  } finally {
+    if (seq === requestSeq) {
+      loading.value = false
+    }
+  }
+}
+
+/** 切换筛选：先清空列表再重新加载，旧筛选的数据不停留在页面上 */
+function applyFilter() {
+  bookings.value = []
+  total.value = 0
+  pageNum.value = 0
+  loadPage(true)
+}
+
+/** 重试：首屏失败从第 1 页重来，翻页失败只补当前这一页 */
+function reload() {
+  loadPage(pageNum.value === 0)
+}
+
+function goLogin() {
+  uni.navigateTo({ url: LOGIN_PAGE })
+}
 
 function onStatusChange(value) {
   if (value === activeStatus.value) {
     return
   }
   activeStatus.value = value
-  loadBookings()
-}
-
-function onCourseTypeTap() {
-  if (!courseTypes.value.length) {
-    return
-  }
-  uni.showActionSheet({
-    itemList: courseTypes.value.map((item) => item.label),
-    success: (res) => {
-      const picked = courseTypes.value[res.tapIndex]
-      if (!picked || picked.value === activeCourseType.value) {
-        return
-      }
-      activeCourseType.value = picked.value
-      loadBookings()
-    }
-  })
+  applyFilter()
 }
 
 function onCardTypeTap() {
-  if (!cardTypes.value.length) {
-    return
-  }
   uni.showActionSheet({
     itemList: cardTypes.value.map((item) => item.label),
     success: (res) => {
@@ -166,16 +219,21 @@ function onCardTypeTap() {
         return
       }
       activeCardType.value = picked.value
-      loadBookings()
+      applyFilter()
     }
   })
 }
 
-function onBookingTap() {
-  // TODO 原型没有「预约详情」页，暂不跳转（getBookingDetail 已可用）
-}
+// 用 onShow：从约课页预约成功切回来时列表要刷新
+onShow(() => {
+  loadPage(true)
+})
 
-/** 「取消预约」→ 确认弹窗 → cancelBooking → toast */
+onReachBottom(() => {
+  loadPage()
+})
+
+/** 「取消预约」→ 确认弹窗 → cancelBooking → toast 后刷新列表 */
 function onCancel(item) {
   uni.showModal({
     title: '取消预约',
@@ -186,15 +244,26 @@ function onCancel(item) {
       if (!res.confirm) {
         return
       }
-      const result = await cancelBooking(item.id)
-      if (result && result.success) {
-        uni.showToast({ title: result.message || '已取消预约' })
-        await loadBookings()
-        return
+      try {
+        const message = await cancelBooking(item.id)
+        uni.showToast({ title: message || '取消预约成功' })
+        await loadPage(true)
+      } catch (requestError) {
+        // 失败原因（超过取消截止时间 / 已签到 / 排课已结束）已由 request 统一 toast
       }
-      uni.showToast({ title: (result && result.message) || '取消失败', icon: 'none' })
     }
   })
+}
+
+/** 「签到」→ checkInBooking → toast 后刷新列表 */
+async function onCheckIn(item) {
+  try {
+    const message = await checkInBooking(item.id)
+    uni.showToast({ title: message || '签到成功' })
+    await loadPage(true)
+  } catch (requestError) {
+    // 失败原因（未到签到窗口 / 课程已结束 / 已取消）已由 request 统一 toast
+  }
 }
 </script>
 
@@ -234,7 +303,7 @@ function onCancel(item) {
     }
   }
 
-  /* 24×3pt 蓝色圆角下划线；未选中占位用透明块，保证两态基线一致 */
+  /* 蓝色圆角下划线；未选中占位用透明块，保证两态基线一致 */
   &__bar {
     margin-top: 13rpx;
     width: 46rpx;
@@ -248,37 +317,13 @@ function onCancel(item) {
   }
 }
 
-/* 计数 + 下拉筛选行：44pt */
+/* 卡类型下拉行：右对齐 */
 .filters {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   height: 85rpx;
   padding: 0 31rpx;
-
-  &__count {
-    display: flex;
-    align-items: baseline;
-  }
-
-  &__num {
-    font-size: 29rpx;
-    font-weight: 600;
-    line-height: 1;
-    color: $ys-ink-1;
-  }
-
-  &__unit {
-    margin-left: 6rpx;
-    font-size: 25rpx;
-    line-height: 1;
-    color: $ys-ink-3;
-  }
-
-  &__right {
-    display: flex;
-    align-items: center;
-  }
 
   &__btn {
     display: flex;
@@ -289,10 +334,6 @@ function onCancel(item) {
     border: 1px solid $ys-line;
     border-radius: 12rpx;
     background: #fff;
-
-    &--last {
-      margin-left: 15rpx;
-    }
   }
 
   &__icon {
@@ -317,12 +358,69 @@ function onCancel(item) {
   background: #fff;
 }
 
+/* ---------------- 未登录 / 加载失败 ---------------- */
+.state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 200rpx;
+
+  &__text {
+    font-size: 27rpx;
+    line-height: 1;
+    color: $ys-ink-3;
+  }
+
+  &__btn {
+    margin-top: 32rpx;
+    padding: 16rpx 44rpx;
+    background: $ys-brand;
+    border-radius: 36rpx;
+  }
+
+  &__btn-text {
+    font-size: 27rpx;
+    line-height: 1;
+    color: #fff;
+  }
+}
+
 /* ---------------- 预约卡列表：页面左右 13pt、卡片间距 8pt ---------------- */
 .list {
-  /* 卡片间距用 flex + gap：WXSS 不支持星号通配符选择器（会报 error at token） */
+  /* 卡片间距用 flex + gap：WXSS 不支持星号通配符选择器 */
   display: flex;
   flex-direction: column;
   gap: 15rpx;
   padding: 31rpx $ys-gap 0;
+}
+
+/* ---------------- 底部：加载中 / 重试 / 到底 ---------------- */
+.foot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-top: 44rpx;
+
+  /* 翻页失败：整行可点，点一次补当前页 */
+  &--retry {
+    padding-bottom: 12rpx;
+  }
+}
+
+.foot__line {
+  width: 64rpx;
+  height: 1px;
+  background: #dde1e6;
+}
+
+.foot__text {
+  margin: 0 18rpx;
+  font-size: 23rpx;
+  line-height: 1;
+  color: #b9bec6;
+}
+
+.bottom {
+  height: 48rpx;
 }
 </style>

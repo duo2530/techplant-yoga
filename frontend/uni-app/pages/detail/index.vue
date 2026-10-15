@@ -7,8 +7,8 @@
     口径（用户端接口详细设计 §2.3）：
       - 课种 courseType / courseTypeName **取排课快照**；难度 / 封面 / 介绍实时取课程当前值；
       - 状态文案 statusText 与 bookable 全部用后端返回值；
-      - 预约人员 bookers 一期固定为 []（不是 null）→ 显示空态；
-      - 「立即预约」只提示「敬请期待」，**不发起任何请求**；
+      - 预约人员 bookers 是后端返回的脱敏名单（最多 10 位），无预约时为空数组 → 显示空态；
+      - 「立即预约」在 bookable 为真时进立即预约页，否则不跳转；
       - 后端对「不存在 / 已删除 / 待上架」一律返回 404 → 友好提示并返回上一页。
   -->
   <view class="detail">
@@ -236,7 +236,7 @@ function onBook() {
   if (!detail.value || !detail.value.bookable) {
     return
   }
-  uni.showToast({ title: '敬请期待', icon: 'none' })
+  uni.navigateTo({ url: '/pages/booking-confirm/index?scheduleId=' + scheduleId.value })
 }
 </script>
 

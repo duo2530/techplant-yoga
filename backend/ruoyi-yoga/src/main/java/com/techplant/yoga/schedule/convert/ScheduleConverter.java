@@ -8,6 +8,7 @@ import com.techplant.yoga.schedule.dto.ScheduleCreateDTO;
 import com.techplant.yoga.schedule.dto.ScheduleUpdateDTO;
 import com.techplant.yoga.schedule.enums.ScheduleStatusEnum;
 import com.techplant.yoga.schedule.vo.PublicScheduleDetailVO;
+import com.techplant.yoga.schedule.vo.ScheduleBookingSnapshot;
 import com.techplant.yoga.schedule.vo.ScheduleCardVO;
 import com.techplant.yoga.schedule.vo.ScheduleDetailVO;
 import com.techplant.yoga.schedule.vo.ScheduleListItemVO;
@@ -97,7 +98,7 @@ public final class ScheduleConverter
     /**
      * DO → 用户端详情（在卡片字段上补课程／教练／人数信息）
      *
-     * <p>课种取**快照**；封面／介绍／难度由 service 实时从课程取；{@code bookers} 固定空数组。</p>
+     * <p>课种取**快照**；封面／介绍／难度由 service 实时从课程取；{@code bookers} 由 service 生成脱敏名单。</p>
      */
     public static PublicScheduleDetailVO toPublicDetailVO(ScheduleDO source, LocalDateTime now)
     {
@@ -108,6 +109,26 @@ public final class ScheduleConverter
         vo.setMinPersons(source.getMinPersons());
         vo.setBookers(new java.util.ArrayList<String>());
         return vo;
+    }
+
+    /** DO → 预约模块用的排课快照（带预约校验、占位与预约列表展示需要的字段） */
+    public static ScheduleBookingSnapshot toBookingSnapshot(ScheduleDO source)
+    {
+        ScheduleBookingSnapshot snapshot = new ScheduleBookingSnapshot();
+        snapshot.setId(source.getId());
+        snapshot.setStoreId(source.getStoreId());
+        snapshot.setCourseId(source.getCourseId());
+        snapshot.setCourseType(source.getCourseType());
+        snapshot.setCoachId(source.getCoachId());
+        snapshot.setClassroomId(source.getClassroomId());
+        snapshot.setScheduleDate(source.getScheduleDate());
+        snapshot.setStartTime(source.getStartTime());
+        snapshot.setEndTime(source.getEndTime());
+        snapshot.setMaxPersons(source.getMaxPersons());
+        snapshot.setMinPersons(source.getMinPersons());
+        snapshot.setBookedPersons(source.getBookedPersons() == null ? 0 : source.getBookedPersons());
+        snapshot.setStatus(source.getStatus());
+        return snapshot;
     }
 
     private static void fillAdminFields(ScheduleListItemVO vo, ScheduleDO source, LocalDateTime now)
@@ -137,6 +158,7 @@ public final class ScheduleConverter
 
     private static void fillCardFields(ScheduleCardVO vo, ScheduleDO source, LocalDateTime now)
     {
+        int bookedPersons = source.getBookedPersons() == null ? 0 : source.getBookedPersons();
         vo.setId(source.getId());
         vo.setCourseType(source.getCourseType());
         vo.setCourseTypeName(emptyIfNull(CourseTypeEnum.nameOf(source.getCourseType())));
@@ -145,11 +167,12 @@ public final class ScheduleConverter
         vo.setEndTime(source.getEndTime());
         vo.setStoreId(source.getStoreId());
         vo.setMaxPersons(source.getMaxPersons());
-        vo.setBookedPersons(0);
-        vo.setRemainingPlaces(source.getMaxPersons());
+        vo.setBookedPersons(bookedPersons);
+        vo.setRemainingPlaces(remainingPlaces(source.getMaxPersons(), bookedPersons));
         vo.setStatus(source.getStatus());
         vo.setStatusText(ScheduleStatusEnum.publicTextOf(source.getStatus(), source.getEndTime(), now));
-        vo.setBookable(ScheduleStatusEnum.isBookable(source.getStatus(), source.getEndTime(), now));
+        // 是否可约由 service 按上架状态、开始时间、14 天窗口与剩余名额统一判定
+        vo.setBookable(false);
         // 空值兜底：名称与课程资料由 service 批量补齐，未补齐时是空字符串而不是 null
         vo.setCourseName("");
         vo.setCourseCoverUrl("");
@@ -158,10 +181,21 @@ public final class ScheduleConverter
         vo.setClassroomName("");
         if (vo instanceof PublicScheduleDetailVO)
         {
+            ((PublicScheduleDetailVO) vo).setStoreAddress("");
             ((PublicScheduleDetailVO) vo).setCourseIntro("");
             ((PublicScheduleDetailVO) vo).setCoachAvatarUrl("");
             ((PublicScheduleDetailVO) vo).setCoachIntro("");
         }
+    }
+
+    /** 剩余名额：最大人数 − 已预约人数，下限为 0 */
+    public static int remainingPlaces(Integer maxPersons, int bookedPersons)
+    {
+        if (maxPersons == null)
+        {
+            return 0;
+        }
+        return Math.max(maxPersons - bookedPersons, 0);
     }
 
     /** 空值兜底：契约要求名称字段返回空字符串，不能是 null */

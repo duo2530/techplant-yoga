@@ -2,7 +2,8 @@ const fs = require('fs')
 const path = require('path')
 const { config } = require('./config')
 const { SkipError } = require('./assert')
-const { apiMemberCards, seedSession, clearSession } = require('./session')
+const { apiMemberCards, apiReservations, apiCancelReservation, apiSchedules, seedSession, clearSession } =
+  require('./session')
 
 /**
  * 用例执行器。
@@ -17,6 +18,18 @@ const MEMBER_CARDS_READY = () => {
   }
   return !!document.querySelector('.card, .cards__error, .ys-empty')
 }
+
+/** 课程详情页可交互的终态：底部操作条出现 */
+const SCHEDULE_DETAIL_READY = () => !!document.querySelector('.bar__btn, .detail__error')
+
+/** 立即预约页可交互的终态：底部操作条或「课程不存在」提示出现 */
+const BOOKING_CONFIRM_READY = () => !!document.querySelector('.bar__btn, .nofound')
+
+/** 我的预约页终态：预约卡、空态或未登录／失败提示之一 */
+const MY_BOOKINGS_READY = () => !!document.querySelector('.ys-booking, .ys-empty, .state')
+
+/** 预约成功页终态 */
+const BOOKING_SUCCESS_READY = () => !!document.querySelector('.ok__actions')
 
 function slug(name)
 {
@@ -102,6 +115,79 @@ async function createHelper({ browser, h5Base, memberSession, caseName, runId })
     fetchCards()
     {
       return apiMemberCards(memberSession.token, { pageNum: 1, pageSize: 100 })
+    },
+
+    /** 当前登录会员的预约（期望值来源：同一后端的列表接口） */
+    fetchReservations(params)
+    {
+      return apiReservations(memberSession.token, params)
+    },
+
+    /** 排课列表（预约流程用它挑一个可约场次） */
+    fetchSchedules(params)
+    {
+      return apiSchedules(params)
+    },
+
+    /** 直接用接口取消预约，用于清理上一轮遗留的未取消预约 */
+    cancelReservation(reservationId)
+    {
+      return apiCancelReservation(memberSession.token, reservationId)
+    },
+
+    /** 记录到的预约接口请求，用于断言页面确实调用了预约接口 */
+    reservationRequests()
+    {
+      return logs.requests.filter((url) => url.includes('/api/reservations'))
+    },
+
+    /** 写入会员会话后打开课程详情页（预约流程的入口） */
+    async openScheduleDetail(scheduleId)
+    {
+      await page.goto(h5Base + '/#/pages/home/index', { waitUntil: 'load' })
+      await page.waitForSelector('uni-page-body', { timeout: 20000 })
+      await seedSession(page, memberSession)
+      await page.goto(h5Base + '/#/pages/detail/index?scheduleId=' + encodeURIComponent(scheduleId),
+        { waitUntil: 'load' })
+      await page.waitForFunction(SCHEDULE_DETAIL_READY, null, { timeout: 20000 })
+      await page.waitForTimeout(300)
+    },
+
+    /** 写入会员会话后打开预约成功页（该页只依赖 query，可直接进入） */
+    async openBookingSuccess(query = '')
+    {
+      await page.goto(h5Base + '/#/pages/home/index', { waitUntil: 'load' })
+      await page.waitForSelector('uni-page-body', { timeout: 20000 })
+      await seedSession(page, memberSession)
+      await page.goto(h5Base + '/#/pages/booking-success/index' + query, { waitUntil: 'load' })
+      await page.waitForFunction(BOOKING_SUCCESS_READY, null, { timeout: 20000 })
+      await page.waitForTimeout(300)
+    },
+
+    /** 写入会员会话后打开我的预约页；waitReady=false 时只等页面外壳（用于「加载中切换筛选」用例） */
+    async openMyBookings({ waitReady = true, routes = [] } = {})
+    {
+      for (const route of routes)
+      {
+        await page.route(route.match, route.handler)
+      }
+      await page.goto(h5Base + '/#/pages/home/index', { waitUntil: 'load' })
+      await page.waitForSelector('uni-page-body', { timeout: 20000 })
+      await seedSession(page, memberSession)
+      await page.goto(h5Base + '/#/pages/my-bookings/index', { waitUntil: 'load' })
+      await page.waitForSelector('.status__item', { timeout: 20000 })
+      if (waitReady)
+      {
+        await page.waitForFunction(MY_BOOKINGS_READY, null, { timeout: 20000 })
+        await page.waitForTimeout(300)
+      }
+    },
+
+    /** 立即预约页提交后等成功页出现 */
+    async waitBookingSuccess()
+    {
+      await page.waitForFunction(BOOKING_SUCCESS_READY, null, { timeout: 20000 })
+      await page.waitForTimeout(300)
     },
 
     /** DOM 上每张卡的展示字段（按卡号可与接口逐条对应） */

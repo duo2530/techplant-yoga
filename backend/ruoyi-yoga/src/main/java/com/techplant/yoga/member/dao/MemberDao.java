@@ -23,7 +23,7 @@ public interface MemberDao
     /** 按会员 ID 查会员 */
     MemberDO selectById(Long memberId);
 
-    /** 按会员 ID 集合批量查询，仅取 id 与显示名（跨模块 summaries 用） */
+    /** 按会员 ID 集合批量查询，仅取 id、显示名与手机号（跨模块 summaries 用） */
     List<MemberDO> selectByIds(Collection<Long> memberIds);
 
     /**

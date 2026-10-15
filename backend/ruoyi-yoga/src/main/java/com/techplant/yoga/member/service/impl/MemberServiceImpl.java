@@ -224,6 +224,12 @@ public class MemberServiceImpl implements MemberService
     }
 
     @Override
+    public boolean lockForBooking(Long memberId)
+    {
+        return memberDao.selectByIdForUpdate(memberId) != null;
+    }
+
+    @Override
     public List<MemberSummaryVO> summaries(Collection<Long> memberIds)
     {
         if (memberIds == null || memberIds.isEmpty())
