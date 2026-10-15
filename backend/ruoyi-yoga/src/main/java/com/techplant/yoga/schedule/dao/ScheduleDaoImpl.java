@@ -16,8 +16,6 @@ import com.techplant.yoga.schedule.query.ScheduleQuery;
 /**
  * 排课数据访问实现。
  *
- * <p><b>本表没有 {@code deleted} 列</b>：{@code deleteById} 是真正的 {@code DELETE}，
- * 查询也不用追加任何逻辑删除条件。</p>
  */
 @Repository
 public class ScheduleDaoImpl implements ScheduleDao
@@ -42,8 +40,8 @@ public class ScheduleDaoImpl implements ScheduleDao
         wrapper.ge(query.getStartDate() != null, ScheduleDO::getScheduleDate, query.getStartDate());
         wrapper.le(query.getEndDate() != null, ScheduleDO::getScheduleDate, query.getEndDate());
         // 稳定排序：分页不重复、不漏项
-        wrapper.orderByAsc(ScheduleDO::getStartTime);
-        wrapper.orderByAsc(ScheduleDO::getId);
+        wrapper.orderByDesc(ScheduleDO::getStartTime);
+        wrapper.orderByDesc(ScheduleDO::getId);
         return scheduleMapper.selectPage(
                 new Page<ScheduleDO>(query.pageNumOrDefault(), query.pageSizeOrDefault()), wrapper);
     }
