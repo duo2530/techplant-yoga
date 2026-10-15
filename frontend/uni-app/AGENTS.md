@@ -4,7 +4,7 @@
 
 ## 1. 这是什么
 
-微信小程序用户端，基于 Vue 3 + uni-app 和 RuoYi-App 模板，支持 npm CLI 与 HBuilderX 编译为 H5、微信小程序。账号与会员卡使用真实后端，其余业务域使用 mock；不开发教练端。
+微信小程序用户端，基于 Vue 3 + uni-app 和 RuoYi-App 模板，支持 npm CLI 与 HBuilderX 编译为 H5、微信小程序。数据来源见第 6 节；不开发教练端。
 
 ## 2. 运行方式
 
@@ -70,15 +70,15 @@
 | 类型 | 页面 |
 |---|---|
 | tabBar 一级页（4） | `pages/home/index` 首页（`navigationStyle:custom`，用 `<ys-nav-brand>`）、`pages/booking/index` 约课、`pages/my-bookings/index` 我的预约、`pages/profile/index` 我的 |
-| 二级页（15） | `settings` 设置（入口：「我的」页点头像——**已登录**进设置页、**未登录**进登录页；设置页含退出登录）、`trial-apply` 申请体验、`my-trials` 我的体验课、`coaches` 约教练、`activities` 活动列表、`messages` 消息、`member-cards` 我的会员卡（入口：「我的」页四宫格第一项；未登录先去登录页）、`booking-confirm` 立即预约（入口：约课卡与课程详情页的「立即预约」；未登录先去登录页）、`booking-success` 预约成功（由立即预约页 `redirectTo` 进入，两个出口：查看预约 → 我的预约、返回首页）、`share-poster` 分享海报、`terms` 用户协议、`privacy` 隐私政策、`auth/quick-login` 快速登录、`auth/phone-auth` 手机号登录/注册、`auth/forgot-password` 忘记密码 |
+| 二级页（15） | `settings` 设置、`trial-apply` 申请体验、`my-trials` 我的体验课、`coaches` 约教练、`activities` 活动列表、`messages` 消息、`member-cards` 我的会员卡、`booking-confirm` 立即预约、`booking-success` 预约成功、`share-poster` 分享海报、`terms` 用户协议、`privacy` 隐私政策、`auth/quick-login` 快速登录、`auth/phone-auth` 手机号登录/注册、`auth/forgot-password` 忘记密码 |
+
+设置页由「我的」页头像进入，含退出登录；会员卡入口为「我的」页四宫格第一项。预约入口为约课卡或课程详情页，提交成功后通过 `redirectTo` 进入成功页，可查看我的预约或返回首页。设置、会员卡和预约入口均要求登录。
 
 **数据来源**：
 
-- `api/auth.js` 调用 `/api/auth/**`；`api/member.js` 的 `listMemberCards` 调用 `GET /api/member-cards`；`api/schedule.js` 调用 `/api/schedules**`；`api/booking.js` 调用 `/api/reservations**`（我的预约、取消、签到与提交预约）。接口契约见[用户端接口详细设计](../../docs/详细设计/用户端接口详细设计.md)。
-- 会员显示名与手机号来自本地有效会话，预约与排课走真实接口，其余会员资料及门店、课程等业务数据使用 `mock/`；`mock/auth.js` 保存协议正文。
-- `mock/config.js` 里的开关：
-  - `MOCK.delay` 模拟网络延迟；
-  - `MOCK.empty.*` **空态开关**（`homeTodayCourses / homeHotCourses / homeNotices / trials / activities / messages`）—— 默认 `true`，即**按原型显示空态**（原型截图里这些位置就是空态）；改成 `false` 可看到 mock 数据的列表视图。
+- 真实接口：`api/auth.js` 对接 `/api/auth/**`，`api/member.js` 查询 `GET /api/member-cards`，`api/schedule.js` 对接排课，`api/booking.js` 对接预约。契约见[用户端接口详细设计](../../docs/详细设计/用户端接口详细设计.md)。
+- 会员显示名与手机号来自本地有效会话，其余未接入业务使用 `mock/`；协议正文位于 `mock/auth.js`。
+- `mock/config.js`：`MOCK.delay` 控制模拟延迟；`MOCK.empty.*` 默认 `true` 显示空态，设为 `false` 显示 mock 列表。
 - 会员卡等需要身份的页面自行校验会员会话，真实接口由后端鉴权。
 
 **外壳口径**：原型是「整机复刻」（含 iOS 状态栏、导航栏、微信胶囊、TabBar），小程序里这些**由系统绘制**，所以页面只实现内容区；首页因为要还原「书法一 Logo + 品牌字左对齐」，用了 `navigationStyle:custom` + `<ys-nav-brand>`。
