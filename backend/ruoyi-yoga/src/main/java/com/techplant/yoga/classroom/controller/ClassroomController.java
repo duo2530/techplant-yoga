@@ -1,5 +1,7 @@
 package com.techplant.yoga.classroom.controller;
 
+import lombok.RequiredArgsConstructor;
+
 import javax.validation.Valid;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -26,22 +28,16 @@ import io.swagger.annotations.ApiOperation;
 @Api(tags = "管理端-教室管理")
 @RestController
 @RequestMapping("/admin/classrooms")
-public class ClassroomController extends BaseController
-{
+@RequiredArgsConstructor
+public class ClassroomController extends BaseController {
     private final ClassroomService classroomService;
-
-    public ClassroomController(ClassroomService classroomService)
-    {
-        this.classroomService = classroomService;
-    }
 
     /**
      * 查询教室列表：按 {@code store_id ASC, name ASC, id DESC} 稳定排序；storeName 批量补齐
      */
     @ApiOperation("查询教室列表")
     @GetMapping
-    public TableDataInfo list(@Valid ClassroomQuery query)
-    {
+    public TableDataInfo list(@Valid ClassroomQuery query) {
         PageResult<ClassroomListItemVO> page = classroomService.page(query);
         TableDataInfo dataTable = new TableDataInfo();
         dataTable.setCode(HttpStatus.SUCCESS);
@@ -56,8 +52,7 @@ public class ClassroomController extends BaseController
      */
     @ApiOperation("新增教室")
     @PostMapping
-    public AjaxResult create(@Valid @RequestBody ClassroomCreateDTO dto)
-    {
+    public AjaxResult create(@Valid @RequestBody ClassroomCreateDTO dto) {
         classroomService.create(dto);
         return success();
     }
@@ -67,8 +62,8 @@ public class ClassroomController extends BaseController
      */
     @ApiOperation("修改教室（只改名称）")
     @PutMapping("/{classroomId}")
-    public AjaxResult update(@PathVariable("classroomId") Long classroomId, @Valid @RequestBody ClassroomUpdateDTO dto)
-    {
+    public AjaxResult update(@PathVariable("classroomId") Long classroomId,
+            @Valid @RequestBody ClassroomUpdateDTO dto) {
         classroomService.update(classroomId, dto);
         return success();
     }
@@ -78,8 +73,7 @@ public class ClassroomController extends BaseController
      */
     @ApiOperation("删除教室")
     @DeleteMapping("/{classroomId}")
-    public AjaxResult delete(@PathVariable("classroomId") Long classroomId)
-    {
+    public AjaxResult delete(@PathVariable("classroomId") Long classroomId) {
         classroomService.delete(classroomId);
         return success();
     }

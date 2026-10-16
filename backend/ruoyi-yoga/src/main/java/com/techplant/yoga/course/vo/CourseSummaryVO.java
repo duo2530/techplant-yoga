@@ -1,12 +1,16 @@
 package com.techplant.yoga.course.vo;
 
+import lombok.Getter;
+import lombok.Setter;
+
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 
 /** 课程摘要。 */
 @ApiModel("课程摘要")
-public class CourseSummaryVO
-{
+@Getter
+@Setter
+public class CourseSummaryVO {
     @ApiModelProperty(value = "课程ID（雪花ID，字符串）", example = "1856739201475235801")
     private Long id;
 
@@ -27,74 +31,4 @@ public class CourseSummaryVO
 
     @ApiModelProperty(value = "课程难度：1~5 星", example = "2")
     private Integer difficulty;
-
-    public Long getId()
-    {
-        return id;
-    }
-
-    public void setId(Long id)
-    {
-        this.id = id;
-    }
-
-    public String getName()
-    {
-        return name;
-    }
-
-    public void setName(String name)
-    {
-        this.name = name;
-    }
-
-    public Integer getCourseType()
-    {
-        return courseType;
-    }
-
-    public void setCourseType(Integer courseType)
-    {
-        this.courseType = courseType;
-    }
-
-    public String getCourseTypeName()
-    {
-        return courseTypeName;
-    }
-
-    public void setCourseTypeName(String courseTypeName)
-    {
-        this.courseTypeName = courseTypeName;
-    }
-
-    public String getCoverUrl()
-    {
-        return coverUrl;
-    }
-
-    public void setCoverUrl(String coverUrl)
-    {
-        this.coverUrl = coverUrl;
-    }
-
-    public String getIntro()
-    {
-        return intro;
-    }
-
-    public void setIntro(String intro)
-    {
-        this.intro = intro;
-    }
-
-    public Integer getDifficulty()
-    {
-        return difficulty;
-    }
-
-    public void setDifficulty(Integer difficulty)
-    {
-        this.difficulty = difficulty;
-    }
 }

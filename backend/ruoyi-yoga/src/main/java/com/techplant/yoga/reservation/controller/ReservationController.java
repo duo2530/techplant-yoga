@@ -1,5 +1,7 @@
 package com.techplant.yoga.reservation.controller;
 
+import lombok.RequiredArgsConstructor;
+
 import javax.validation.Valid;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -20,20 +22,14 @@ import io.swagger.annotations.ApiOperation;
 @Validated
 @RestController
 @RequestMapping("/admin/reservations")
-public class ReservationController extends BaseController
-{
+@RequiredArgsConstructor
+public class ReservationController extends BaseController {
     private final ReservationService reservationService;
-
-    public ReservationController(ReservationService reservationService)
-    {
-        this.reservationService = reservationService;
-    }
 
     /** 查询预约列表：按排课查询名单也使用本接口，默认包含取消记录 */
     @ApiOperation("查询预约列表")
     @GetMapping
-    public TableDataInfo list(@Valid ReservationAdminQuery query)
-    {
+    public TableDataInfo list(@Valid ReservationAdminQuery query) {
         PageResult<ReservationAdminItemVO> page = reservationService.pageForAdmin(query);
         TableDataInfo dataTable = new TableDataInfo();
         dataTable.setCode(HttpStatus.SUCCESS);

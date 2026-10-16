@@ -19,14 +19,13 @@ import com.techplant.yoga.membercard.vo.MemberCardSummaryVO;
  * <p>转换是<b>纯函数</b>：不查库、不查服务。卡号、有效期、剩余次数与展示状态由 service 按业务规则算好后传入；
  * 会员名与门店名由 service 批量查好后以入参传入，关联对象已删除时传 {@code null}（翻译为空字符串）。</p>
  */
-public final class MemberCardConverter
-{
-    private MemberCardConverter() { }
+public final class MemberCardConverter {
+    private MemberCardConverter() {
+    }
 
     /** 发卡请求 → DO：卡号、有效期数量与剩余次数由 service 计算后传入 */
     public static MemberCardDO toDO(MemberCardCreateDTO dto, MemberCardTypeEnum cardType, String cardNo,
-            Integer validPeriodCount)
-    {
+            Integer validPeriodCount) {
         MemberCardDO card = new MemberCardDO();
         card.setMemberId(dto.getMemberId());
         card.setOpenStoreId(dto.getOpenStoreId());
@@ -46,8 +45,7 @@ public final class MemberCardConverter
 
     /** 单行 → 列表项 */
     public static MemberCardListItemVO toListItemVO(MemberCardDO card, String memberName, String openStoreNo,
-            String openStoreName, String storeName, Integer remainingDays)
-    {
+            String openStoreName, String storeName, Integer remainingDays) {
         MemberCardListItemVO vo = new MemberCardListItemVO();
         fill(vo, card, memberName, openStoreNo, openStoreName, storeName, remainingDays);
         return vo;
@@ -55,8 +53,7 @@ public final class MemberCardConverter
 
     /** 单行 → 详情：字段与列表项一致 */
     public static MemberCardDetailVO toDetailVO(MemberCardDO card, String memberName, String openStoreNo,
-            String openStoreName, String storeName, Integer remainingDays)
-    {
+            String openStoreName, String storeName, Integer remainingDays) {
         MemberCardDetailVO vo = new MemberCardDetailVO();
         fill(vo, card, memberName, openStoreNo, openStoreName, storeName, remainingDays);
         return vo;
@@ -71,8 +68,7 @@ public final class MemberCardConverter
      * @param remainingDays 年卡剩余天数，其余情况传 {@code null}
      */
     public static MemberCardPublicItemVO toPublicItemVO(MemberCardDO card, MemberCardPublicStatusEnum status,
-            String storeName, String storeScopeText, Integer remainingDays)
-    {
+            String storeName, String storeScopeText, Integer remainingDays) {
         MemberCardPublicItemVO vo = new MemberCardPublicItemVO();
         vo.setId(card.getId());
         vo.setCardNo(card.getCardNo());
@@ -100,8 +96,7 @@ public final class MemberCardConverter
     }
 
     /** 单行 → 预约事务用的锁卡快照（只带资格校验与扣返次需要的字段） */
-    public static MemberCardBookingSnapshot toBookingSnapshot(MemberCardDO card)
-    {
+    public static MemberCardBookingSnapshot toBookingSnapshot(MemberCardDO card) {
         MemberCardBookingSnapshot snapshot = new MemberCardBookingSnapshot();
         snapshot.setId(card.getId());
         snapshot.setMemberId(card.getMemberId());
@@ -118,13 +113,10 @@ public final class MemberCardConverter
     }
 
     /** 批量 → 会员卡摘要（跨模块 summaries，给卡号、卡名与卡类型） */
-    public static List<MemberCardSummaryVO> toSummaryVOList(List<MemberCardDO> cards)
-    {
+    public static List<MemberCardSummaryVO> toSummaryVOList(List<MemberCardDO> cards) {
         List<MemberCardSummaryVO> list = new ArrayList<MemberCardSummaryVO>();
-        if (cards != null)
-        {
-            for (MemberCardDO card : cards)
-            {
+        if (cards != null) {
+            for (MemberCardDO card : cards) {
                 list.add(new MemberCardSummaryVO(card.getId(), card.getCardNo(), card.getCardName(),
                         card.getCardType()));
             }
@@ -133,8 +125,7 @@ public final class MemberCardConverter
     }
 
     private static void fill(MemberCardListItemVO vo, MemberCardDO card, String memberName, String openStoreNo,
-            String openStoreName, String storeName, Integer remainingDays)
-    {
+            String openStoreName, String storeName, Integer remainingDays) {
         vo.setId(card.getId());
         vo.setCardNo(card.getCardNo());
         vo.setOpenStoreId(card.getOpenStoreId());
@@ -164,22 +155,18 @@ public final class MemberCardConverter
     }
 
     /** 总次数 = 购买 + 赠送；次数字段缺失（非次数卡）时不给值 */
-    private static Integer totalTimes(MemberCardDO card)
-    {
-        if (card.getPurchaseTimes() == null || card.getGiftTimes() == null)
-        {
+    private static Integer totalTimes(MemberCardDO card) {
+        if (card.getPurchaseTimes() == null || card.getGiftTimes() == null) {
             return null;
         }
         return card.getPurchaseTimes() + card.getGiftTimes();
     }
 
-    private static String trim(String value)
-    {
+    private static String trim(String value) {
         return value == null ? null : value.trim();
     }
 
-    private static String nullToEmpty(String value)
-    {
+    private static String nullToEmpty(String value) {
         return value == null ? "" : value;
     }
 }

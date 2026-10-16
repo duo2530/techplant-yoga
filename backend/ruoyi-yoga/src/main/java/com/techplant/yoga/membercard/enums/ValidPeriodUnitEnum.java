@@ -1,8 +1,10 @@
 package com.techplant.yoga.membercard.enums;
 
+import lombok.Getter;
+
 /** 有效期单位固定枚举：开卡前为空，开卡时按卡类型写入。 */
-public enum ValidPeriodUnitEnum
-{
+@Getter
+public enum ValidPeriodUnitEnum {
     /** 月（次数卡） */
     MONTH(1, "月"),
 
@@ -15,19 +17,8 @@ public enum ValidPeriodUnitEnum
     /** 有效期单位名称 */
     private final String name;
 
-    ValidPeriodUnitEnum(Integer code, String name)
-    {
+    ValidPeriodUnitEnum(Integer code, String name) {
         this.code = code;
         this.name = name;
-    }
-
-    public Integer getCode()
-    {
-        return code;
-    }
-
-    public String getName()
-    {
-        return name;
     }
 }

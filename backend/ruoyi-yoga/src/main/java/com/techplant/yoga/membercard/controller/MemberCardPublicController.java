@@ -1,5 +1,7 @@
 package com.techplant.yoga.membercard.controller;
 
+import lombok.RequiredArgsConstructor;
+
 import javax.validation.Valid;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -21,14 +23,9 @@ import io.swagger.annotations.ApiOperation;
 @Validated
 @RestController
 @RequestMapping("/api/member-cards")
-public class MemberCardPublicController extends BaseController
-{
+@RequiredArgsConstructor
+public class MemberCardPublicController extends BaseController {
     private final MemberCardService memberCardService;
-
-    public MemberCardPublicController(MemberCardService memberCardService)
-    {
-        this.memberCardService = memberCardService;
-    }
 
     /**
      * 查询我的会员卡：会员 ID 只取登录态，客户端传入值不作为访问依据
@@ -37,10 +34,9 @@ public class MemberCardPublicController extends BaseController
      */
     @ApiOperation("查询我的会员卡")
     @GetMapping
-    public TableDataInfo list(@Valid MemberCardPublicQuery query)
-    {
-        PageResult<MemberCardPublicItemVO> page = memberCardService.pageForMember(
-                MemberContextUtils.requireMemberId(), query);
+    public TableDataInfo list(@Valid MemberCardPublicQuery query) {
+        PageResult<MemberCardPublicItemVO> page = memberCardService.pageForMember(MemberContextUtils.requireMemberId(),
+                query);
         TableDataInfo dataTable = new TableDataInfo();
         dataTable.setCode(HttpStatus.SUCCESS);
         dataTable.setMsg("查询成功");

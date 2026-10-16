@@ -1,5 +1,8 @@
 package com.techplant.yoga.store.dto;
 
+import lombok.Getter;
+import lombok.Setter;
+
 import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotBlank;
@@ -10,8 +13,9 @@ import io.swagger.annotations.ApiModelProperty;
 
 /** 新增门店请求。 */
 @ApiModel("新增门店请求")
-public class StoreCreateDTO
-{
+@Getter
+@Setter
+public class StoreCreateDTO {
     @ApiModelProperty(value = "门店名称（全平台唯一）", required = true, example = "徐汇店")
     @NotBlank(message = "门店名称不能为空")
     @Size(max = 64, message = "门店名称长度不能超过 64")
@@ -46,19 +50,4 @@ public class StoreCreateDTO
     @ApiModelProperty(value = "门店图片 URL（单图，可空）", example = "https://cdn.example.com/store/1.jpg")
     @Size(max = 255, message = "门店图片 URL 长度不能超过 255")
     private String imageUrl;
-
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
-    public Integer getStoreType() { return storeType; }
-    public void setStoreType(Integer storeType) { this.storeType = storeType; }
-    public String getRegionCode() { return regionCode; }
-    public void setRegionCode(String regionCode) { this.regionCode = regionCode; }
-    public String getPhone() { return phone; }
-    public void setPhone(String phone) { this.phone = phone; }
-    public String getBusinessHours() { return businessHours; }
-    public void setBusinessHours(String businessHours) { this.businessHours = businessHours; }
-    public String getAddress() { return address; }
-    public void setAddress(String address) { this.address = address; }
-    public String getImageUrl() { return imageUrl; }
-    public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
 }

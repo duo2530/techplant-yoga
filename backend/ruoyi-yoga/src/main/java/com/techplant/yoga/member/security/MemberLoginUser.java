@@ -1,10 +1,14 @@
 package com.techplant.yoga.member.security;
 
+import lombok.Getter;
+import lombok.Setter;
+
 import java.io.Serializable;
 
 /** 会员登录对象。 */
-public class MemberLoginUser implements Serializable
-{
+@Getter
+@Setter
+public class MemberLoginUser implements Serializable {
     private static final long serialVersionUID = 1L;
 
     /** 会话标识（JWT 里的随机会话 ID，也是 Redis key 的后缀） */
@@ -24,17 +28,4 @@ public class MemberLoginUser implements Serializable
 
     /** 登录 IP */
     private String ipaddr;
-
-    public String getToken() { return token; }
-    public void setToken(String token) { this.token = token; }
-    public Long getMemberId() { return memberId; }
-    public void setMemberId(Long memberId) { this.memberId = memberId; }
-    public String getPhone() { return phone; }
-    public void setPhone(String phone) { this.phone = phone; }
-    public Long getLoginTime() { return loginTime; }
-    public void setLoginTime(Long loginTime) { this.loginTime = loginTime; }
-    public Long getExpireTime() { return expireTime; }
-    public void setExpireTime(Long expireTime) { this.expireTime = expireTime; }
-    public String getIpaddr() { return ipaddr; }
-    public void setIpaddr(String ipaddr) { this.ipaddr = ipaddr; }
 }

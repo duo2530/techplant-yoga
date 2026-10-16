@@ -39,17 +39,16 @@ import com.techplant.yoga.member.vo.MemberListItemVO;
  *
  * <p>会员等级的取值与名称来自字典 {@code member_level}，用例自行准备字典夹具。</p>
  */
-@ContextConfiguration(classes = { YogaMyBatisTestConfig.class, MemberDaoImpl.class, MemberLevelDictDaoImpl.class,
-        MemberServiceImpl.class })
+@ContextConfiguration(classes = {YogaMyBatisTestConfig.class, MemberDaoImpl.class, MemberLevelDictDaoImpl.class,
+    MemberServiceImpl.class})
 @DisplayName("MemberService 集成测试（Testcontainers MySQL：建档 / 等级字典 / 修改字段语义 / 并发删除 / 删除）")
-class MemberServiceImplTest extends AbstractYogaIntegrationTest
-{
+class MemberServiceImplTest extends AbstractYogaIntegrationTest {
     private static final String PHONE = "13800138000";
 
     private static final String HASH = "$2a$10$memberManageHashValueForTest000000000000000000000000000000";
 
     /** 字典中存在的等级：0~4 */
-    private static final String[] LEVEL_LABELS = { "V0 普通会员", "V1 忻会员", "V2 银会员", "V3 金会员", "V4 黑金会员" };
+    private static final String[] LEVEL_LABELS = {"V0 普通会员", "V1 忻会员", "V2 银会员", "V3 金会员", "V4 黑金会员"};
 
     /** 字典中状态为停用的等级码 */
     private static final int DISABLED_LEVEL = 9;
@@ -68,13 +67,11 @@ class MemberServiceImplTest extends AbstractYogaIntegrationTest
     private TransactionTemplate transactionTemplate;
 
     @BeforeEach
-    void resetTable()
-    {
+    void resetTable() {
         YogaSchema.reset(dataSource, "t_member", "sys_dict_data");
         jdbcTemplate = new JdbcTemplate(dataSource);
         transactionTemplate = new TransactionTemplate(transactionManager);
-        for (int level = 0; level < LEVEL_LABELS.length; level++)
-        {
+        for (int level = 0; level < LEVEL_LABELS.length; level++) {
             insertLevelDict(level + 1, String.valueOf(level), LEVEL_LABELS[level], "0");
         }
         insertLevelDict(DISABLED_LEVEL + 1, String.valueOf(DISABLED_LEVEL), "V9 已停用等级", "1");
@@ -82,8 +79,7 @@ class MemberServiceImplTest extends AbstractYogaIntegrationTest
 
     @Test
     @DisplayName("新增：显示名与后四位由系统生成，性别与等级缺省取 0，不写登录凭证")
-    void create_shouldGenerateProfileFields()
-    {
+    void create_shouldGenerateProfileFields() {
         memberService.create(createDTO(PHONE, null, null));
 
         MemberDO found = memberDao.selectByPhone(PHONE);
@@ -104,8 +100,7 @@ class MemberServiceImplTest extends AbstractYogaIntegrationTest
 
     @Test
     @DisplayName("新增：按提交的性别与等级建档；手机号已建档 → 409 且不覆盖原档案")
-    void create_withSubmittedGenderAndLevel()
-    {
+    void create_withSubmittedGenderAndLevel() {
         memberService.create(createDTO(PHONE, 2, 3));
         MemberDO found = memberDao.selectByPhone(PHONE);
         assertEquals(Integer.valueOf(2), found.getGender());
@@ -121,8 +116,7 @@ class MemberServiceImplTest extends AbstractYogaIntegrationTest
 
     @Test
     @DisplayName("新增：性别取值非法、等级不在字典（含已停用）→ 500，且不落库")
-    void create_withInvalidGenderOrLevel_shouldFail()
-    {
+    void create_withInvalidGenderOrLevel_shouldFail() {
         ServiceException invalidGender = assertThrows(ServiceException.class,
                 () -> memberService.create(createDTO(PHONE, 3, null)));
         assertEquals(Integer.valueOf(500), invalidGender.getCode());
@@ -141,8 +135,7 @@ class MemberServiceImplTest extends AbstractYogaIntegrationTest
 
     @Test
     @DisplayName("新增：等级字典没有配置时拒绝建档，提示字典未配置")
-    void create_withoutLevelDict_shouldFail()
-    {
+    void create_withoutLevelDict_shouldFail() {
         jdbcTemplate.update("DELETE FROM sys_dict_data WHERE dict_type = 'member_level'");
 
         ServiceException exception = assertThrows(ServiceException.class,
@@ -154,8 +147,7 @@ class MemberServiceImplTest extends AbstractYogaIntegrationTest
 
     @Test
     @DisplayName("列表与详情：级别码名成对返回、registered 由密码推导；等级筛选按字典校验")
-    void pageAndDetail_shouldTranslateEnumAndRegistered()
-    {
+    void pageAndDetail_shouldTranslateEnumAndRegistered() {
         memberService.create(createDTO("13800138001", 1, 4));
         memberService.create(createDTO("13800138002", null, 0));
         Long registeredId = memberDao.selectByPhone("13800138001").getId();
@@ -191,8 +183,7 @@ class MemberServiceImplTest extends AbstractYogaIntegrationTest
 
     @Test
     @DisplayName("修改：省略字段保留原值；等级按字典校验；提交 null → 500；不存在 → 404")
-    void update_shouldOnlyApplySubmittedFields()
-    {
+    void update_shouldOnlyApplySubmittedFields() {
         memberService.create(createDTO(PHONE, 1, 0));
         Long memberId = memberDao.selectByPhone(PHONE).getId();
 
@@ -241,8 +232,7 @@ class MemberServiceImplTest extends AbstractYogaIntegrationTest
 
     @Test
     @DisplayName("修改：会员在事务快照建立后被并发删除 → 404，不返回旧值")
-    void update_afterConcurrentDelete_shouldReportNotFound()
-    {
+    void update_afterConcurrentDelete_shouldReportNotFound() {
         memberService.create(createDTO(PHONE, 1, 0));
         final Long memberId = memberDao.selectByPhone(PHONE).getId();
 
@@ -250,18 +240,14 @@ class MemberServiceImplTest extends AbstractYogaIntegrationTest
         dto.setGender(2);
 
         final ServiceException[] failure = new ServiceException[1];
-        transactionTemplate.execute(status ->
-        {
+        transactionTemplate.execute(status -> {
             // 事务内第一次读建立快照；随后另一连接删除并提交，模拟并发删除
             assertNotNull(memberDao.selectById(memberId));
             deleteOnSeparateConnection(memberId);
 
-            try
-            {
+            try {
                 memberService.update(memberId, dto);
-            }
-            catch (ServiceException e)
-            {
+            } catch (ServiceException e) {
                 failure[0] = e;
             }
             status.setRollbackOnly();
@@ -277,23 +263,18 @@ class MemberServiceImplTest extends AbstractYogaIntegrationTest
 
     @Test
     @DisplayName("删除：会员在事务快照建立后被并发删除 → 404")
-    void delete_afterConcurrentDelete_shouldReportNotFound()
-    {
+    void delete_afterConcurrentDelete_shouldReportNotFound() {
         memberService.create(createDTO(PHONE, 1, 0));
         final Long memberId = memberDao.selectByPhone(PHONE).getId();
 
         final ServiceException[] failure = new ServiceException[1];
-        transactionTemplate.execute(status ->
-        {
+        transactionTemplate.execute(status -> {
             assertNotNull(memberDao.selectById(memberId));
             deleteOnSeparateConnection(memberId);
 
-            try
-            {
+            try {
                 memberService.delete(memberId);
-            }
-            catch (ServiceException e)
-            {
+            } catch (ServiceException e) {
                 failure[0] = e;
             }
             status.setRollbackOnly();
@@ -306,8 +287,7 @@ class MemberServiceImplTest extends AbstractYogaIntegrationTest
 
     @Test
     @DisplayName("删除：会员行与登录凭证一并删除，再删 → 404")
-    void delete_shouldRemoveRowAndCredentials()
-    {
+    void delete_shouldRemoveRowAndCredentials() {
         memberService.create(createDTO(PHONE, 1, 0));
         Long memberId = memberDao.selectByPhone(PHONE).getId();
         memberService.registerByPhone(PHONE, HASH);
@@ -324,8 +304,7 @@ class MemberServiceImplTest extends AbstractYogaIntegrationTest
         assertEquals(Integer.valueOf(404), notFound.getCode());
     }
 
-    private MemberCreateDTO createDTO(String phone, Integer gender, Integer level)
-    {
+    private MemberCreateDTO createDTO(String phone, Integer gender, Integer level) {
         MemberCreateDTO dto = new MemberCreateDTO();
         dto.setPhone(phone);
         dto.setGender(gender);
@@ -333,30 +312,26 @@ class MemberServiceImplTest extends AbstractYogaIntegrationTest
         return dto;
     }
 
-    private MemberQuery queryByName(String name)
-    {
+    private MemberQuery queryByName(String name) {
         MemberQuery query = query(10);
         query.setName(name);
         return query;
     }
 
-    private MemberQuery queryByLevel(Integer level)
-    {
+    private MemberQuery queryByLevel(Integer level) {
         MemberQuery query = query(10);
         query.setLevel(level);
         return query;
     }
 
-    private MemberQuery query(int pageSize)
-    {
+    private MemberQuery query(int pageSize) {
         MemberQuery query = new MemberQuery();
         query.setPageNum(1);
         query.setPageSize(pageSize);
         return query;
     }
 
-    private void insertLevelDict(int dictSort, String value, String label, String status)
-    {
+    private void insertLevelDict(int dictSort, String value, String label, String status) {
         jdbcTemplate.update("INSERT INTO sys_dict_data (dict_sort, dict_label, dict_value, dict_type, css_class,"
                 + " list_class, is_default, status, create_by, create_time) VALUES (?, ?, ?, 'member_level', '',"
                 + " 'default', 'N', ?, 'admin', NOW())", dictSort, label, value, status);
@@ -365,16 +340,12 @@ class MemberServiceImplTest extends AbstractYogaIntegrationTest
     /**
      * 用独立连接删除会员并提交：不走当前事务，模拟并发删除（快照读仍能看到旧行）
      */
-    private void deleteOnSeparateConnection(Long memberId)
-    {
+    private void deleteOnSeparateConnection(Long memberId) {
         try (Connection connection = dataSource.getConnection();
-                PreparedStatement statement = connection.prepareStatement("DELETE FROM t_member WHERE id = ?"))
-        {
+                PreparedStatement statement = connection.prepareStatement("DELETE FROM t_member WHERE id = ?")) {
             statement.setLong(1, memberId);
             statement.executeUpdate();
-        }
-        catch (SQLException e)
-        {
+        } catch (SQLException e) {
             throw new IllegalStateException("并发删除夹具执行失败", e);
         }
     }

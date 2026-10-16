@@ -14,8 +14,7 @@ import com.techplant.yoga.store.query.StoreQuery;
  * <p>屏蔽 Mapper 细节：筛选条件、字段选择与<b>稳定排序</b>都在这里组装；
  * 删除是<b>物理删除</b>（{@code StoreDO} 不标 {@code @TableLogic}），业务代码不手写 {@code deleted} 条件。</p>
  */
-public interface StoreDao
-{
+public interface StoreDao {
     /** 管理端分页：筛选 name（模糊）／regionCode（精确）／storeType，排序 store_type ASC, id DESC */
     IPage<StoreDO> selectPage(StoreQuery query);
 

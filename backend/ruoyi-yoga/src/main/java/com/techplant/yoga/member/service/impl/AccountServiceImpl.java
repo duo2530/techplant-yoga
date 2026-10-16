@@ -1,5 +1,7 @@
 package com.techplant.yoga.member.service.impl;
 
+import lombok.RequiredArgsConstructor;
+
 import java.time.LocalDateTime;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -20,8 +22,8 @@ import com.techplant.yoga.member.vo.LoginVO;
 
 /** 用户端账号业务实现。 */
 @Service
-public class AccountServiceImpl implements AccountService
-{
+@RequiredArgsConstructor
+public class AccountServiceImpl implements AccountService {
     /** 资源不存在：忘记密码时手机号未注册 */
     private static final int NOT_FOUND = 404;
 
@@ -44,31 +46,18 @@ public class AccountServiceImpl implements AccountService
 
     private final BCryptPasswordEncoder passwordEncoder;
 
-    public AccountServiceImpl(MemberDao memberDao, MemberService memberService, SmsCodeService smsCodeService,
-            MemberTokenService memberTokenService, BCryptPasswordEncoder passwordEncoder)
-    {
-        this.memberDao = memberDao;
-        this.memberService = memberService;
-        this.smsCodeService = smsCodeService;
-        this.memberTokenService = memberTokenService;
-        this.passwordEncoder = passwordEncoder;
-    }
-
     @Override
-    public void sendSmsCode(SmsCodeSendDTO dto)
-    {
+    public void sendSmsCode(SmsCodeSendDTO dto) {
         SmsCodeService.requireValidScene(dto.getScene());
         String phone = normalizePhone(dto.getPhone());
         SmsSceneEnum scene = SmsSceneEnum.fromCode(dto.getScene());
         MemberDO member = memberDao.selectByPhone(phone);
 
-        if (scene == SmsSceneEnum.REGISTER && member != null && member.isRegistered())
-        {
+        if (scene == SmsSceneEnum.REGISTER && member != null && member.isRegistered()) {
             // 注册场景：手机号已注册 → 409
             throw new ServiceException("该手机号已注册，请直接登录", CONFLICT);
         }
-        if (scene == SmsSceneEnum.RESET && (member == null || !member.isRegistered()))
-        {
+        if (scene == SmsSceneEnum.RESET && (member == null || !member.isRegistered())) {
             // 忘记密码场景：手机号未注册 → 404
             throw new ServiceException("手机号未注册", NOT_FOUND);
         }
@@ -78,8 +67,7 @@ public class AccountServiceImpl implements AccountService
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void register(RegisterDTO dto)
-    {
+    public void register(RegisterDTO dto) {
         String phone = normalizePhone(dto.getPhone());
         validatePasswordStrength(dto.getPassword());
         // 验证码校验成功才消费（错误／过期返回 409，保留未过期验证码供重试）
@@ -90,13 +78,11 @@ public class AccountServiceImpl implements AccountService
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public LoginVO login(LoginDTO dto)
-    {
+    public LoginVO login(LoginDTO dto) {
         String phone = normalizePhone(dto.getPhone());
         MemberDO member = memberDao.selectByPhone(phone);
         if (member == null || !member.isRegistered()
-                || !passwordEncoder.matches(dto.getPassword(), member.getPassword()))
-        {
+                || !passwordEncoder.matches(dto.getPassword(), member.getPassword())) {
             throw new ServiceException("手机号或密码错误", CONFLICT);
         }
 
@@ -107,13 +93,11 @@ public class AccountServiceImpl implements AccountService
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void resetPassword(ResetPasswordDTO dto)
-    {
+    public void resetPassword(ResetPasswordDTO dto) {
         String phone = normalizePhone(dto.getPhone());
         validatePasswordStrength(dto.getPassword());
         MemberDO member = memberDao.selectByPhone(phone);
-        if (member == null || !member.isRegistered())
-        {
+        if (member == null || !member.isRegistered()) {
             throw new ServiceException("手机号未注册", NOT_FOUND);
         }
         smsCodeService.verifyAndConsume(SmsSceneEnum.RESET.getCode(), phone, dto.getSmsCode());
@@ -121,19 +105,15 @@ public class AccountServiceImpl implements AccountService
     }
 
     /** 密码强度兜底校验（接口层 @Valid 已拦一层） */
-    private void validatePasswordStrength(String password)
-    {
-        if (password == null || !password.matches(PASSWORD_PATTERN))
-        {
+    private void validatePasswordStrength(String password) {
+        if (password == null || !password.matches(PASSWORD_PATTERN)) {
             throw new ServiceException("密码需 8～20 位且同时包含字母与数字", PARAM_INVALID);
         }
     }
 
     /** 手机号规整与兜底校验：接口层已校验格式，这里防住 service 直调（null／空白 → 500） */
-    private String normalizePhone(String phone)
-    {
-        if (phone == null || phone.trim().isEmpty())
-        {
+    private String normalizePhone(String phone) {
+        if (phone == null || phone.trim().isEmpty()) {
             throw new ServiceException("手机号不能为空", PARAM_INVALID);
         }
         return phone.trim();

@@ -1,5 +1,8 @@
 package com.techplant.yoga.reservation.vo;
 
+import lombok.Getter;
+import lombok.Setter;
+
 import java.time.LocalDateTime;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.annotations.ApiModel;
@@ -7,8 +10,9 @@ import io.swagger.annotations.ApiModelProperty;
 
 /** 我的预约列表项。 */
 @ApiModel("我的预约列表项")
-public class ReservationPublicItemVO
-{
+@Getter
+@Setter
+public class ReservationPublicItemVO {
     @ApiModelProperty(value = "预约ID（雪花ID，字符串）", example = "1856739201475240001")
     private Long id;
 
@@ -52,33 +56,4 @@ public class ReservationPublicItemVO
 
     @ApiModelProperty(value = "预约状态文案", example = "已预约")
     private String statusText;
-
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
-    public Long getScheduleId() { return scheduleId; }
-    public void setScheduleId(Long scheduleId) { this.scheduleId = scheduleId; }
-    public Long getCourseId() { return courseId; }
-    public void setCourseId(Long courseId) { this.courseId = courseId; }
-    public String getCourseName() { return courseName; }
-    public void setCourseName(String courseName) { this.courseName = courseName; }
-    public String getCourseCoverUrl() { return courseCoverUrl; }
-    public void setCourseCoverUrl(String courseCoverUrl) { this.courseCoverUrl = courseCoverUrl; }
-    public Integer getCourseType() { return courseType; }
-    public void setCourseType(Integer courseType) { this.courseType = courseType; }
-    public String getCourseTypeName() { return courseTypeName; }
-    public void setCourseTypeName(String courseTypeName) { this.courseTypeName = courseTypeName; }
-    public String getCoachName() { return coachName; }
-    public void setCoachName(String coachName) { this.coachName = coachName; }
-    public String getStoreAddress() { return storeAddress; }
-    public void setStoreAddress(String storeAddress) { this.storeAddress = storeAddress; }
-    public String getScheduleDate() { return scheduleDate; }
-    public void setScheduleDate(String scheduleDate) { this.scheduleDate = scheduleDate; }
-    public LocalDateTime getStartTime() { return startTime; }
-    public void setStartTime(LocalDateTime startTime) { this.startTime = startTime; }
-    public LocalDateTime getEndTime() { return endTime; }
-    public void setEndTime(LocalDateTime endTime) { this.endTime = endTime; }
-    public Integer getStatus() { return status; }
-    public void setStatus(Integer status) { this.status = status; }
-    public String getStatusText() { return statusText; }
-    public void setStatusText(String statusText) { this.statusText = statusText; }
 }

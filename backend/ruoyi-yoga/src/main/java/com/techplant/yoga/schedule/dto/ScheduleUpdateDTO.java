@@ -9,6 +9,5 @@ import io.swagger.annotations.ApiModel;
  * 状态走独立的状态流转接口；课种快照只在「更换课程」时刷新；上课日期由开始时间推导。</p>
  */
 @ApiModel("修改排课请求")
-public class ScheduleUpdateDTO extends ScheduleCreateDTO
-{
+public class ScheduleUpdateDTO extends ScheduleCreateDTO {
 }

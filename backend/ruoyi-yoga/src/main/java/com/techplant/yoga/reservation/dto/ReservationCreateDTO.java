@@ -1,5 +1,8 @@
 package com.techplant.yoga.reservation.dto;
 
+import lombok.Getter;
+import lombok.Setter;
+
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
@@ -9,8 +12,9 @@ import io.swagger.annotations.ApiModelProperty;
 
 /** 预约课程请求。 */
 @ApiModel("预约课程请求")
-public class ReservationCreateDTO
-{
+@Getter
+@Setter
+public class ReservationCreateDTO {
     @ApiModelProperty(value = "请求幂等标识（客户端 UUID，同一次提交与网络重试沿用）", required = true)
     @NotBlank(message = "请求幂等标识不能为空")
     @Size(max = 36, message = "请求幂等标识长度不能超过 36")
@@ -28,13 +32,4 @@ public class ReservationCreateDTO
     @NotNull(message = "预约人数不能为空")
     @Min(value = 1, message = "预约人数必须大于 0")
     private Integer persons;
-
-    public String getRequestId() { return requestId; }
-    public void setRequestId(String requestId) { this.requestId = requestId; }
-    public Long getScheduleId() { return scheduleId; }
-    public void setScheduleId(Long scheduleId) { this.scheduleId = scheduleId; }
-    public Long getMemberCardId() { return memberCardId; }
-    public void setMemberCardId(Long memberCardId) { this.memberCardId = memberCardId; }
-    public Integer getPersons() { return persons; }
-    public void setPersons(Integer persons) { this.persons = persons; }
 }

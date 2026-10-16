@@ -1,5 +1,8 @@
 package com.techplant.yoga.store.vo;
 
+import lombok.Getter;
+import lombok.Setter;
+
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 
@@ -10,8 +13,9 @@ import io.swagger.annotations.ApiModelProperty;
  * 预约与排课详情用它补门店地址；由 {@code StoreService#summaries(java.util.Collection)} 提供。</p>
  */
 @ApiModel("门店摘要")
-public class StoreSummaryVO
-{
+@Getter
+@Setter
+public class StoreSummaryVO {
     @ApiModelProperty(value = "门店ID（雪花ID，字符串）", example = "1856739201475235901")
     private Long id;
 
@@ -24,29 +28,17 @@ public class StoreSummaryVO
     @ApiModelProperty(value = "门店地址", example = "漕溪北路 88 号")
     private String address;
 
-    public StoreSummaryVO()
-    {
+    public StoreSummaryVO() {
     }
 
-    public StoreSummaryVO(Long id, String storeNo, String name)
-    {
+    public StoreSummaryVO(Long id, String storeNo, String name) {
         this(id, storeNo, name, null);
     }
 
-    public StoreSummaryVO(Long id, String storeNo, String name, String address)
-    {
+    public StoreSummaryVO(Long id, String storeNo, String name, String address) {
         this.id = id;
         this.storeNo = storeNo;
         this.name = name;
         this.address = address;
     }
-
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
-    public String getStoreNo() { return storeNo; }
-    public void setStoreNo(String storeNo) { this.storeNo = storeNo; }
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
-    public String getAddress() { return address; }
-    public void setAddress(String address) { this.address = address; }
 }

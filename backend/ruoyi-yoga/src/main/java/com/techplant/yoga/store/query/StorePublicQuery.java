@@ -1,5 +1,8 @@
 package com.techplant.yoga.store.query;
 
+import lombok.Getter;
+import lombok.Setter;
+
 import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.Size;
@@ -8,8 +11,9 @@ import io.swagger.annotations.ApiModelProperty;
 
 /** 用户端门店列表查询条件。 */
 @ApiModel("用户端门店列表查询条件")
-public class StorePublicQuery
-{
+@Getter
+@Setter
+public class StorePublicQuery {
     public static final int DEFAULT_PAGE_NUM = 1;
     public static final int DEFAULT_PAGE_SIZE = 10;
     public static final int MAX_PAGE_SIZE = 100;
@@ -31,16 +35,11 @@ public class StorePublicQuery
     @Max(value = MAX_PAGE_SIZE, message = "每页条数不能超过 100")
     private Integer pageSize;
 
-    public int pageNumOrDefault() { return pageNum == null ? DEFAULT_PAGE_NUM : pageNum; }
+    public int pageNumOrDefault() {
+        return pageNum == null ? DEFAULT_PAGE_NUM : pageNum;
+    }
 
-    public int pageSizeOrDefault() { return pageSize == null ? DEFAULT_PAGE_SIZE : pageSize; }
-
-    public String getRegionCode() { return regionCode; }
-    public void setRegionCode(String regionCode) { this.regionCode = regionCode; }
-    public String getKeyword() { return keyword; }
-    public void setKeyword(String keyword) { this.keyword = keyword; }
-    public Integer getPageNum() { return pageNum; }
-    public void setPageNum(Integer pageNum) { this.pageNum = pageNum; }
-    public Integer getPageSize() { return pageSize; }
-    public void setPageSize(Integer pageSize) { this.pageSize = pageSize; }
+    public int pageSizeOrDefault() {
+        return pageSize == null ? DEFAULT_PAGE_SIZE : pageSize;
+    }
 }

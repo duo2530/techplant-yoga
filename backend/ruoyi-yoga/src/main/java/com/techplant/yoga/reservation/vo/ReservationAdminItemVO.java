@@ -1,5 +1,8 @@
 package com.techplant.yoga.reservation.vo;
 
+import lombok.Getter;
+import lombok.Setter;
+
 import java.time.LocalDateTime;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.annotations.ApiModel;
@@ -12,8 +15,9 @@ import io.swagger.annotations.ApiModelProperty;
  * 关联资料已物理删除时对应字段为 {@code null}。</p>
  */
 @ApiModel("管理端预约列表项")
-public class ReservationAdminItemVO
-{
+@Getter
+@Setter
+public class ReservationAdminItemVO {
     @ApiModelProperty(value = "预约ID（雪花ID，字符串）", example = "1856739201475240001")
     private Long id;
 
@@ -129,79 +133,4 @@ public class ReservationAdminItemVO
 
     @ApiModelProperty(value = "排课教室ID")
     private Long classroomId;
-
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
-    public Long getScheduleId() { return scheduleId; }
-    public void setScheduleId(Long scheduleId) { this.scheduleId = scheduleId; }
-    public Long getCourseId() { return courseId; }
-    public void setCourseId(Long courseId) { this.courseId = courseId; }
-    public String getCourseName() { return courseName; }
-    public void setCourseName(String courseName) { this.courseName = courseName; }
-    public String getCourseCoverUrl() { return courseCoverUrl; }
-    public void setCourseCoverUrl(String courseCoverUrl) { this.courseCoverUrl = courseCoverUrl; }
-    public Integer getCourseType() { return courseType; }
-    public void setCourseType(Integer courseType) { this.courseType = courseType; }
-    public String getCourseTypeName() { return courseTypeName; }
-    public void setCourseTypeName(String courseTypeName) { this.courseTypeName = courseTypeName; }
-    public Integer getDifficulty() { return difficulty; }
-    public void setDifficulty(Integer difficulty) { this.difficulty = difficulty; }
-    public String getCoachName() { return coachName; }
-    public void setCoachName(String coachName) { this.coachName = coachName; }
-    public Long getStoreId() { return storeId; }
-    public void setStoreId(Long storeId) { this.storeId = storeId; }
-    public String getStoreName() { return storeName; }
-    public void setStoreName(String storeName) { this.storeName = storeName; }
-    public String getStoreAddress() { return storeAddress; }
-    public void setStoreAddress(String storeAddress) { this.storeAddress = storeAddress; }
-    public String getClassroomName() { return classroomName; }
-    public void setClassroomName(String classroomName) { this.classroomName = classroomName; }
-    public String getScheduleDate() { return scheduleDate; }
-    public void setScheduleDate(String scheduleDate) { this.scheduleDate = scheduleDate; }
-    public LocalDateTime getStartTime() { return startTime; }
-    public void setStartTime(LocalDateTime startTime) { this.startTime = startTime; }
-    public LocalDateTime getEndTime() { return endTime; }
-    public void setEndTime(LocalDateTime endTime) { this.endTime = endTime; }
-    public Integer getDurationMinutes() { return durationMinutes; }
-    public void setDurationMinutes(Integer durationMinutes) { this.durationMinutes = durationMinutes; }
-    public Integer getPersons() { return persons; }
-    public void setPersons(Integer persons) { this.persons = persons; }
-    public Long getMemberCardId() { return memberCardId; }
-    public void setMemberCardId(Long memberCardId) { this.memberCardId = memberCardId; }
-    public String getCardName() { return cardName; }
-    public void setCardName(String cardName) { this.cardName = cardName; }
-    public Integer getCardType() { return cardType; }
-    public void setCardType(Integer cardType) { this.cardType = cardType; }
-    public String getCardTypeText() { return cardTypeText; }
-    public void setCardTypeText(String cardTypeText) { this.cardTypeText = cardTypeText; }
-    public Integer getDeductTimes() { return deductTimes; }
-    public void setDeductTimes(Integer deductTimes) { this.deductTimes = deductTimes; }
-    public Integer getStatus() { return status; }
-    public void setStatus(Integer status) { this.status = status; }
-    public String getStatusText() { return statusText; }
-    public void setStatusText(String statusText) { this.statusText = statusText; }
-    public Integer getScheduleStatus() { return scheduleStatus; }
-    public void setScheduleStatus(Integer scheduleStatus) { this.scheduleStatus = scheduleStatus; }
-    public String getScheduleStatusText() { return scheduleStatusText; }
-    public void setScheduleStatusText(String scheduleStatusText) { this.scheduleStatusText = scheduleStatusText; }
-    public LocalDateTime getReservationTime() { return reservationTime; }
-    public void setReservationTime(LocalDateTime reservationTime) { this.reservationTime = reservationTime; }
-    public LocalDateTime getCancelTime() { return cancelTime; }
-    public void setCancelTime(LocalDateTime cancelTime) { this.cancelTime = cancelTime; }
-    public Integer getCancelReason() { return cancelReason; }
-    public void setCancelReason(Integer cancelReason) { this.cancelReason = cancelReason; }
-    public LocalDateTime getCheckInTime() { return checkInTime; }
-    public void setCheckInTime(LocalDateTime checkInTime) { this.checkInTime = checkInTime; }
-    public Long getMemberId() { return memberId; }
-    public void setMemberId(Long memberId) { this.memberId = memberId; }
-    public String getMemberName() { return memberName; }
-    public void setMemberName(String memberName) { this.memberName = memberName; }
-    public String getMemberPhone() { return memberPhone; }
-    public void setMemberPhone(String memberPhone) { this.memberPhone = memberPhone; }
-    public String getCardNo() { return cardNo; }
-    public void setCardNo(String cardNo) { this.cardNo = cardNo; }
-    public Long getCoachId() { return coachId; }
-    public void setCoachId(Long coachId) { this.coachId = coachId; }
-    public Long getClassroomId() { return classroomId; }
-    public void setClassroomId(Long classroomId) { this.classroomId = classroomId; }
 }

@@ -1,5 +1,8 @@
 package com.techplant.yoga.membercard.vo;
 
+import lombok.Getter;
+import lombok.Setter;
+
 import java.time.LocalDateTime;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.annotations.ApiModel;
@@ -13,8 +16,9 @@ import io.swagger.annotations.ApiModelProperty;
  * 而 {@code storeScopeText} 给「适用门店已删除」。包含管理端才需要的会员身份与审计信息一律不返回。</p>
  */
 @ApiModel("我的会员卡列表项")
-public class MemberCardPublicItemVO
-{
+@Getter
+@Setter
+public class MemberCardPublicItemVO {
     @ApiModelProperty(value = "会员卡ID（雪花ID，字符串）", example = "1856739201475235912")
     private Long id;
 
@@ -80,47 +84,4 @@ public class MemberCardPublicItemVO
     @ApiModelProperty("有效期止（未开卡为 null；其他状态保留原值）")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime validEndTime;
-
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
-    public String getCardNo() { return cardNo; }
-    public void setCardNo(String cardNo) { this.cardNo = cardNo; }
-    public String getCardName() { return cardName; }
-    public void setCardName(String cardName) { this.cardName = cardName; }
-    public Integer getCardType() { return cardType; }
-    public void setCardType(Integer cardType) { this.cardType = cardType; }
-    public String getCardTypeText() { return cardTypeText; }
-    public void setCardTypeText(String cardTypeText) { this.cardTypeText = cardTypeText; }
-    public String getCardCategoryText() { return cardCategoryText; }
-    public void setCardCategoryText(String cardCategoryText) { this.cardCategoryText = cardCategoryText; }
-    public Integer getStatus() { return status; }
-    public void setStatus(Integer status) { this.status = status; }
-    public String getStatusText() { return statusText; }
-    public void setStatusText(String statusText) { this.statusText = statusText; }
-    public Integer getCourseScope() { return courseScope; }
-    public void setCourseScope(Integer courseScope) { this.courseScope = courseScope; }
-    public String getCourseScopeName() { return courseScopeName; }
-    public void setCourseScopeName(String courseScopeName) { this.courseScopeName = courseScopeName; }
-    public Long getStoreId() { return storeId; }
-    public void setStoreId(Long storeId) { this.storeId = storeId; }
-    public String getStoreName() { return storeName; }
-    public void setStoreName(String storeName) { this.storeName = storeName; }
-    public String getStoreScopeText() { return storeScopeText; }
-    public void setStoreScopeText(String storeScopeText) { this.storeScopeText = storeScopeText; }
-    public Integer getPurchaseTimes() { return purchaseTimes; }
-    public void setPurchaseTimes(Integer purchaseTimes) { this.purchaseTimes = purchaseTimes; }
-    public Integer getGiftTimes() { return giftTimes; }
-    public void setGiftTimes(Integer giftTimes) { this.giftTimes = giftTimes; }
-    public Integer getTotalTimes() { return totalTimes; }
-    public void setTotalTimes(Integer totalTimes) { this.totalTimes = totalTimes; }
-    public Integer getRemainingTimes() { return remainingTimes; }
-    public void setRemainingTimes(Integer remainingTimes) { this.remainingTimes = remainingTimes; }
-    public Integer getRemainingDays() { return remainingDays; }
-    public void setRemainingDays(Integer remainingDays) { this.remainingDays = remainingDays; }
-    public LocalDateTime getActivateTime() { return activateTime; }
-    public void setActivateTime(LocalDateTime activateTime) { this.activateTime = activateTime; }
-    public LocalDateTime getValidStartTime() { return validStartTime; }
-    public void setValidStartTime(LocalDateTime validStartTime) { this.validStartTime = validStartTime; }
-    public LocalDateTime getValidEndTime() { return validEndTime; }
-    public void setValidEndTime(LocalDateTime validEndTime) { this.validEndTime = validEndTime; }
 }

@@ -27,10 +27,9 @@ import com.techplant.yoga.common.testcontainers.YogaMyBatisTestConfig;
 import com.techplant.yoga.common.testcontainers.YogaSchema;
 
 /** 教练数据访问的**真实 SQL 口径**集成测试（Testcontainers MySQL，表结构取自 backend/sql/yoga.sql，不连开发库）。 */
-@ContextConfiguration(classes = { YogaMyBatisTestConfig.class, CoachDaoImpl.class })
+@ContextConfiguration(classes = {YogaMyBatisTestConfig.class, CoachDaoImpl.class})
 @DisplayName("CoachDao 集成测试（Testcontainers MySQL：列表 / 详情 / 物理删除 / 全量更新）")
-class CoachDaoTest extends AbstractYogaIntegrationTest
-{
+class CoachDaoTest extends AbstractYogaIntegrationTest {
     private static final Long LIN_COACH_ID = 9001L;
 
     private static final Long ZHOU_COACH_ID = 9002L;
@@ -46,8 +45,7 @@ class CoachDaoTest extends AbstractYogaIntegrationTest
     private CoachDao coachDao;
 
     @BeforeEach
-    void resetTable()
-    {
+    void resetTable() {
         YogaSchema.reset(dataSource, "t_coach");
     }
 
@@ -57,8 +55,7 @@ class CoachDaoTest extends AbstractYogaIntegrationTest
 
     @Test
     @DisplayName("列表：姓名模糊匹配，固定按 id DESC；不传姓名时返回全部")
-    void selectAdminPage_shouldFilterByNameAndOrderByIdDesc() throws Exception
-    {
+    void selectAdminPage_shouldFilterByNameAndOrderByIdDesc() throws Exception {
         insertCoach(LIN_COACH_ID, LIN_NAME, null, null);
         insertCoach(ZHOU_COACH_ID, "周教练", null, null);
         insertCoach(SECOND_LIN_COACH_ID, LIN_NAME, null, null);
@@ -82,8 +79,7 @@ class CoachDaoTest extends AbstractYogaIntegrationTest
 
     @Test
     @DisplayName("列表 SQL 只 select 必要列：intro 与 gallery 不会被查出来")
-    void selectAdminPage_shouldNotSelectIntroAndGallery() throws Exception
-    {
+    void selectAdminPage_shouldNotSelectIntroAndGallery() throws Exception {
         insertCoach(LIN_COACH_ID, LIN_NAME, "十年哈他瑜伽经验", "[\"https://cdn.example.com/coach/a.jpg\"]");
 
         CoachQuery query = new CoachQuery();
@@ -104,8 +100,7 @@ class CoachDaoTest extends AbstractYogaIntegrationTest
 
     @Test
     @DisplayName("按主键查询：gallery 的 JSON 内容原样读出（DAO 不做 JSON 加工）")
-    void selectById_shouldReturnGalleryJsonAsIs() throws Exception
-    {
+    void selectById_shouldReturnGalleryJsonAsIs() throws Exception {
         String gallery = "[\"https://cdn.example.com/coach/a.jpg\",\"https://cdn.example.com/coach/b.jpg\"]";
         insertCoach(LIN_COACH_ID, LIN_NAME, "十年哈他瑜伽经验", gallery);
 
@@ -125,8 +120,7 @@ class CoachDaoTest extends AbstractYogaIntegrationTest
 
     @Test
     @DisplayName("删除是物理删除：DELETE 之后行真的没了（不是逻辑删除）")
-    void deleteById_shouldPhysicallyRemoveRow() throws Exception
-    {
+    void deleteById_shouldPhysicallyRemoveRow() throws Exception {
         insertCoach(LIN_COACH_ID, LIN_NAME, null, null);
         assertNotNull(coachDao.selectById(LIN_COACH_ID));
 
@@ -142,8 +136,7 @@ class CoachDaoTest extends AbstractYogaIntegrationTest
 
     @Test
     @DisplayName("更新是全量覆盖业务列：name/avatar_url/intro/phone/gallery 都写，create_by 不动")
-    void updateById_shouldWriteBusinessColumnsOnly() throws Exception
-    {
+    void updateById_shouldWriteBusinessColumnsOnly() throws Exception {
         insertCoach(LIN_COACH_ID, LIN_NAME, "旧简介", null);
 
         CoachDO update = new CoachDO();
@@ -169,8 +162,7 @@ class CoachDaoTest extends AbstractYogaIntegrationTest
 
     @Test
     @DisplayName("更新：相册清空（传 null）→ gallery 列写成 NULL")
-    void updateById_withNullGallery_shouldClearColumn() throws Exception
-    {
+    void updateById_withNullGallery_shouldClearColumn() throws Exception {
         insertCoach(LIN_COACH_ID, LIN_NAME, null, "[\"https://cdn.example.com/coach/a.jpg\"]");
 
         CoachDO update = new CoachDO();
@@ -190,13 +182,11 @@ class CoachDaoTest extends AbstractYogaIntegrationTest
 
     @Test
     @DisplayName("摘要查询：按 ID 集合命中现有行，带 intro、不带 gallery（排课模块补名称头像用）")
-    void selectSummaryByIds_shouldReturnIntroWithoutGallery() throws Exception
-    {
+    void selectSummaryByIds_shouldReturnIntroWithoutGallery() throws Exception {
         insertCoach(LIN_COACH_ID, LIN_NAME, "十年哈他瑜伽经验", "[\"https://cdn.example.com/coach/a.jpg\"]");
         insertCoach(ZHOU_COACH_ID, "周教练", "擅长普拉提", null);
 
-        List<CoachDO> summaries = coachDao.selectSummaryByIds(
-                Arrays.asList(LIN_COACH_ID, ZHOU_COACH_ID, 9999L));
+        List<CoachDO> summaries = coachDao.selectSummaryByIds(Arrays.asList(LIN_COACH_ID, ZHOU_COACH_ID, 9999L));
 
         assertEquals(2, summaries.size(), "已被物理删除/不存在的 ID 不会出现在结果里");
         CoachDO first = summaries.get(0);
@@ -212,13 +202,11 @@ class CoachDaoTest extends AbstractYogaIntegrationTest
     // ------------------------------------------------------------------
 
     /** 直插测试数据（避开审计填充与雪花 ID，断言才稳定） */
-    private void insertCoach(Long id, String name, String intro, String gallery) throws Exception
-    {
+    private void insertCoach(Long id, String name, String intro, String gallery) throws Exception {
         String sql = "INSERT INTO t_coach (id, name, avatar_url, intro, phone, gallery,"
                 + " create_by, create_time, update_by, update_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         try (Connection connection = dataSource.getConnection();
-                PreparedStatement statement = connection.prepareStatement(sql))
-        {
+                PreparedStatement statement = connection.prepareStatement(sql)) {
             Timestamp now = Timestamp.valueOf(LocalDateTime.of(2026, 9, 28, 10, 0, 0));
             statement.setLong(1, id);
             statement.setString(2, name);
@@ -234,15 +222,12 @@ class CoachDaoTest extends AbstractYogaIntegrationTest
         }
     }
 
-    private long rawCountById(Long id) throws Exception
-    {
+    private long rawCountById(Long id) throws Exception {
         try (Connection connection = dataSource.getConnection();
-                PreparedStatement statement = connection.prepareStatement(
-                        "SELECT COUNT(*) FROM t_coach WHERE id = ?"))
-        {
+                PreparedStatement statement = connection
+                        .prepareStatement("SELECT COUNT(*) FROM t_coach WHERE id = ?")) {
             statement.setLong(1, id);
-            try (ResultSet resultSet = statement.executeQuery())
-            {
+            try (ResultSet resultSet = statement.executeQuery()) {
                 resultSet.next();
                 return resultSet.getLong(1);
             }

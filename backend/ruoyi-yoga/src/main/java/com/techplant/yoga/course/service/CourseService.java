@@ -11,8 +11,7 @@ import com.techplant.yoga.course.vo.CourseListItemVO;
 import com.techplant.yoga.course.vo.CourseSummaryVO;
 
 /** 课程业务接口。 */
-public interface CourseService
-{
+public interface CourseService {
     /**
      * 查询课程列表（分页，按 {@code course_type ASC, id DESC} 稳定排序）
      */

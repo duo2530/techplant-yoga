@@ -1,13 +1,15 @@
 package com.techplant.yoga.membercard.enums;
 
+import lombok.Getter;
+
 /**
  * 会员卡在用户端的展示状态。
  *
  * <p>不落库：由开卡时间、停卡时间、有效期止与剩余次数实时判定，判定优先级为
  * 停卡 → 未开卡 → 过期 → 已用尽 → 正常，与管理端派生状态的口径一致。</p>
  */
-public enum MemberCardPublicStatusEnum
-{
+@Getter
+public enum MemberCardPublicStatusEnum {
     /** 尚未开卡：有效期起止与开卡时间都为空 */
     PENDING(1, "未开卡"),
 
@@ -29,19 +31,8 @@ public enum MemberCardPublicStatusEnum
     /** 状态文案 */
     private final String text;
 
-    MemberCardPublicStatusEnum(Integer code, String text)
-    {
+    MemberCardPublicStatusEnum(Integer code, String text) {
         this.code = code;
         this.text = text;
-    }
-
-    public Integer getCode()
-    {
-        return code;
-    }
-
-    public String getText()
-    {
-        return text;
     }
 }

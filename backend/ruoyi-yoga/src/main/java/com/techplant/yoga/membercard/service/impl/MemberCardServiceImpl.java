@@ -1,5 +1,7 @@
 package com.techplant.yoga.membercard.service.impl;
 
+import lombok.RequiredArgsConstructor;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
@@ -42,8 +44,8 @@ import com.techplant.yoga.store.vo.StoreSummaryVO;
 
 /** 会员卡管理业务实现。 */
 @Service
-public class MemberCardServiceImpl implements MemberCardService
-{
+@RequiredArgsConstructor
+public class MemberCardServiceImpl implements MemberCardService {
     /** 资源不存在：会员卡、会员或门店已被删除 */
     private static final int NOT_FOUND = 404;
 
@@ -64,18 +66,8 @@ public class MemberCardServiceImpl implements MemberCardService
 
     private final CardNoGenerator cardNoGenerator;
 
-    public MemberCardServiceImpl(MemberCardDao memberCardDao, MemberService memberService, StoreService storeService,
-            CardNoGenerator cardNoGenerator)
-    {
-        this.memberCardDao = memberCardDao;
-        this.memberService = memberService;
-        this.storeService = storeService;
-        this.cardNoGenerator = cardNoGenerator;
-    }
-
     @Override
-    public PageResult<MemberCardListItemVO> page(MemberCardQuery query)
-    {
+    public PageResult<MemberCardListItemVO> page(MemberCardQuery query) {
         IPage<MemberCardDO> page = memberCardDao.selectPage(query);
         List<MemberCardDO> cards = page.getRecords();
         // IPage 不出 service 层
@@ -83,18 +75,15 @@ public class MemberCardServiceImpl implements MemberCardService
     }
 
     @Override
-    public MemberCardDetailVO getById(Long cardId)
-    {
+    public MemberCardDetailVO getById(Long cardId) {
         return detailOf(requireCard(cardId));
     }
 
     @Override
-    public PageResult<MemberCardPublicItemVO> pageForMember(Long memberId, MemberCardPublicQuery query)
-    {
+    public PageResult<MemberCardPublicItemVO> pageForMember(Long memberId, MemberCardPublicQuery query) {
         IPage<MemberCardDO> page = memberCardDao.selectPageForMember(memberId, query);
         // IPage 不出 service 层
-        return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(),
-                toPublicItemVOList(page.getRecords()));
+        return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), toPublicItemVOList(page.getRecords()));
     }
 
     /**
@@ -102,14 +91,12 @@ public class MemberCardServiceImpl implements MemberCardService
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void create(MemberCardCreateDTO dto)
-    {
+    public void create(MemberCardCreateDTO dto) {
         MemberCardTypeEnum cardType = MemberCardTypeEnum.validate(dto.getCardType());
         CourseScopeEnum.validate(dto.getCourseScope());
         validateCombination(dto, cardType);
 
-        if (!memberService.existsById(dto.getMemberId()))
-        {
+        if (!memberService.existsById(dto.getMemberId())) {
             throw new ServiceException("会员不存在或已被删除", NOT_FOUND);
         }
 
@@ -117,66 +104,57 @@ public class MemberCardServiceImpl implements MemberCardService
         Map<Long, StoreSummaryVO> stores = indexStores(
                 storeService.summaries(Arrays.asList(dto.getOpenStoreId(), dto.getStoreId())));
         StoreSummaryVO openStore = stores.get(dto.getOpenStoreId());
-        if (openStore == null)
-        {
+        if (openStore == null) {
             throw new ServiceException("开卡门店不存在或已被删除", NOT_FOUND);
         }
-        if (cardType.isTimesCard() && stores.get(dto.getStoreId()) == null)
-        {
+        if (cardType.isTimesCard() && stores.get(dto.getStoreId()) == null) {
             throw new ServiceException("适用门店不存在或已被删除", NOT_FOUND);
         }
 
         // 年卡的有效期数量由服务端固定为 1 年，有效期单位与起止时间留到正式开卡时写入
-        Integer validPeriodCount = cardType.isTimesCard() ? dto.getValidPeriodCount()
+        Integer validPeriodCount = cardType.isTimesCard()
+                ? dto.getValidPeriodCount()
                 : Integer.valueOf(MemberCardTypeEnum.ANNUAL_PERIOD_COUNT);
         MemberCardDO card = MemberCardConverter.toDO(dto, cardType, cardNoGenerator.generate(openStore.getStoreNo()),
                 validPeriodCount);
-        try
-        {
+        try {
             int rows = memberCardDao.insert(card);
-            if (rows != 1 || card.getId() == null)
-            {
+            if (rows != 1 || card.getId() == null) {
                 throw new ServiceException("发卡失败", PARAM_INVALID);
             }
-        }
-        catch (DuplicateKeyException e)
-        {
+        } catch (DuplicateKeyException e) {
             throw cardNoConflict(e);
         }
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public MemberCardDetailVO activate(Long cardId)
-    {
+    public MemberCardDetailVO activate(Long cardId) {
         // 当前读加行锁：并发开卡只有一次能通过状态检查
         MemberCardDO card = requireCardForUpdate(cardId);
-        if (card.getStopTime() != null)
-        {
+        if (card.getStopTime() != null) {
             throw new ServiceException("该会员卡已停卡，不能开卡", CONFLICT);
         }
-        if (card.getActivateTime() != null)
-        {
+        if (card.getActivateTime() != null) {
             throw new ServiceException("该会员卡已开卡，不能重复开卡", CONFLICT);
         }
 
         MemberCardTypeEnum cardType = MemberCardTypeEnum.of(card.getCardType());
-        if (cardType == null)
-        {
+        if (cardType == null) {
             throw new ServiceException("卡类型取值非法，无法开卡", PARAM_INVALID);
         }
-        int validPeriodCount = cardType.isTimesCard() ? requireValidPeriodCount(card)
+        int validPeriodCount = cardType.isTimesCard()
+                ? requireValidPeriodCount(card)
                 : MemberCardTypeEnum.ANNUAL_PERIOD_COUNT;
 
         // 有效期起为开卡日 00:00:00，止为「起始日 + 有效天数 - 1 天」的 23:59:59，含首尾日
         LocalDateTime activateTime = LocalDateTime.now(CardNoGenerator.CARD_ZONE);
         LocalDateTime validStartTime = activateTime.toLocalDate().atStartOfDay();
-        LocalDateTime validEndTime = validStartTime.toLocalDate()
-                .plusDays(cardType.validDays(validPeriodCount) - 1L).atTime(23, 59, 59);
+        LocalDateTime validEndTime = validStartTime.toLocalDate().plusDays(cardType.validDays(validPeriodCount) - 1L)
+                .atTime(23, 59, 59);
 
         if (memberCardDao.activate(cardId, cardType.getValidPeriodUnit().getCode(), validStartTime, validEndTime,
-                activateTime, CurrentUserUtils.getUserIdOrNull()) != 1)
-        {
+                activateTime, CurrentUserUtils.getUserIdOrNull()) != 1) {
             throw new ServiceException("会员卡状态已变更，请刷新后重试", CONFLICT);
         }
         return detailOf(requireCard(cardId));
@@ -184,23 +162,19 @@ public class MemberCardServiceImpl implements MemberCardService
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public MemberCardDetailVO stop(Long cardId, MemberCardStopDTO dto)
-    {
+    public MemberCardDetailVO stop(Long cardId, MemberCardStopDTO dto) {
         MemberCardDO card = requireCardForUpdate(cardId);
-        if (card.getStopTime() != null)
-        {
+        if (card.getStopTime() != null) {
             throw new ServiceException("该会员卡已停卡，不能重复停卡", CONFLICT);
         }
         String stopReason = dto == null ? null : trimToNull(dto.getStopReason());
-        if (stopReason == null)
-        {
+        if (stopReason == null) {
             throw new ServiceException("停卡原因不能为空", PARAM_INVALID);
         }
 
         // 停卡只写停卡时间与原因，剩余次数与有效期原样保留
         if (memberCardDao.stop(cardId, LocalDateTime.now(CardNoGenerator.CARD_ZONE), stopReason,
-                CurrentUserUtils.getUserIdOrNull()) != 1)
-        {
+                CurrentUserUtils.getUserIdOrNull()) != 1) {
             throw new ServiceException("会员卡状态已变更，请刷新后重试", CONFLICT);
         }
         return detailOf(requireCard(cardId));
@@ -208,112 +182,92 @@ public class MemberCardServiceImpl implements MemberCardService
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void delete(Long cardId)
-    {
+    public void delete(Long cardId) {
         requireCard(cardId);
-        if (memberCardDao.deleteById(cardId) != 1)
-        {
+        if (memberCardDao.deleteById(cardId) != 1) {
             // 并发下已被删除：影响行数为 0
             throw notFound();
         }
     }
 
     @Override
-    public MemberCardBookingSnapshot lockCard(Long memberCardId, Long memberId)
-    {
+    public MemberCardBookingSnapshot lockCard(Long memberCardId, Long memberId) {
         MemberCardDO card = memberCardDao.selectByIdForUpdate(memberCardId);
-        if (card == null || !Objects.equals(card.getMemberId(), memberId))
-        {
+        if (card == null || !Objects.equals(card.getMemberId(), memberId)) {
             throw new ServiceException("会员卡不存在或不属于本人", NOT_FOUND);
         }
         return MemberCardConverter.toBookingSnapshot(card);
     }
 
     @Override
-    public List<Long> cardIdsOfMember(Long memberId, Integer cardType)
-    {
+    public List<Long> cardIdsOfMember(Long memberId, Integer cardType) {
         return memberCardDao.selectIdsByMemberAndType(memberId, cardType);
     }
 
     @Override
-    public List<MemberCardSummaryVO> summaries(Collection<Long> cardIds)
-    {
+    public List<MemberCardSummaryVO> summaries(Collection<Long> cardIds) {
         return MemberCardConverter.toSummaryVOList(memberCardDao.selectByIds(cardIds));
     }
 
     @Override
     public MemberCardBookingSnapshot lockBookableCard(Long memberCardId, Long memberId, Integer courseType,
-            Long scheduleStoreId, LocalDateTime startTime, LocalDateTime endTime)
-    {
+            Long scheduleStoreId, LocalDateTime startTime, LocalDateTime endTime) {
         MemberCardBookingSnapshot snapshot = lockCard(memberCardId, memberId);
         validateBookable(snapshot, courseType, scheduleStoreId, startTime, endTime);
         return snapshot;
     }
 
     @Override
-    public boolean deductTimes(Long memberCardId, Integer persons)
-    {
+    public boolean deductTimes(Long memberCardId, Integer persons) {
         return memberCardDao.deductTimes(memberCardId, persons) == 1;
     }
 
     @Override
-    public boolean refundTimes(Long memberCardId, Integer times)
-    {
+    public boolean refundTimes(Long memberCardId, Integer times) {
         return memberCardDao.refundTimes(memberCardId, times) == 1;
     }
 
     /** 预约资格校验：归属已在锁卡时校验，这里依次校验开卡、停卡、有效期、门店与课种 */
     private void validateBookable(MemberCardBookingSnapshot card, Integer courseType, Long scheduleStoreId,
-            LocalDateTime startTime, LocalDateTime endTime)
-    {
-        if (card.getActivateTime() == null)
-        {
+            LocalDateTime startTime, LocalDateTime endTime) {
+        if (card.getActivateTime() == null) {
             throw new ServiceException("会员卡未开卡，不能预约", CONFLICT);
         }
-        if (card.getStopTime() != null)
-        {
+        if (card.getStopTime() != null) {
             throw new ServiceException("会员卡已停卡，不能预约", CONFLICT);
         }
         LocalDateTime now = LocalDateTime.now(CardNoGenerator.CARD_ZONE);
         if (card.getValidStartTime() == null || card.getValidEndTime() == null || now.isBefore(card.getValidStartTime())
-                || now.isAfter(card.getValidEndTime()))
-        {
+                || now.isAfter(card.getValidEndTime())) {
             throw new ServiceException("会员卡已过期，不能预约", CONFLICT);
         }
-        if (startTime == null || endTime == null)
-        {
+        if (startTime == null || endTime == null) {
             throw new ServiceException("排课时间缺失，不能预约", CONFLICT);
         }
-        if (endTime.isAfter(card.getValidEndTime()))
-        {
+        if (endTime.isAfter(card.getValidEndTime())) {
             throw new ServiceException("会员卡有效期不覆盖本次课程，不能预约", CONFLICT);
         }
         CourseScopeEnum scope = CourseScopeEnum.of(card.getCourseScope());
-        if (scope == null || !scope.covers(courseType))
-        {
+        if (scope == null || !scope.covers(courseType)) {
             throw new ServiceException("会员卡不适用于该课程", CONFLICT);
         }
         // 次数卡限定适用门店，年卡全部门店通用
         if (MemberCardTypeEnum.TIMES.getCode().equals(card.getCardType())
-                && !Objects.equals(card.getStoreId(), scheduleStoreId))
-        {
+                && !Objects.equals(card.getStoreId(), scheduleStoreId)) {
             throw new ServiceException("会员卡不适用于该门店", CONFLICT);
         }
     }
 
     /** 批量转列表项：会员名与门店名按 ID 批量补齐，关联对象已删除时由转换器兜底为空字符串 */
-    private List<MemberCardListItemVO> toListItemVOList(List<MemberCardDO> cards)
-    {
+    private List<MemberCardListItemVO> toListItemVOList(List<MemberCardDO> cards) {
         List<MemberCardListItemVO> rows = new ArrayList<MemberCardListItemVO>();
-        if (cards == null || cards.isEmpty())
-        {
+        if (cards == null || cards.isEmpty()) {
             return rows;
         }
         Map<Long, String> memberNames = loadMemberNames(cards);
         Map<Long, StoreSummaryVO> stores = loadStoreSummaries(cards);
         LocalDate today = LocalDate.now(CardNoGenerator.CARD_ZONE);
-        for (MemberCardDO card : cards)
-        {
+        for (MemberCardDO card : cards) {
             rows.add(MemberCardConverter.toListItemVO(card, memberNames.get(card.getMemberId()),
                     storeNoOf(stores, card.getOpenStoreId()), storeNameOf(stores, card.getOpenStoreId()),
                     storeNameOf(stores, card.getStoreId()), remainingDays(card, today)));
@@ -322,73 +276,59 @@ public class MemberCardServiceImpl implements MemberCardService
     }
 
     /** 单卡转详情：字段与列表项一致 */
-    private MemberCardDetailVO detailOf(MemberCardDO card)
-    {
+    private MemberCardDetailVO detailOf(MemberCardDO card) {
         List<MemberCardDO> cards = Collections.singletonList(card);
         Map<Long, String> memberNames = loadMemberNames(cards);
         Map<Long, StoreSummaryVO> stores = loadStoreSummaries(cards);
         return MemberCardConverter.toDetailVO(card, memberNames.get(card.getMemberId()),
                 storeNoOf(stores, card.getOpenStoreId()), storeNameOf(stores, card.getOpenStoreId()),
-                storeNameOf(stores, card.getStoreId()),
-                remainingDays(card, LocalDate.now(CardNoGenerator.CARD_ZONE)));
+                storeNameOf(stores, card.getStoreId()), remainingDays(card, LocalDate.now(CardNoGenerator.CARD_ZONE)));
     }
 
     /**
      * 批量转用户端列表项：只翻译次数卡的适用门店，展示状态与剩余天数按本次请求的统一时间计算
      */
-    private List<MemberCardPublicItemVO> toPublicItemVOList(List<MemberCardDO> cards)
-    {
+    private List<MemberCardPublicItemVO> toPublicItemVOList(List<MemberCardDO> cards) {
         List<MemberCardPublicItemVO> rows = new ArrayList<MemberCardPublicItemVO>();
-        if (cards == null || cards.isEmpty())
-        {
+        if (cards == null || cards.isEmpty()) {
             return rows;
         }
         // 年卡不把开卡门店作为适用门店，只有次数卡的非空 storeId 需要翻译
         List<Long> storeIds = new ArrayList<Long>();
-        for (MemberCardDO card : cards)
-        {
+        for (MemberCardDO card : cards) {
             addIfPresent(storeIds, card.getStoreId());
         }
         Map<Long, StoreSummaryVO> stores = indexStores(storeService.summaries(storeIds));
         LocalDateTime now = LocalDateTime.now(CardNoGenerator.CARD_ZONE);
         LocalDate today = now.toLocalDate();
-        for (MemberCardDO card : cards)
-        {
+        for (MemberCardDO card : cards) {
             rows.add(MemberCardConverter.toPublicItemVO(card, publicStatus(card, now),
-                    storeNameOf(stores, card.getStoreId()), storeScopeText(card, stores),
-                    remainingDays(card, today)));
+                    storeNameOf(stores, card.getStoreId()), storeScopeText(card, stores), remainingDays(card, today)));
         }
         return rows;
     }
 
     /** 展示状态：停卡 → 未开卡 → 过期 → 已用尽 → 正常 */
-    private MemberCardPublicStatusEnum publicStatus(MemberCardDO card, LocalDateTime now)
-    {
-        if (card.getStopTime() != null)
-        {
+    private MemberCardPublicStatusEnum publicStatus(MemberCardDO card, LocalDateTime now) {
+        if (card.getStopTime() != null) {
             return MemberCardPublicStatusEnum.STOPPED;
         }
-        if (card.getActivateTime() == null)
-        {
+        if (card.getActivateTime() == null) {
             return MemberCardPublicStatusEnum.PENDING;
         }
-        if (card.getValidEndTime() != null && now.isAfter(card.getValidEndTime()))
-        {
+        if (card.getValidEndTime() != null && now.isAfter(card.getValidEndTime())) {
             return MemberCardPublicStatusEnum.EXPIRED;
         }
         if (MemberCardTypeEnum.TIMES.getCode().equals(card.getCardType()) && card.getRemainingTimes() != null
-                && card.getRemainingTimes() <= 0)
-        {
+                && card.getRemainingTimes() <= 0) {
             return MemberCardPublicStatusEnum.EXHAUSTED;
         }
         return MemberCardPublicStatusEnum.ACTIVE;
     }
 
     /** 适用门店文案：年卡全部门店通用；次数卡的适用门店被删除时给缺失文案 */
-    private String storeScopeText(MemberCardDO card, Map<Long, StoreSummaryVO> stores)
-    {
-        if (card.getStoreId() == null)
-        {
+    private String storeScopeText(MemberCardDO card, Map<Long, StoreSummaryVO> stores) {
+        if (card.getStoreId() == null) {
             return "全部门店通用";
         }
         StoreSummaryVO store = stores.get(card.getStoreId());
@@ -396,51 +336,39 @@ public class MemberCardServiceImpl implements MemberCardService
     }
 
     /** 会员卡上的次数类字段组合校验，规则随卡类型分流 */
-    private void validateCombination(MemberCardCreateDTO dto, MemberCardTypeEnum cardType)
-    {
-        if (cardType.isTimesCard())
-        {
-            if (dto.getStoreId() == null)
-            {
+    private void validateCombination(MemberCardCreateDTO dto, MemberCardTypeEnum cardType) {
+        if (cardType.isTimesCard()) {
+            if (dto.getStoreId() == null) {
                 throw new ServiceException("次数卡必须选择适用门店", PARAM_INVALID);
             }
-            if (dto.getPurchaseTimes() == null || dto.getGiftTimes() == null)
-            {
+            if (dto.getPurchaseTimes() == null || dto.getGiftTimes() == null) {
                 throw new ServiceException("次数卡必须填写购买次数与赠送次数", PARAM_INVALID);
             }
-            if (dto.getPurchaseTimes() < 0 || dto.getGiftTimes() < 0)
-            {
+            if (dto.getPurchaseTimes() < 0 || dto.getGiftTimes() < 0) {
                 throw new ServiceException("购买次数与赠送次数不能小于 0", PARAM_INVALID);
             }
-            if (dto.getPurchaseTimes() + dto.getGiftTimes() <= 0)
-            {
+            if (dto.getPurchaseTimes() + dto.getGiftTimes() <= 0) {
                 throw new ServiceException("购买次数与赠送次数合计必须大于 0", PARAM_INVALID);
             }
-            if (!MemberCardTypeEnum.isValidTimesPeriodCount(dto.getValidPeriodCount()))
-            {
+            if (!MemberCardTypeEnum.isValidTimesPeriodCount(dto.getValidPeriodCount())) {
                 throw new ServiceException("次数卡有效期数量只能是 3、6 或 12 个月", PARAM_INVALID);
             }
             return;
         }
-        if (dto.getStoreId() != null)
-        {
+        if (dto.getStoreId() != null) {
             throw new ServiceException("年卡不能选择适用门店", PARAM_INVALID);
         }
-        if (dto.getPurchaseTimes() != null || dto.getGiftTimes() != null)
-        {
+        if (dto.getPurchaseTimes() != null || dto.getGiftTimes() != null) {
             throw new ServiceException("年卡不能填写购买次数与赠送次数", PARAM_INVALID);
         }
-        if (dto.getValidPeriodCount() != null)
-        {
+        if (dto.getValidPeriodCount() != null) {
             throw new ServiceException("年卡不能填写有效期数量，有效期固定 1 年", PARAM_INVALID);
         }
     }
 
     /** 次数卡开卡时读取发卡保存的有效期数量，缺失按数据异常处理 */
-    private int requireValidPeriodCount(MemberCardDO card)
-    {
-        if (card.getValidPeriodCount() == null)
-        {
+    private int requireValidPeriodCount(MemberCardDO card) {
+        if (card.getValidPeriodCount() == null) {
             throw new ServiceException("会员卡有效期数量缺失，无法开卡", PARAM_INVALID);
         }
         return card.getValidPeriodCount();
@@ -449,106 +377,86 @@ public class MemberCardServiceImpl implements MemberCardService
     /**
      * 剩余天数（含今天）：只有年卡未过期时才给值，其余情况返回 {@code null}
      */
-    private Integer remainingDays(MemberCardDO card, LocalDate today)
-    {
-        if (!MemberCardTypeEnum.ANNUAL.getCode().equals(card.getCardType()) || card.getValidEndTime() == null)
-        {
+    private Integer remainingDays(MemberCardDO card, LocalDate today) {
+        if (!MemberCardTypeEnum.ANNUAL.getCode().equals(card.getCardType()) || card.getValidEndTime() == null) {
             return null;
         }
         LocalDate endDate = card.getValidEndTime().toLocalDate();
-        if (today.isAfter(endDate))
-        {
+        if (today.isAfter(endDate)) {
             return null;
         }
         return (int) (ChronoUnit.DAYS.between(today, endDate) + 1);
     }
 
     /** 按 ID 取会员卡，不存在直接 404 */
-    private MemberCardDO requireCard(Long cardId)
-    {
+    private MemberCardDO requireCard(Long cardId) {
         MemberCardDO card = memberCardDao.selectById(cardId);
-        if (card == null)
-        {
+        if (card == null) {
             throw notFound();
         }
         return card;
     }
 
     /** 按 ID 当前读取并锁定会员卡，行已被并发删除时同样按 404 处理 */
-    private MemberCardDO requireCardForUpdate(Long cardId)
-    {
+    private MemberCardDO requireCardForUpdate(Long cardId) {
         MemberCardDO card = memberCardDao.selectByIdForUpdate(cardId);
-        if (card == null)
-        {
+        if (card == null) {
             throw notFound();
         }
         return card;
     }
 
     /** 批量取会员显示名（id → 显示名）；会员已删除时不在结果中 */
-    private Map<Long, String> loadMemberNames(List<MemberCardDO> cards)
-    {
+    private Map<Long, String> loadMemberNames(List<MemberCardDO> cards) {
         List<Long> memberIds = new ArrayList<Long>();
-        for (MemberCardDO card : cards)
-        {
+        for (MemberCardDO card : cards) {
             addIfPresent(memberIds, card.getMemberId());
         }
         Map<Long, String> names = new HashMap<Long, String>();
-        for (MemberSummaryVO member : memberService.summaries(memberIds))
-        {
+        for (MemberSummaryVO member : memberService.summaries(memberIds)) {
             names.put(member.getId(), member.getName());
         }
         return names;
     }
 
     /** 取卡片涉及的门店（开卡门店与适用门店）；门店已删除时不在结果中 */
-    private Map<Long, StoreSummaryVO> loadStoreSummaries(List<MemberCardDO> cards)
-    {
+    private Map<Long, StoreSummaryVO> loadStoreSummaries(List<MemberCardDO> cards) {
         List<Long> storeIds = new ArrayList<Long>();
-        for (MemberCardDO card : cards)
-        {
+        for (MemberCardDO card : cards) {
             addIfPresent(storeIds, card.getOpenStoreId());
             addIfPresent(storeIds, card.getStoreId());
         }
         return indexStores(storeService.summaries(storeIds));
     }
 
-    private Map<Long, StoreSummaryVO> indexStores(List<StoreSummaryVO> summaries)
-    {
+    private Map<Long, StoreSummaryVO> indexStores(List<StoreSummaryVO> summaries) {
         Map<Long, StoreSummaryVO> stores = new HashMap<Long, StoreSummaryVO>();
-        for (StoreSummaryVO store : summaries)
-        {
+        for (StoreSummaryVO store : summaries) {
             stores.put(store.getId(), store);
         }
         return stores;
     }
 
-    private String storeNoOf(Map<Long, StoreSummaryVO> stores, Long storeId)
-    {
+    private String storeNoOf(Map<Long, StoreSummaryVO> stores, Long storeId) {
         StoreSummaryVO store = storeId == null ? null : stores.get(storeId);
         return store == null ? null : store.getStoreNo();
     }
 
-    private String storeNameOf(Map<Long, StoreSummaryVO> stores, Long storeId)
-    {
+    private String storeNameOf(Map<Long, StoreSummaryVO> stores, Long storeId) {
         StoreSummaryVO store = storeId == null ? null : stores.get(storeId);
         return store == null ? null : store.getName();
     }
 
-    private void addIfPresent(Collection<Long> target, Long value)
-    {
-        if (value != null && !target.contains(value))
-        {
+    private void addIfPresent(Collection<Long> target, Long value) {
+        if (value != null && !target.contains(value)) {
             target.add(value);
         }
     }
 
     /** 卡号唯一键冲突：只有 uk_card_no 才是「同门店同秒已有发卡」，其余数据库异常原样抛出 */
-    private RuntimeException cardNoConflict(DuplicateKeyException cause)
-    {
+    private RuntimeException cardNoConflict(DuplicateKeyException cause) {
         String message = cause.getMessage() == null ? "" : cause.getMessage();
-        if (!message.contains(UK_CARD_NO))
-        {
+        if (!message.contains(UK_CARD_NO)) {
             return cause;
         }
         ServiceException exception = new ServiceException("该门店当前时间已有发卡记录，请稍后重试", CONFLICT);
@@ -556,18 +464,15 @@ public class MemberCardServiceImpl implements MemberCardService
         return exception;
     }
 
-    private String trimToNull(String value)
-    {
-        if (value == null)
-        {
+    private String trimToNull(String value) {
+        if (value == null) {
             return null;
         }
         String trimmed = value.trim();
         return trimmed.isEmpty() ? null : trimmed;
     }
 
-    private ServiceException notFound()
-    {
+    private ServiceException notFound() {
         return new ServiceException("会员卡不存在或已被删除", NOT_FOUND);
     }
 }

@@ -1,5 +1,7 @@
 package com.techplant.yoga.member.controller;
 
+import lombok.RequiredArgsConstructor;
+
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.Valid;
 import org.springframework.validation.annotation.Validated;
@@ -23,23 +25,16 @@ import io.swagger.annotations.ApiOperation;
 @Validated
 @RestController
 @RequestMapping("/api/auth")
-public class AuthController extends BaseController
-{
+@RequiredArgsConstructor
+public class AuthController extends BaseController {
     private final AccountService accountService;
 
     private final MemberTokenService memberTokenService;
 
-    public AuthController(AccountService accountService, MemberTokenService memberTokenService)
-    {
-        this.accountService = accountService;
-        this.memberTokenService = memberTokenService;
-    }
-
     /** 发送短信验证码（注册／忘记密码） */
     @ApiOperation("发送短信验证码")
     @PostMapping("/sms-code")
-    public AjaxResult sendSmsCode(@Valid @RequestBody SmsCodeSendDTO dto)
-    {
+    public AjaxResult sendSmsCode(@Valid @RequestBody SmsCodeSendDTO dto) {
         accountService.sendSmsCode(dto);
         return AjaxResult.success("验证码已发送");
     }
@@ -47,8 +42,7 @@ public class AuthController extends BaseController
     /** 注册：成功不签发 token，前端跳回登录页 */
     @ApiOperation("注册")
     @PostMapping("/register")
-    public AjaxResult register(@Valid @RequestBody RegisterDTO dto)
-    {
+    public AjaxResult register(@Valid @RequestBody RegisterDTO dto) {
         accountService.register(dto);
         return AjaxResult.success("注册成功，请登录");
     }
@@ -56,16 +50,14 @@ public class AuthController extends BaseController
     /** 登录：返回 token、过期时间戳、会员 ID 与显示名 */
     @ApiOperation("登录")
     @PostMapping("/login")
-    public AjaxResult login(@Valid @RequestBody LoginDTO dto)
-    {
+    public AjaxResult login(@Valid @RequestBody LoginDTO dto) {
         return AjaxResult.success("登录成功", accountService.login(dto));
     }
 
     /** 忘记密码：覆盖 BCrypt 哈希，不需要旧密码 */
     @ApiOperation("忘记密码")
     @PostMapping("/reset-password")
-    public AjaxResult resetPassword(@Valid @RequestBody ResetPasswordDTO dto)
-    {
+    public AjaxResult resetPassword(@Valid @RequestBody ResetPasswordDTO dto) {
         accountService.resetPassword(dto);
         return AjaxResult.success("密码已重置");
     }
@@ -77,8 +69,7 @@ public class AuthController extends BaseController
      */
     @ApiOperation("退出登录")
     @PostMapping("/logout")
-    public AjaxResult logout(HttpServletRequest request)
-    {
+    public AjaxResult logout(HttpServletRequest request) {
         memberTokenService.revokeSession(request);
         return AjaxResult.success("退出成功");
     }

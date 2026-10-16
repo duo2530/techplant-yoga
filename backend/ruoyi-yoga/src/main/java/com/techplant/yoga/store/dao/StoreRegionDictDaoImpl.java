@@ -1,5 +1,7 @@
 package com.techplant.yoga.store.dao;
 
+import lombok.RequiredArgsConstructor;
+
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -16,8 +18,8 @@ import com.techplant.yoga.store.mapper.StoreRegionDictMapper;
  * 的 '0' 表示正常），不提供任何写方法。</p>
  */
 @Repository
-public class StoreRegionDictDaoImpl implements StoreRegionDictDao
-{
+@RequiredArgsConstructor
+public class StoreRegionDictDaoImpl implements StoreRegionDictDao {
     /** 门店区域字典类型 */
     private static final String DICT_TYPE_STORE_REGION = "store_region";
 
@@ -26,27 +28,17 @@ public class StoreRegionDictDaoImpl implements StoreRegionDictDao
 
     private final StoreRegionDictMapper storeRegionDictMapper;
 
-    public StoreRegionDictDaoImpl(StoreRegionDictMapper storeRegionDictMapper)
-    {
-        this.storeRegionDictMapper = storeRegionDictMapper;
-    }
-
     @Override
-    public Map<String, String> selectRegionLabelMap()
-    {
+    public Map<String, String> selectRegionLabelMap() {
         LambdaQueryWrapper<StoreRegionDictDO> wrapper = Wrappers.<StoreRegionDictDO>lambdaQuery()
                 .eq(StoreRegionDictDO::getDictType, DICT_TYPE_STORE_REGION)
-                .eq(StoreRegionDictDO::getStatus, STATUS_NORMAL)
-                .orderByAsc(StoreRegionDictDO::getDictCode);
+                .eq(StoreRegionDictDO::getStatus, STATUS_NORMAL).orderByAsc(StoreRegionDictDO::getDictCode);
         List<StoreRegionDictDO> dictDatas = storeRegionDictMapper.selectList(wrapper);
 
         Map<String, String> labelMap = new LinkedHashMap<String, String>();
-        if (dictDatas != null)
-        {
-            for (StoreRegionDictDO dictData : dictDatas)
-            {
-                if (dictData.getDictValue() == null)
-                {
+        if (dictDatas != null) {
+            for (StoreRegionDictDO dictData : dictDatas) {
+                if (dictData.getDictValue() == null) {
                     continue;
                 }
                 labelMap.put(dictData.getDictValue(), dictData.getDictLabel() == null ? "" : dictData.getDictLabel());

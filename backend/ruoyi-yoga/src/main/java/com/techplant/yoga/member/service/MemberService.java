@@ -16,8 +16,7 @@ import com.techplant.yoga.member.vo.MemberSummaryVO;
  * <p>账号与会员共用 {@code t_member}，本接口承载「会员身份」相关的跨模块校验，
  * 登录态与会话由 {@code MemberTokenService} 负责。</p>
  */
-public interface MemberService
-{
+public interface MemberService {
     /** 查询会员列表（分页；后四位精确、显示名模糊、等级精确筛选，按会员 ID 降序） */
     PageResult<MemberListItemVO> page(MemberQuery query);
 

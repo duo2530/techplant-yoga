@@ -1,13 +1,17 @@
 package com.techplant.yoga.membercard.vo;
 
+import lombok.Getter;
+import lombok.Setter;
+
 import java.time.LocalDateTime;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 
 /** 预约事务内锁定的会员卡快照，不作为 HTTP 接口返回对象。 */
 @ApiModel("会员卡预约快照")
-public class MemberCardBookingSnapshot
-{
+@Getter
+@Setter
+public class MemberCardBookingSnapshot {
     @ApiModelProperty("会员卡ID")
     private Long id;
 
@@ -40,27 +44,4 @@ public class MemberCardBookingSnapshot
 
     @ApiModelProperty("剩余次数（仅次数卡）")
     private Integer remainingTimes;
-
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
-    public Long getMemberId() { return memberId; }
-    public void setMemberId(Long memberId) { this.memberId = memberId; }
-    public String getCardName() { return cardName; }
-    public void setCardName(String cardName) { this.cardName = cardName; }
-    public Integer getCardType() { return cardType; }
-    public void setCardType(Integer cardType) { this.cardType = cardType; }
-    public Integer getCourseScope() { return courseScope; }
-    public void setCourseScope(Integer courseScope) { this.courseScope = courseScope; }
-    public Long getStoreId() { return storeId; }
-    public void setStoreId(Long storeId) { this.storeId = storeId; }
-    public LocalDateTime getValidStartTime() { return validStartTime; }
-    public void setValidStartTime(LocalDateTime validStartTime) { this.validStartTime = validStartTime; }
-    public LocalDateTime getValidEndTime() { return validEndTime; }
-    public void setValidEndTime(LocalDateTime validEndTime) { this.validEndTime = validEndTime; }
-    public LocalDateTime getActivateTime() { return activateTime; }
-    public void setActivateTime(LocalDateTime activateTime) { this.activateTime = activateTime; }
-    public LocalDateTime getStopTime() { return stopTime; }
-    public void setStopTime(LocalDateTime stopTime) { this.stopTime = stopTime; }
-    public Integer getRemainingTimes() { return remainingTimes; }
-    public void setRemainingTimes(Integer remainingTimes) { this.remainingTimes = remainingTimes; }
 }

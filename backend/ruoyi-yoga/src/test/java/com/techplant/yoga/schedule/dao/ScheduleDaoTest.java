@@ -28,10 +28,9 @@ import com.techplant.yoga.schedule.query.PublicScheduleQuery;
 import com.techplant.yoga.schedule.query.ScheduleQuery;
 
 /** 排课数据访问的**真实 SQL 口径**集成测试（Testcontainers MySQL，表结构取自 backend/sql/yoga.sql，不连开发库）。 */
-@ContextConfiguration(classes = { YogaMyBatisTestConfig.class, ScheduleDaoImpl.class })
+@ContextConfiguration(classes = {YogaMyBatisTestConfig.class, ScheduleDaoImpl.class})
 @DisplayName("ScheduleDao 集成测试（Testcontainers MySQL：状态口径 / 冲突校验 / 稳定排序）")
-class ScheduleDaoTest extends AbstractYogaIntegrationTest
-{
+class ScheduleDaoTest extends AbstractYogaIntegrationTest {
     private static final Long STORE_ID = 100L;
 
     private static final Long OTHER_STORE_ID = 200L;
@@ -52,31 +51,29 @@ class ScheduleDaoTest extends AbstractYogaIntegrationTest
     private ScheduleDao scheduleDao;
 
     @BeforeEach
-    void resetTable()
-    {
+    void resetTable() {
         YogaSchema.reset(dataSource, "t_schedule");
     }
 
     @Test
     @DisplayName("四个 countActiveByXxx 共用口径：end_time > NOW() AND status IN (1,2)，已结束与已取消都不阻塞")
-    void countActive_shouldShareOneConditionInSql() throws Exception
-    {
+    void countActive_shouldShareOneConditionInSql() throws Exception {
         LocalDateTime now = LocalDateTime.now();
         LocalDate today = LocalDate.now();
         // 未结束（end_time > now）且状态 1/2 → 计数
-        insertRow(9001L, STORE_ID, COURSE_ID, COURSE_TYPE_GROUP, COACH_ID, CLASSROOM_ID, today,
-                now.plusHours(1), now.plusHours(2), 1);
-        insertRow(9002L, STORE_ID, COURSE_ID, COURSE_TYPE_GROUP, COACH_ID, CLASSROOM_ID, today,
-                now.plusHours(3), now.plusHours(4), 2);
+        insertRow(9001L, STORE_ID, COURSE_ID, COURSE_TYPE_GROUP, COACH_ID, CLASSROOM_ID, today, now.plusHours(1),
+                now.plusHours(2), 1);
+        insertRow(9002L, STORE_ID, COURSE_ID, COURSE_TYPE_GROUP, COACH_ID, CLASSROOM_ID, today, now.plusHours(3),
+                now.plusHours(4), 2);
         // status=2 但已结束（end_time <= now）→ 不计数
-        insertRow(9003L, STORE_ID, COURSE_ID, COURSE_TYPE_GROUP, COACH_ID, CLASSROOM_ID, today,
-                now.minusHours(2), now.minusHours(1), 2);
+        insertRow(9003L, STORE_ID, COURSE_ID, COURSE_TYPE_GROUP, COACH_ID, CLASSROOM_ID, today, now.minusHours(2),
+                now.minusHours(1), 2);
         // status=3 已取消，即使未结束 → 不计数
-        insertRow(9004L, STORE_ID, COURSE_ID, COURSE_TYPE_GROUP, COACH_ID, CLASSROOM_ID, today,
-                now.plusHours(5), now.plusHours(6), 3);
+        insertRow(9004L, STORE_ID, COURSE_ID, COURSE_TYPE_GROUP, COACH_ID, CLASSROOM_ID, today, now.plusHours(5),
+                now.plusHours(6), 3);
         // status=1 但已结束（end_time <= now）→ 不计数（证明时间条件真的进了 SQL）
-        insertRow(9005L, STORE_ID, COURSE_ID, COURSE_TYPE_GROUP, COACH_ID, CLASSROOM_ID, today,
-                now.minusHours(4), now.minusHours(3), 1);
+        insertRow(9005L, STORE_ID, COURSE_ID, COURSE_TYPE_GROUP, COACH_ID, CLASSROOM_ID, today, now.minusHours(4),
+                now.minusHours(3), 1);
 
         assertEquals(2L, scheduleDao.countActiveByStoreId(STORE_ID));
         assertEquals(2L, scheduleDao.countActiveByClassroomId(CLASSROOM_ID));
@@ -90,26 +87,25 @@ class ScheduleDaoTest extends AbstractYogaIntegrationTest
 
     @Test
     @DisplayName("用户端列表：固定 status<>1 ＋ 门店 ＋ 课种快照 ＋ schedule_date，且排序 start_time ASC, id ASC")
-    void selectPublicPage_shouldApplyFixedFiltersAndStableOrder() throws Exception
-    {
+    void selectPublicPage_shouldApplyFixedFiltersAndStableOrder() throws Exception {
         LocalDate today = LocalDate.now();
         LocalDate tomorrow = today.plusDays(1);
         LocalDateTime base = today.atTime(9, 0);
         // status=1 待上架 → 用户端不可见
-        insertRow(9101L, STORE_ID, COURSE_ID, COURSE_TYPE_GROUP, COACH_ID, CLASSROOM_ID, today,
-                base, base.plusHours(1), 1);
+        insertRow(9101L, STORE_ID, COURSE_ID, COURSE_TYPE_GROUP, COACH_ID, CLASSROOM_ID, today, base, base.plusHours(1),
+                1);
         // 可见（已上架）：10:00
-        insertRow(9102L, STORE_ID, COURSE_ID, COURSE_TYPE_GROUP, COACH_ID, CLASSROOM_ID, today,
-                base.plusHours(1), base.plusHours(2), 2);
+        insertRow(9102L, STORE_ID, COURSE_ID, COURSE_TYPE_GROUP, COACH_ID, CLASSROOM_ID, today, base.plusHours(1),
+                base.plusHours(2), 2);
         // 可见（已取消）：11:00，排在 9102 之后
-        insertRow(9103L, STORE_ID, COURSE_ID, COURSE_TYPE_GROUP, COACH_ID, CLASSROOM_ID, today,
-                base.plusHours(2), base.plusHours(3), 3);
+        insertRow(9103L, STORE_ID, COURSE_ID, COURSE_TYPE_GROUP, COACH_ID, CLASSROOM_ID, today, base.plusHours(2),
+                base.plusHours(3), 3);
         // 别的日期 → 不返回（日期筛的是派生列 schedule_date）
-        insertRow(9104L, STORE_ID, COURSE_ID, COURSE_TYPE_GROUP, COACH_ID, CLASSROOM_ID, tomorrow,
-                base.plusHours(4), base.plusHours(5), 2);
+        insertRow(9104L, STORE_ID, COURSE_ID, COURSE_TYPE_GROUP, COACH_ID, CLASSROOM_ID, tomorrow, base.plusHours(4),
+                base.plusHours(5), 2);
         // 别的课种 → 不返回（课种筛的是快照列 course_type）
-        insertRow(9105L, STORE_ID, COURSE_ID, COURSE_TYPE_FEATURE, COACH_ID, CLASSROOM_ID, today,
-                base.plusHours(6), base.plusHours(7), 2);
+        insertRow(9105L, STORE_ID, COURSE_ID, COURSE_TYPE_FEATURE, COACH_ID, CLASSROOM_ID, today, base.plusHours(6),
+                base.plusHours(7), 2);
 
         PublicScheduleQuery query = new PublicScheduleQuery();
         query.setStoreId(STORE_ID);
@@ -126,16 +122,15 @@ class ScheduleDaoTest extends AbstractYogaIntegrationTest
 
     @Test
     @DisplayName("用户端详情：未删除且 status<>1 才可见；待上架与不存在都查不到（同一响应）")
-    void selectVisibleById_shouldHidePendingRows() throws Exception
-    {
+    void selectVisibleById_shouldHidePendingRows() throws Exception {
         LocalDate today = LocalDate.now();
         LocalDateTime base = today.atTime(9, 0);
-        insertRow(9201L, STORE_ID, COURSE_ID, COURSE_TYPE_GROUP, COACH_ID, CLASSROOM_ID, today,
-                base, base.plusHours(1), 1);
-        insertRow(9202L, STORE_ID, COURSE_ID, COURSE_TYPE_GROUP, COACH_ID, CLASSROOM_ID, today,
-                base.plusHours(1), base.plusHours(2), 2);
-        insertRow(9203L, STORE_ID, COURSE_ID, COURSE_TYPE_GROUP, COACH_ID, CLASSROOM_ID, today,
-                base.plusHours(2), base.plusHours(3), 3);
+        insertRow(9201L, STORE_ID, COURSE_ID, COURSE_TYPE_GROUP, COACH_ID, CLASSROOM_ID, today, base, base.plusHours(1),
+                1);
+        insertRow(9202L, STORE_ID, COURSE_ID, COURSE_TYPE_GROUP, COACH_ID, CLASSROOM_ID, today, base.plusHours(1),
+                base.plusHours(2), 2);
+        insertRow(9203L, STORE_ID, COURSE_ID, COURSE_TYPE_GROUP, COACH_ID, CLASSROOM_ID, today, base.plusHours(2),
+                base.plusHours(3), 3);
 
         assertNull(scheduleDao.selectVisibleById(9201L), "待上架对用户端不可见 → 按不存在处理");
         assertNull(scheduleDao.selectVisibleById(9999L), "不存在 → null");
@@ -145,12 +140,11 @@ class ScheduleDaoTest extends AbstractYogaIntegrationTest
 
     @Test
     @DisplayName("删除是物理删除：DELETE 之后行真的没了")
-    void deleteById_shouldPhysicallyRemoveRow() throws Exception
-    {
+    void deleteById_shouldPhysicallyRemoveRow() throws Exception {
         LocalDate today = LocalDate.now();
         LocalDateTime base = today.atTime(9, 0);
-        insertRow(9301L, STORE_ID, COURSE_ID, COURSE_TYPE_GROUP, COACH_ID, CLASSROOM_ID, today,
-                base, base.plusHours(1), 1);
+        insertRow(9301L, STORE_ID, COURSE_ID, COURSE_TYPE_GROUP, COACH_ID, CLASSROOM_ID, today, base, base.plusHours(1),
+                1);
         assertNotNull(scheduleDao.selectById(9301L));
 
         assertEquals(1, scheduleDao.deleteById(9301L));
@@ -161,12 +155,11 @@ class ScheduleDaoTest extends AbstractYogaIntegrationTest
 
     @Test
     @DisplayName("修改只更新业务列：status 与 booked_persons 不被写入")
-    void updateById_shouldNotTouchStatusAndBookedPersons() throws Exception
-    {
+    void updateById_shouldNotTouchStatusAndBookedPersons() throws Exception {
         LocalDate today = LocalDate.now();
         LocalDateTime base = today.atTime(9, 0);
-        insertRow(9401L, STORE_ID, COURSE_ID, COURSE_TYPE_GROUP, COACH_ID, CLASSROOM_ID, today,
-                base, base.plusHours(1), 1);
+        insertRow(9401L, STORE_ID, COURSE_ID, COURSE_TYPE_GROUP, COACH_ID, CLASSROOM_ID, today, base, base.plusHours(1),
+                1);
 
         ScheduleDO update = new ScheduleDO();
         update.setId(9401L);
@@ -198,8 +191,7 @@ class ScheduleDaoTest extends AbstractYogaIntegrationTest
 
     @Test
     @DisplayName("完全同时段校验：同门店＋同课程＋完全相同的起止时间（排除已取消、排除自身）")
-    void existsSameSlot_shouldExcludeCancelledAndSelf() throws Exception
-    {
+    void existsSameSlot_shouldExcludeCancelledAndSelf() throws Exception {
         LocalDate today = LocalDate.now();
         LocalDateTime start = today.atTime(19, 0);
         LocalDateTime end = today.atTime(20, 0);
@@ -217,8 +209,7 @@ class ScheduleDaoTest extends AbstractYogaIntegrationTest
 
     @Test
     @DisplayName("教练区间相交校验：start_time < :end AND end_time > :start（相邻不算相交，排除自身与已取消）")
-    void existsCoachOverlap_shouldUseIntervalIntersection() throws Exception
-    {
+    void existsCoachOverlap_shouldUseIntervalIntersection() throws Exception {
         LocalDate today = LocalDate.now();
         LocalDateTime start = today.atTime(10, 0);
         LocalDateTime end = today.atTime(11, 0);
@@ -239,8 +230,7 @@ class ScheduleDaoTest extends AbstractYogaIntegrationTest
 
     @Test
     @DisplayName("管理端列表：日期区间按派生列 schedule_date 筛，排序 start_time DESC, id DESC")
-    void selectPage_shouldFilterByScheduleDateAndKeepStableOrder() throws Exception
-    {
+    void selectPage_shouldFilterByScheduleDateAndKeepStableOrder() throws Exception {
         LocalDate today = LocalDate.now();
         LocalDate tomorrow = today.plusDays(1);
         // 同一天两条，故意让 start_time 早的 id 更大
@@ -248,8 +238,8 @@ class ScheduleDaoTest extends AbstractYogaIntegrationTest
                 tomorrow.atTime(15, 0), tomorrow.atTime(16, 0), 1);
         insertRow(9701L, STORE_ID, COURSE_ID, COURSE_TYPE_GROUP, COACH_ID, CLASSROOM_ID, tomorrow,
                 tomorrow.atTime(9, 0), tomorrow.atTime(10, 0), 1);
-        insertRow(9703L, STORE_ID, COURSE_ID, COURSE_TYPE_GROUP, COACH_ID, CLASSROOM_ID, today,
-                today.atTime(9, 0), today.atTime(10, 0), 1);
+        insertRow(9703L, STORE_ID, COURSE_ID, COURSE_TYPE_GROUP, COACH_ID, CLASSROOM_ID, today, today.atTime(9, 0),
+                today.atTime(10, 0), 1);
 
         ScheduleQuery query = new ScheduleQuery();
         query.setStartDate(tomorrow);
@@ -264,14 +254,12 @@ class ScheduleDaoTest extends AbstractYogaIntegrationTest
 
     /** 直插测试数据（避开审计填充与雪花 ID，断言才稳定） */
     private void insertRow(Long id, Long storeId, Long courseId, int courseType, Long coachId, Long classroomId,
-            LocalDate scheduleDate, LocalDateTime startTime, LocalDateTime endTime, int status) throws Exception
-    {
+            LocalDate scheduleDate, LocalDateTime startTime, LocalDateTime endTime, int status) throws Exception {
         String sql = "INSERT INTO t_schedule (id, store_id, course_id, course_type, coach_id, classroom_id,"
                 + " schedule_date, start_time, end_time, max_persons, min_persons, booked_persons, status)"
                 + " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         try (Connection connection = dataSource.getConnection();
-                PreparedStatement statement = connection.prepareStatement(sql))
-        {
+                PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setLong(1, id);
             statement.setLong(2, storeId);
             statement.setLong(3, courseId);
@@ -289,14 +277,12 @@ class ScheduleDaoTest extends AbstractYogaIntegrationTest
         }
     }
 
-    private long rawCountById(Long id) throws Exception
-    {
+    private long rawCountById(Long id) throws Exception {
         try (Connection connection = dataSource.getConnection();
-                PreparedStatement statement = connection.prepareStatement("SELECT COUNT(*) FROM t_schedule WHERE id = ?"))
-        {
+                PreparedStatement statement = connection
+                        .prepareStatement("SELECT COUNT(*) FROM t_schedule WHERE id = ?")) {
             statement.setLong(1, id);
-            try (ResultSet resultSet = statement.executeQuery())
-            {
+            try (ResultSet resultSet = statement.executeQuery()) {
                 resultSet.next();
                 return resultSet.getLong(1);
             }

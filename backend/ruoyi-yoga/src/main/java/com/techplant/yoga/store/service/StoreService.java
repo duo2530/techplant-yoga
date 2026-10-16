@@ -13,8 +13,7 @@ import com.techplant.yoga.store.vo.StorePublicItemVO;
 import com.techplant.yoga.store.vo.StoreSummaryVO;
 
 /** 门店管理业务服务。 */
-public interface StoreService
-{
+public interface StoreService {
     /** 管理端分页查询 */
     PageResult<StoreListItemVO> page(StoreQuery query);
 

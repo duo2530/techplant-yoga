@@ -1,5 +1,7 @@
 package com.techplant.yoga.schedule.dao;
 
+import lombok.RequiredArgsConstructor;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -21,18 +23,12 @@ import com.techplant.yoga.schedule.query.ScheduleQuery;
  *
  */
 @Repository
-public class ScheduleDaoImpl implements ScheduleDao
-{
+@RequiredArgsConstructor
+public class ScheduleDaoImpl implements ScheduleDao {
     private final ScheduleMapper scheduleMapper;
 
-    public ScheduleDaoImpl(ScheduleMapper scheduleMapper)
-    {
-        this.scheduleMapper = scheduleMapper;
-    }
-
     @Override
-    public IPage<ScheduleDO> selectPage(ScheduleQuery query)
-    {
+    public IPage<ScheduleDO> selectPage(ScheduleQuery query) {
         LambdaQueryWrapper<ScheduleDO> wrapper = Wrappers.<ScheduleDO>lambdaQuery();
         wrapper.eq(query.getStoreId() != null, ScheduleDO::getStoreId, query.getStoreId());
         wrapper.eq(query.getCourseId() != null, ScheduleDO::getCourseId, query.getCourseId());
@@ -45,13 +41,12 @@ public class ScheduleDaoImpl implements ScheduleDao
         // 稳定排序：分页不重复、不漏项
         wrapper.orderByDesc(ScheduleDO::getStartTime);
         wrapper.orderByDesc(ScheduleDO::getId);
-        return scheduleMapper.selectPage(
-                new Page<ScheduleDO>(query.pageNumOrDefault(), query.pageSizeOrDefault()), wrapper);
+        return scheduleMapper.selectPage(new Page<ScheduleDO>(query.pageNumOrDefault(), query.pageSizeOrDefault()),
+                wrapper);
     }
 
     @Override
-    public IPage<ScheduleDO> selectPublicPage(PublicScheduleQuery query, LocalDate scheduleDate)
-    {
+    public IPage<ScheduleDO> selectPublicPage(PublicScheduleQuery query, LocalDate scheduleDate) {
         // 可见口径（status <> 1）与详情共用 buildVisibleCondition
         LambdaQueryWrapper<ScheduleDO> wrapper = buildVisibleCondition();
         wrapper.eq(ScheduleDO::getStoreId, query.getStoreId());
@@ -61,58 +56,47 @@ public class ScheduleDaoImpl implements ScheduleDao
         wrapper.eq(ScheduleDO::getScheduleDate, scheduleDate);
         wrapper.orderByAsc(ScheduleDO::getStartTime);
         wrapper.orderByAsc(ScheduleDO::getId);
-        return scheduleMapper.selectPage(
-                new Page<ScheduleDO>(query.pageNumOrDefault(), query.pageSizeOrDefault()), wrapper);
+        return scheduleMapper.selectPage(new Page<ScheduleDO>(query.pageNumOrDefault(), query.pageSizeOrDefault()),
+                wrapper);
     }
 
     @Override
-    public ScheduleDO selectById(Long id)
-    {
+    public ScheduleDO selectById(Long id) {
         return scheduleMapper.selectById(id);
     }
 
     @Override
-    public List<ScheduleDO> selectByIds(Collection<Long> ids)
-    {
-        if (ids == null || ids.isEmpty())
-        {
+    public List<ScheduleDO> selectByIds(Collection<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
             return new ArrayList<ScheduleDO>();
         }
         return scheduleMapper.selectBatchIds(ids);
     }
 
     @Override
-    public ScheduleDO selectByIdForUpdate(Long id)
-    {
-        if (id == null)
-        {
+    public ScheduleDO selectByIdForUpdate(Long id) {
+        if (id == null) {
             return null;
         }
-        return scheduleMapper.selectOne(Wrappers.<ScheduleDO>lambdaQuery()
-                .eq(ScheduleDO::getId, id)
-                .last("FOR UPDATE"));
+        return scheduleMapper
+                .selectOne(Wrappers.<ScheduleDO>lambdaQuery().eq(ScheduleDO::getId, id).last("FOR UPDATE"));
     }
 
     @Override
-    public ScheduleDO selectVisibleById(Long id)
-    {
+    public ScheduleDO selectVisibleById(Long id) {
         return scheduleMapper.selectOne(buildVisibleCondition().eq(ScheduleDO::getId, id));
     }
 
     @Override
-    public int insert(ScheduleDO schedule)
-    {
+    public int insert(ScheduleDO schedule) {
         return scheduleMapper.insert(schedule);
     }
 
     @Override
-    public int updateById(ScheduleDO schedule)
-    {
+    public int updateById(ScheduleDO schedule) {
         // 显式 SET 业务列：不含 status（走状态流转接口）与 booked_persons（只属于预约模块）
-        return scheduleMapper.update(null, Wrappers.<ScheduleDO>lambdaUpdate()
-                .eq(ScheduleDO::getId, schedule.getId())
-                .set(ScheduleDO::getStoreId, schedule.getStoreId())
-                .set(ScheduleDO::getCourseId, schedule.getCourseId())
+        return scheduleMapper.update(null, Wrappers.<ScheduleDO>lambdaUpdate().eq(ScheduleDO::getId, schedule.getId())
+                .set(ScheduleDO::getStoreId, schedule.getStoreId()).set(ScheduleDO::getCourseId, schedule.getCourseId())
                 .set(ScheduleDO::getCourseType, schedule.getCourseType())
                 .set(ScheduleDO::getCoachId, schedule.getCoachId())
                 .set(ScheduleDO::getClassroomId, schedule.getClassroomId())
@@ -126,37 +110,29 @@ public class ScheduleDaoImpl implements ScheduleDao
     }
 
     @Override
-    public int updateStatus(Long id, Integer status, Long updateBy)
-    {
-        return scheduleMapper.update(null, Wrappers.<ScheduleDO>lambdaUpdate()
-                .eq(ScheduleDO::getId, id)
-                .set(ScheduleDO::getStatus, status)
-                .set(ScheduleDO::getUpdateBy, updateBy)
-                .set(ScheduleDO::getUpdateTime, LocalDateTime.now()));
+    public int updateStatus(Long id, Integer status, Long updateBy) {
+        return scheduleMapper.update(null,
+                Wrappers.<ScheduleDO>lambdaUpdate().eq(ScheduleDO::getId, id).set(ScheduleDO::getStatus, status)
+                        .set(ScheduleDO::getUpdateBy, updateBy).set(ScheduleDO::getUpdateTime, LocalDateTime.now()));
     }
 
     @Override
-    public int updateBookedPersons(Long id, Integer bookedPersons)
-    {
-        return scheduleMapper.update(null, Wrappers.<ScheduleDO>lambdaUpdate()
-                .eq(ScheduleDO::getId, id)
+    public int updateBookedPersons(Long id, Integer bookedPersons) {
+        return scheduleMapper.update(null, Wrappers.<ScheduleDO>lambdaUpdate().eq(ScheduleDO::getId, id)
                 // 条件更新保证不超额：写入值超过最大人数时不更新
-                .apply("max_persons >= {0}", bookedPersons)
-                .set(ScheduleDO::getBookedPersons, bookedPersons)
+                .apply("max_persons >= {0}", bookedPersons).set(ScheduleDO::getBookedPersons, bookedPersons)
                 .set(ScheduleDO::getUpdateTime, LocalDateTime.now()));
     }
 
     @Override
-    public int deleteById(Long id)
-    {
+    public int deleteById(Long id) {
         // 物理删除：本表没有 @TableLogic，也没有 deleted 列
         return scheduleMapper.deleteById(id);
     }
 
     @Override
     public boolean existsSameSlot(Long storeId, Long courseId, LocalDateTime startTime, LocalDateTime endTime,
-            Long excludeId)
-    {
+            Long excludeId) {
         LambdaQueryWrapper<ScheduleDO> wrapper = Wrappers.<ScheduleDO>lambdaQuery();
         wrapper.eq(ScheduleDO::getStoreId, storeId);
         wrapper.eq(ScheduleDO::getCourseId, courseId);
@@ -169,8 +145,7 @@ public class ScheduleDaoImpl implements ScheduleDao
     }
 
     @Override
-    public boolean existsCoachOverlap(Long coachId, LocalDateTime startTime, LocalDateTime endTime, Long excludeId)
-    {
+    public boolean existsCoachOverlap(Long coachId, LocalDateTime startTime, LocalDateTime endTime, Long excludeId) {
         LambdaQueryWrapper<ScheduleDO> wrapper = Wrappers.<ScheduleDO>lambdaQuery();
         wrapper.eq(ScheduleDO::getCoachId, coachId);
         wrapper.ne(ScheduleDO::getStatus, ScheduleStatusEnum.CANCELLED.getCode());
@@ -182,42 +157,33 @@ public class ScheduleDaoImpl implements ScheduleDao
     }
 
     @Override
-    public long countActiveByStoreId(Long storeId)
-    {
+    public long countActiveByStoreId(Long storeId) {
         return scheduleMapper.selectCount(buildActiveCondition().eq(ScheduleDO::getStoreId, storeId));
     }
 
     @Override
-    public long countActiveByClassroomId(Long classroomId)
-    {
+    public long countActiveByClassroomId(Long classroomId) {
         return scheduleMapper.selectCount(buildActiveCondition().eq(ScheduleDO::getClassroomId, classroomId));
     }
 
     @Override
-    public long countActiveByCoachId(Long coachId)
-    {
+    public long countActiveByCoachId(Long coachId) {
         return scheduleMapper.selectCount(buildActiveCondition().eq(ScheduleDO::getCoachId, coachId));
     }
 
     @Override
-    public long countActiveByCourseId(Long courseId)
-    {
+    public long countActiveByCourseId(Long courseId) {
         return scheduleMapper.selectCount(buildActiveCondition().eq(ScheduleDO::getCourseId, courseId));
     }
 
     /** 删除门禁口径：{@code end_time > NOW AND status IN (1, 2)} */
-    private LambdaQueryWrapper<ScheduleDO> buildActiveCondition()
-    {
-        return Wrappers.<ScheduleDO>lambdaQuery()
-                .apply("end_time > NOW()")
-                .in(ScheduleDO::getStatus, ScheduleStatusEnum.PENDING.getCode(),
-                        ScheduleStatusEnum.PUBLISHED.getCode());
+    private LambdaQueryWrapper<ScheduleDO> buildActiveCondition() {
+        return Wrappers.<ScheduleDO>lambdaQuery().apply("end_time > NOW()").in(ScheduleDO::getStatus,
+                ScheduleStatusEnum.PENDING.getCode(), ScheduleStatusEnum.PUBLISHED.getCode());
     }
 
     /** 用户端可见口径：{@code status <> 1}（非「待上架」） */
-    private LambdaQueryWrapper<ScheduleDO> buildVisibleCondition()
-    {
-        return Wrappers.<ScheduleDO>lambdaQuery()
-                .ne(ScheduleDO::getStatus, ScheduleStatusEnum.PENDING.getCode());
+    private LambdaQueryWrapper<ScheduleDO> buildVisibleCondition() {
+        return Wrappers.<ScheduleDO>lambdaQuery().ne(ScheduleDO::getStatus, ScheduleStatusEnum.PENDING.getCode());
     }
 }

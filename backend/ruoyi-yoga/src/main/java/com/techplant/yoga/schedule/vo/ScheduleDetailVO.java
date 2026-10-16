@@ -4,6 +4,5 @@ import io.swagger.annotations.ApiModel;
 
 /** 管理端排课详情。 */
 @ApiModel("管理端排课详情")
-public class ScheduleDetailVO extends ScheduleListItemVO
-{
+public class ScheduleDetailVO extends ScheduleListItemVO {
 }

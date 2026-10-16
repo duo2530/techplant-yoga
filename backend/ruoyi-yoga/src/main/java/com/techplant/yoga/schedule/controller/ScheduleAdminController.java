@@ -1,5 +1,7 @@
 package com.techplant.yoga.schedule.controller;
 
+import lombok.RequiredArgsConstructor;
+
 import javax.validation.Valid;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -30,20 +32,14 @@ import io.swagger.annotations.ApiOperation;
 @Validated
 @RestController
 @RequestMapping("/admin/schedules")
-public class ScheduleAdminController extends BaseController
-{
+@RequiredArgsConstructor
+public class ScheduleAdminController extends BaseController {
     private final ScheduleService scheduleService;
-
-    public ScheduleAdminController(ScheduleService scheduleService)
-    {
-        this.scheduleService = scheduleService;
-    }
 
     /** 查询排课列表（日期区间筛 schedule_date，排序 start_time ASC, id ASC） */
     @ApiOperation("查询排课列表")
     @GetMapping
-    public TableDataInfo list(@Valid ScheduleQuery query)
-    {
+    public TableDataInfo list(@Valid ScheduleQuery query) {
         PageResult<ScheduleListItemVO> page = scheduleService.page(query);
         TableDataInfo dataTable = new TableDataInfo();
         dataTable.setCode(HttpStatus.SUCCESS);
@@ -56,16 +52,14 @@ public class ScheduleAdminController extends BaseController
     /** 查询排课详情；不存在或已被删除 → 404「排课不存在或已被删除」 */
     @ApiOperation("查询排课详情")
     @GetMapping("/{scheduleId}")
-    public AjaxResult detail(@PathVariable("scheduleId") Long scheduleId)
-    {
+    public AjaxResult detail(@PathVariable("scheduleId") Long scheduleId) {
         return AjaxResult.success(scheduleService.getById(scheduleId));
     }
 
     /** 新增排课；成功只返回 {@code {"code":200,"msg":"操作成功"}}，不返回新 ID */
     @ApiOperation("新增排课")
     @PostMapping
-    public AjaxResult create(@Valid @RequestBody ScheduleCreateDTO dto)
-    {
+    public AjaxResult create(@Valid @RequestBody ScheduleCreateDTO dto) {
         scheduleService.create(dto);
         return success();
     }
@@ -73,9 +67,7 @@ public class ScheduleAdminController extends BaseController
     /** 修改排课（仅「待上架」可改）；成功返回更新后的详情 */
     @ApiOperation("修改排课")
     @PutMapping("/{scheduleId}")
-    public AjaxResult update(@PathVariable("scheduleId") Long scheduleId,
-            @Valid @RequestBody ScheduleUpdateDTO dto)
-    {
+    public AjaxResult update(@PathVariable("scheduleId") Long scheduleId, @Valid @RequestBody ScheduleUpdateDTO dto) {
         ScheduleDetailVO detail = scheduleService.update(scheduleId, dto);
         return AjaxResult.success(detail);
     }
@@ -89,8 +81,7 @@ public class ScheduleAdminController extends BaseController
     @ApiOperation("排课状态流转（上架／下架／取消）")
     @PutMapping("/{scheduleId}/status")
     public AjaxResult changeStatus(@PathVariable("scheduleId") Long scheduleId,
-            @RequestParam("status") Integer status)
-    {
+            @RequestParam("status") Integer status) {
         scheduleService.changeStatus(scheduleId, status);
         return success();
     }
@@ -98,8 +89,7 @@ public class ScheduleAdminController extends BaseController
     /** 删除排课（物理；仅「待上架」可删） */
     @ApiOperation("删除排课")
     @DeleteMapping("/{scheduleId}")
-    public AjaxResult delete(@PathVariable("scheduleId") Long scheduleId)
-    {
+    public AjaxResult delete(@PathVariable("scheduleId") Long scheduleId) {
         scheduleService.delete(scheduleId);
         return success();
     }

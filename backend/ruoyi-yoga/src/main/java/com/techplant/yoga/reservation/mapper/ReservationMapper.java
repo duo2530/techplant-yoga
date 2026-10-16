@@ -8,8 +8,7 @@ import com.techplant.yoga.reservation.domain.ReservationDO;
 import com.techplant.yoga.reservation.query.ReservationAdminQuery;
 
 /** 预约单 Mapper。 */
-public interface ReservationMapper extends BaseMapper<ReservationDO>
-{
+public interface ReservationMapper extends BaseMapper<ReservationDO> {
     /**
      * 管理端分页查询：门店与课程经排课关联筛选，卡类型经会员卡关联筛选，其余条件按预约字段筛选
      *

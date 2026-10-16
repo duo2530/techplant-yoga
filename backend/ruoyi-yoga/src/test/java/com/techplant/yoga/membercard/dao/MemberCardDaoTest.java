@@ -24,10 +24,9 @@ import com.techplant.yoga.membercard.domain.MemberCardDO;
 import com.techplant.yoga.membercard.query.MemberCardQuery;
 
 /** 会员卡数据访问的集成测试（Testcontainers MySQL，表结构取自 backend/sql/yoga.sql，不连开发库）。 */
-@ContextConfiguration(classes = { YogaMyBatisTestConfig.class, MemberCardDaoImpl.class })
+@ContextConfiguration(classes = {YogaMyBatisTestConfig.class, MemberCardDaoImpl.class})
 @DisplayName("MemberCardDao 集成测试（Testcontainers MySQL：列映射 / 审计 / 卡号唯一 / 状态条件更新）")
-class MemberCardDaoTest extends AbstractYogaIntegrationTest
-{
+class MemberCardDaoTest extends AbstractYogaIntegrationTest {
     private static final Long MEMBER_ID = 1856739201475235902L;
 
     private static final Long OPEN_STORE_ID = 1856739201475235901L;
@@ -38,15 +37,13 @@ class MemberCardDaoTest extends AbstractYogaIntegrationTest
     private MemberCardDao memberCardDao;
 
     @BeforeEach
-    void resetTable()
-    {
+    void resetTable() {
         YogaSchema.reset(dataSource, "t_member_card");
     }
 
     @Test
     @DisplayName("新增：雪花 ID ＋ 审计填充；列名按下划线→驼峰映射")
-    void insert_shouldGenerateSnowflakeIdAndFillAuditFields()
-    {
+    void insert_shouldGenerateSnowflakeIdAndFillAuditFields() {
         MemberCardDO card = newCard(1001L, "202610030001100000");
 
         int rows = memberCardDao.insert(card);
@@ -78,8 +75,7 @@ class MemberCardDaoTest extends AbstractYogaIntegrationTest
 
     @Test
     @DisplayName("新增：卡号重复 → DuplicateKeyException（上层转 409 的兜底）")
-    void insert_withDuplicateCardNo_shouldThrowDuplicateKey()
-    {
+    void insert_withDuplicateCardNo_shouldThrowDuplicateKey() {
         memberCardDao.insert(newCard(1001L, "202610030001100000"));
 
         assertThrows(DuplicateKeyException.class, () -> memberCardDao.insert(newCard(1002L, "202610030001100000")));
@@ -87,8 +83,7 @@ class MemberCardDaoTest extends AbstractYogaIntegrationTest
 
     @Test
     @DisplayName("列表：按会员、卡号模糊、卡类型与适用门店筛选；按 ID 降序分页")
-    void selectPage_shouldFilterAndOrderByIdDesc()
-    {
+    void selectPage_shouldFilterAndOrderByIdDesc() {
         memberCardDao.insert(newCard(1001L, "202610030001100000"));
         MemberCardDO annual = newCard(1002L, "202610040001110000");
         annual.setMemberId(9999L);
@@ -130,8 +125,7 @@ class MemberCardDaoTest extends AbstractYogaIntegrationTest
 
     @Test
     @DisplayName("开卡：写入开卡时间、有效期单位与起止；已开卡或已停卡的卡影响行数为 0")
-    void activate_shouldOnlyApplyToUnactivatedCard()
-    {
+    void activate_shouldOnlyApplyToUnactivatedCard() {
         memberCardDao.insert(newCard(1001L, "202610030001100000"));
         LocalDateTime start = LocalDateTime.of(2026, 10, 3, 0, 0, 0);
         LocalDateTime end = LocalDateTime.of(2027, 9, 27, 23, 59, 59);
@@ -156,8 +150,7 @@ class MemberCardDaoTest extends AbstractYogaIntegrationTest
 
     @Test
     @DisplayName("停卡：写入停卡时间与原因并保留剩余次数与有效期；重复停卡影响行数为 0")
-    void stop_shouldKeepTimesAndValidity()
-    {
+    void stop_shouldKeepTimesAndValidity() {
         memberCardDao.insert(newCard(1001L, "202610030001100000"));
         LocalDateTime stopTime = LocalDateTime.of(2026, 10, 4, 10, 0, 0);
 
@@ -176,8 +169,7 @@ class MemberCardDaoTest extends AbstractYogaIntegrationTest
 
     @Test
     @DisplayName("当前读：存在的卡返回该行，不存在返回 null；查询缺失主键不抛异常")
-    void selectByIdForUpdate_shouldReturnRowOrNull()
-    {
+    void selectByIdForUpdate_shouldReturnRowOrNull() {
         memberCardDao.insert(newCard(1001L, "202610030001100000"));
 
         assertNotNull(memberCardDao.selectByIdForUpdate(1001L));
@@ -188,8 +180,7 @@ class MemberCardDaoTest extends AbstractYogaIntegrationTest
 
     @Test
     @DisplayName("删除：物理删除卡行，再删影响行数为 0")
-    void deleteById_shouldRemoveRow()
-    {
+    void deleteById_shouldRemoveRow() {
         memberCardDao.insert(newCard(1001L, "202610030001100000"));
 
         assertEquals(1, memberCardDao.deleteById(1001L));
@@ -198,26 +189,22 @@ class MemberCardDaoTest extends AbstractYogaIntegrationTest
         assertTrue(memberCardDao.selectPage(query(1, 10)).getRecords().isEmpty());
     }
 
-    private MemberCardQuery query(int pageNum, int pageSize)
-    {
+    private MemberCardQuery query(int pageNum, int pageSize) {
         MemberCardQuery query = new MemberCardQuery();
         query.setPageNum(pageNum);
         query.setPageSize(pageSize);
         return query;
     }
 
-    private List<Long> ids(List<MemberCardDO> cards)
-    {
+    private List<Long> ids(List<MemberCardDO> cards) {
         List<Long> ids = new ArrayList<Long>();
-        for (MemberCardDO card : cards)
-        {
+        for (MemberCardDO card : cards) {
             ids.add(card.getId());
         }
         return ids;
     }
 
-    private MemberCardDO newCard(Long id, String cardNo)
-    {
+    private MemberCardDO newCard(Long id, String cardNo) {
         MemberCardDO card = new MemberCardDO();
         card.setId(id);
         card.setMemberId(MEMBER_ID);

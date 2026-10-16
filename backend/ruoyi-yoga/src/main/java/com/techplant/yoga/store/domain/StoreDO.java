@@ -1,5 +1,8 @@
 package com.techplant.yoga.store.domain;
 
+import lombok.Getter;
+import lombok.Setter;
+
 import java.time.LocalDateTime;
 import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.annotation.IdType;
@@ -9,8 +12,9 @@ import com.baomidou.mybatisplus.annotation.TableName;
 
 /** 门店数据对象，与 {@code t_store} 一一对应。 */
 @TableName("t_store")
-public class StoreDO
-{
+@Getter
+@Setter
+public class StoreDO {
     /** 门店ID（雪花ID，应用侧生成） */
     @TableId(value = "id", type = IdType.ASSIGN_ID)
     private Long id;
@@ -54,31 +58,4 @@ public class StoreDO
     /** 更新时间 */
     @TableField(fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updateTime;
-
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
-    public String getStoreNo() { return storeNo; }
-    public void setStoreNo(String storeNo) { this.storeNo = storeNo; }
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
-    public Integer getStoreType() { return storeType; }
-    public void setStoreType(Integer storeType) { this.storeType = storeType; }
-    public String getRegionCode() { return regionCode; }
-    public void setRegionCode(String regionCode) { this.regionCode = regionCode; }
-    public String getPhone() { return phone; }
-    public void setPhone(String phone) { this.phone = phone; }
-    public String getBusinessHours() { return businessHours; }
-    public void setBusinessHours(String businessHours) { this.businessHours = businessHours; }
-    public String getAddress() { return address; }
-    public void setAddress(String address) { this.address = address; }
-    public String getImageUrl() { return imageUrl; }
-    public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
-    public Long getCreateBy() { return createBy; }
-    public void setCreateBy(Long createBy) { this.createBy = createBy; }
-    public LocalDateTime getCreateTime() { return createTime; }
-    public void setCreateTime(LocalDateTime createTime) { this.createTime = createTime; }
-    public Long getUpdateBy() { return updateBy; }
-    public void setUpdateBy(Long updateBy) { this.updateBy = updateBy; }
-    public LocalDateTime getUpdateTime() { return updateTime; }
-    public void setUpdateTime(LocalDateTime updateTime) { this.updateTime = updateTime; }
 }

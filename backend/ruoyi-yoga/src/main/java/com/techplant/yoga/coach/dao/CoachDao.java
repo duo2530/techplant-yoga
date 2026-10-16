@@ -7,8 +7,7 @@ import com.techplant.yoga.coach.domain.CoachDO;
 import com.techplant.yoga.coach.query.CoachQuery;
 
 /** 教练数据访问。 */
-public interface CoachDao
-{
+public interface CoachDao {
     /** 管理端列表分页：只 select id/name/avatar_url/phone/审计时间，按 id DESC */
     IPage<CoachDO> selectAdminPage(CoachQuery query);
 

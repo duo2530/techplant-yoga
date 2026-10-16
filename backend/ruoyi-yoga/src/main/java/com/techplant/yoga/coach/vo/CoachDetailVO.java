@@ -1,5 +1,8 @@
 package com.techplant.yoga.coach.vo;
 
+import lombok.Getter;
+import lombok.Setter;
+
 import java.time.LocalDateTime;
 import java.util.List;
 import com.fasterxml.jackson.annotation.JsonFormat;
@@ -13,8 +16,9 @@ import io.swagger.annotations.ApiModelProperty;
  * 两者之间的转换在 service 层完成，本 VO 不关心存储形态。</p>
  */
 @ApiModel("教练详情")
-public class CoachDetailVO
-{
+@Getter
+@Setter
+public class CoachDetailVO {
     @ApiModelProperty(value = "教练ID（雪花ID，字符串）", example = "1856739201475237001")
     private Long id;
 
@@ -40,21 +44,4 @@ public class CoachDetailVO
     @ApiModelProperty(value = "更新时间", example = "2026-09-28 10:00:00")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime updateTime;
-
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
-    public String getAvatarUrl() { return avatarUrl; }
-    public void setAvatarUrl(String avatarUrl) { this.avatarUrl = avatarUrl; }
-    public String getPhone() { return phone; }
-    public void setPhone(String phone) { this.phone = phone; }
-    public String getIntro() { return intro; }
-    public void setIntro(String intro) { this.intro = intro; }
-    public List<String> getGallery() { return gallery; }
-    public void setGallery(List<String> gallery) { this.gallery = gallery; }
-    public LocalDateTime getCreateTime() { return createTime; }
-    public void setCreateTime(LocalDateTime createTime) { this.createTime = createTime; }
-    public LocalDateTime getUpdateTime() { return updateTime; }
-    public void setUpdateTime(LocalDateTime updateTime) { this.updateTime = updateTime; }
 }

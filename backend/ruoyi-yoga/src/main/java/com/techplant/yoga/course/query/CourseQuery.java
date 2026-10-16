@@ -1,5 +1,8 @@
 package com.techplant.yoga.course.query;
 
+import lombok.Getter;
+import lombok.Setter;
+
 import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.Size;
@@ -14,8 +17,9 @@ import io.swagger.annotations.ApiModelProperty;
  * <b>没有门店、没有状态</b> —— 课程是平台级、且无状态。</p>
  */
 @ApiModel("课程列表查询条件")
-public class CourseQuery
-{
+@Getter
+@Setter
+public class CourseQuery {
     /** 默认页码 */
     public static final int DEFAULT_PAGE_NUM = 1;
 
@@ -45,56 +49,14 @@ public class CourseQuery
     /**
      * 页码，未传时取默认值
      */
-    public int pageNumOrDefault()
-    {
+    public int pageNumOrDefault() {
         return pageNum == null ? DEFAULT_PAGE_NUM : pageNum;
     }
 
     /**
      * 每页条数，未传时取默认值
      */
-    public int pageSizeOrDefault()
-    {
+    public int pageSizeOrDefault() {
         return pageSize == null ? DEFAULT_PAGE_SIZE : pageSize;
-    }
-
-    public String getName()
-    {
-        return name;
-    }
-
-    public void setName(String name)
-    {
-        this.name = name;
-    }
-
-    public Integer getCourseType()
-    {
-        return courseType;
-    }
-
-    public void setCourseType(Integer courseType)
-    {
-        this.courseType = courseType;
-    }
-
-    public Integer getPageNum()
-    {
-        return pageNum;
-    }
-
-    public void setPageNum(Integer pageNum)
-    {
-        this.pageNum = pageNum;
-    }
-
-    public Integer getPageSize()
-    {
-        return pageSize;
-    }
-
-    public void setPageSize(Integer pageSize)
-    {
-        this.pageSize = pageSize;
     }
 }

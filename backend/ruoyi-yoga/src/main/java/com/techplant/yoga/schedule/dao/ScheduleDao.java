@@ -10,8 +10,7 @@ import com.techplant.yoga.schedule.query.PublicScheduleQuery;
 import com.techplant.yoga.schedule.query.ScheduleQuery;
 
 /** 排课数据访问语义。 */
-public interface ScheduleDao
-{
+public interface ScheduleDao {
     /** 管理端分页：日期区间筛 {@code schedule_date}，排序 {@code start_time ASC, id ASC} */
     IPage<ScheduleDO> selectPage(ScheduleQuery query);
 
@@ -59,8 +58,7 @@ public interface ScheduleDao
      *
      * @param excludeId 修改时排除自身；新增传 null
      */
-    boolean existsSameSlot(Long storeId, Long courseId, LocalDateTime startTime, LocalDateTime endTime,
-            Long excludeId);
+    boolean existsSameSlot(Long storeId, Long courseId, LocalDateTime startTime, LocalDateTime endTime, Long excludeId);
 
     /**
      * 同一教练**时间区间相交**（{@code status <> 3}）是否已存在

@@ -9,8 +9,7 @@ import com.techplant.yoga.reservation.vo.ReservationAdminItemVO;
 import com.techplant.yoga.reservation.vo.ReservationPublicItemVO;
 
 /** 预约业务：用户端预约课程、取消预约、预约签到与我的预约查询，以及管理端预约列表查询。 */
-public interface ReservationService
-{
+public interface ReservationService {
     /**
      * 预约课程：扣次、占位与预约写入在同一事务内
      *

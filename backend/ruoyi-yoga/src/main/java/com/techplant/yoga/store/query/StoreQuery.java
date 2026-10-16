@@ -1,5 +1,8 @@
 package com.techplant.yoga.store.query;
 
+import lombok.Getter;
+import lombok.Setter;
+
 import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.Size;
@@ -14,8 +17,9 @@ import io.swagger.annotations.ApiModelProperty;
  * 排序由 DAO 固定为 {@code store_type ASC, id DESC}。</p>
  */
 @ApiModel("门店列表查询条件")
-public class StoreQuery
-{
+@Getter
+@Setter
+public class StoreQuery {
     public static final int DEFAULT_PAGE_NUM = 1;
     public static final int DEFAULT_PAGE_SIZE = 10;
     public static final int MAX_PAGE_SIZE = 100;
@@ -42,18 +46,11 @@ public class StoreQuery
     @Max(value = MAX_PAGE_SIZE, message = "每页条数不能超过 100")
     private Integer pageSize;
 
-    public int pageNumOrDefault() { return pageNum == null ? DEFAULT_PAGE_NUM : pageNum; }
+    public int pageNumOrDefault() {
+        return pageNum == null ? DEFAULT_PAGE_NUM : pageNum;
+    }
 
-    public int pageSizeOrDefault() { return pageSize == null ? DEFAULT_PAGE_SIZE : pageSize; }
-
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
-    public String getRegionCode() { return regionCode; }
-    public void setRegionCode(String regionCode) { this.regionCode = regionCode; }
-    public Integer getStoreType() { return storeType; }
-    public void setStoreType(Integer storeType) { this.storeType = storeType; }
-    public Integer getPageNum() { return pageNum; }
-    public void setPageNum(Integer pageNum) { this.pageNum = pageNum; }
-    public Integer getPageSize() { return pageSize; }
-    public void setPageSize(Integer pageSize) { this.pageSize = pageSize; }
+    public int pageSizeOrDefault() {
+        return pageSize == null ? DEFAULT_PAGE_SIZE : pageSize;
+    }
 }

@@ -41,14 +41,13 @@ import com.techplant.yoga.member.service.impl.MemberServiceImpl;
  *
  * <p>覆盖统一响应、参数校验、ID 字符串化与失败分支；安全过滤链与 Redis 不在本测试范围内。</p>
  */
-@ContextConfiguration(classes = { YogaMyBatisTestConfig.class, MemberDaoImpl.class, MemberLevelDictDaoImpl.class,
-        MemberServiceImpl.class })
+@ContextConfiguration(classes = {YogaMyBatisTestConfig.class, MemberDaoImpl.class, MemberLevelDictDaoImpl.class,
+    MemberServiceImpl.class})
 @DisplayName("MemberController 接口测试（MockMvc：分页参数必填 / 统一响应 / ID 字符串化 / null 与缺省）")
-class MemberControllerTest extends AbstractYogaIntegrationTest
-{
+class MemberControllerTest extends AbstractYogaIntegrationTest {
     private static final String PHONE = "13800138000";
 
-    private static final String[] LEVEL_LABELS = { "V0 普通会员", "V1 忻会员", "V2 银会员", "V3 金会员", "V4 黑金会员" };
+    private static final String[] LEVEL_LABELS = {"V0 普通会员", "V1 忻会员", "V2 银会员", "V3 金会员", "V4 黑金会员"};
 
     @Autowired
     private MemberService memberService;
@@ -63,64 +62,49 @@ class MemberControllerTest extends AbstractYogaIntegrationTest
     private ObjectMapper objectMapper;
 
     @BeforeEach
-    void setUp()
-    {
+    void setUp() {
         YogaSchema.reset(dataSource, "t_member", "sys_dict_data");
         jdbcTemplate = new JdbcTemplate(dataSource);
-        for (int level = 0; level < LEVEL_LABELS.length; level++)
-        {
+        for (int level = 0; level < LEVEL_LABELS.length; level++) {
             jdbcTemplate.update("INSERT INTO sys_dict_data (dict_sort, dict_label, dict_value, dict_type, css_class,"
                     + " list_class, is_default, status, create_by, create_time) VALUES (?, ?, ?, 'member_level', '',"
                     + " 'default', 'N', '0', 'admin', NOW())", level + 1, LEVEL_LABELS[level], String.valueOf(level));
         }
 
         // 与运行环境一致：业务 ID 序列化成字符串，异常统一由全局处理器装配
-        objectMapper = Jackson2ObjectMapperBuilder.json()
-                .modulesToInstall(new JacksonConfig.BusinessIdToStringModule())
+        objectMapper = Jackson2ObjectMapperBuilder.json().modulesToInstall(new JacksonConfig.BusinessIdToStringModule())
                 .build();
         mockMvc = MockMvcBuilders.standaloneSetup(new MemberController(memberService))
                 .setControllerAdvice(new GlobalExceptionHandler())
-                .setMessageConverters(new MappingJackson2HttpMessageConverter(objectMapper))
-                .build();
+                .setMessageConverters(new MappingJackson2HttpMessageConverter(objectMapper)).build();
     }
 
     @Test
     @DisplayName("列表：未传分页参数 → 业务码 500（pageNum 与 pageSize 都必填）")
-    void list_withoutPagingParams_shouldReject() throws Exception
-    {
+    void list_withoutPagingParams_shouldReject() throws Exception {
         String message = performMessage(get("/admin/members"));
 
-        assertTrue("页码不能为空".equals(message) || "每页条数不能为空".equals(message),
-                "缺失分页提示语应为页码或每页条数：" + message);
+        assertTrue("页码不能为空".equals(message) || "每页条数不能为空".equals(message), "缺失分页提示语应为页码或每页条数：" + message);
     }
 
     @Test
     @DisplayName("列表：只传 pageNum 或只传 pageSize → 业务码 500")
-    void list_withPartialPagingParams_shouldReject() throws Exception
-    {
-        mockMvc.perform(get("/admin/members").param("pageNum", "1"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(500))
-                .andExpect(jsonPath("$.msg").value("每页条数不能为空"));
+    void list_withPartialPagingParams_shouldReject() throws Exception {
+        mockMvc.perform(get("/admin/members").param("pageNum", "1")).andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(500)).andExpect(jsonPath("$.msg").value("每页条数不能为空"));
 
-        mockMvc.perform(get("/admin/members").param("pageSize", "10"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(500))
-                .andExpect(jsonPath("$.msg").value("页码不能为空"));
+        mockMvc.perform(get("/admin/members").param("pageSize", "10")).andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(500)).andExpect(jsonPath("$.msg").value("页码不能为空"));
     }
 
     @Test
     @DisplayName("列表：分页合法时返回 TableDataInfo（rows/total/code/msg），ID 序列化为字符串")
-    void list_withPagingParams_shouldReturnRows() throws Exception
-    {
+    void list_withPagingParams_shouldReturnRows() throws Exception {
         memberService.create(createDTO(PHONE));
 
-        mockMvc.perform(get("/admin/members").param("pageNum", "1").param("pageSize", "10"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(200))
-                .andExpect(jsonPath("$.msg").value("查询成功"))
-                .andExpect(jsonPath("$.total").value(1))
-                .andExpect(jsonPath("$.rows[0].id").isString())
+        mockMvc.perform(get("/admin/members").param("pageNum", "1").param("pageSize", "10")).andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200)).andExpect(jsonPath("$.msg").value("查询成功"))
+                .andExpect(jsonPath("$.total").value(1)).andExpect(jsonPath("$.rows[0].id").isString())
                 .andExpect(jsonPath("$.rows[0].phone").value(PHONE))
                 .andExpect(jsonPath("$.rows[0].name").value("忻会员8000"))
                 .andExpect(jsonPath("$.rows[0].genderText").value("未知"))
@@ -131,53 +115,42 @@ class MemberControllerTest extends AbstractYogaIntegrationTest
 
     @Test
     @DisplayName("列表：phone_last4 下划线参数精确筛选；非法后四位 → 500")
-    void list_withPhoneLast4Param() throws Exception
-    {
+    void list_withPhoneLast4Param() throws Exception {
         memberService.create(createDTO(PHONE));
 
-        mockMvc.perform(get("/admin/members").param("pageNum", "1").param("pageSize", "10")
-                .param("phone_last4", "8000"))
+        mockMvc.perform(
+                get("/admin/members").param("pageNum", "1").param("pageSize", "10").param("phone_last4", "8000"))
                 .andExpect(jsonPath("$.total").value(1));
 
-        mockMvc.perform(get("/admin/members").param("pageNum", "1").param("pageSize", "10")
-                .param("phone_last4", "12"))
-                .andExpect(jsonPath("$.code").value(500))
-                .andExpect(jsonPath("$.msg").value("手机号后4位必须是 4 位数字"));
+        mockMvc.perform(get("/admin/members").param("pageNum", "1").param("pageSize", "10").param("phone_last4", "12"))
+                .andExpect(jsonPath("$.code").value(500)).andExpect(jsonPath("$.msg").value("手机号后4位必须是 4 位数字"));
     }
 
     @Test
     @DisplayName("详情：不存在 → 404；memberId 格式非法 → 500")
-    void detail_shouldReportNotFoundAndBadRequest() throws Exception
-    {
-        mockMvc.perform(get("/admin/members/999999999"))
-                .andExpect(jsonPath("$.code").value(404))
+    void detail_shouldReportNotFoundAndBadRequest() throws Exception {
+        mockMvc.perform(get("/admin/members/999999999")).andExpect(jsonPath("$.code").value(404))
                 .andExpect(jsonPath("$.msg").value("会员不存在或已被删除"));
 
-        mockMvc.perform(get("/admin/members/abc"))
-                .andExpect(jsonPath("$.code").value(500));
+        mockMvc.perform(get("/admin/members/abc")).andExpect(jsonPath("$.code").value(500));
     }
 
     @Test
     @DisplayName("新增：手机号已建档 → 409；等级不在字典 → 500；缺省等级取 0")
-    void create_shouldReportConflictAndDefaultLevel() throws Exception
-    {
+    void create_shouldReportConflictAndDefaultLevel() throws Exception {
         memberService.create(createDTO(PHONE));
 
-        mockMvc.perform(post("/admin/members").contentType(MediaType.APPLICATION_JSON)
-                .content("{\"phone\":\"" + PHONE + "\"}"))
-                .andExpect(jsonPath("$.code").value(409))
-                .andExpect(jsonPath("$.msg").value("该手机号已建立会员档案"));
+        mockMvc.perform(
+                post("/admin/members").contentType(MediaType.APPLICATION_JSON).content("{\"phone\":\"" + PHONE + "\"}"))
+                .andExpect(jsonPath("$.code").value(409)).andExpect(jsonPath("$.msg").value("该手机号已建立会员档案"));
 
         mockMvc.perform(post("/admin/members").contentType(MediaType.APPLICATION_JSON)
-                .content("{\"phone\":\"13900139000\",\"level\":5}"))
-                .andExpect(jsonPath("$.code").value(500))
+                .content("{\"phone\":\"13900139000\",\"level\":5}")).andExpect(jsonPath("$.code").value(500))
                 .andExpect(jsonPath("$.msg").value("会员等级取值非法"));
 
         mockMvc.perform(post("/admin/members").contentType(MediaType.APPLICATION_JSON)
-                .content("{\"phone\":\"13900139001\",\"level\":3}"))
-                .andExpect(jsonPath("$.code").value(200))
-                .andExpect(jsonPath("$.msg").value("操作成功"))
-                .andExpect(jsonPath("$.data").doesNotExist());
+                .content("{\"phone\":\"13900139001\",\"level\":3}")).andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.msg").value("操作成功")).andExpect(jsonPath("$.data").doesNotExist());
 
         MemberDO created = memberDao.selectByPhone("13900139001");
         assertEquals(Integer.valueOf(3), created.getLevel(), "新档等级应为提交的 3");
@@ -185,35 +158,28 @@ class MemberControllerTest extends AbstractYogaIntegrationTest
 
     @Test
     @DisplayName("修改：省略字段保留原值，显式 null → 500，忽略 phone/name/registered")
-    void update_shouldDistinguishMissingAndNull() throws Exception
-    {
+    void update_shouldDistinguishMissingAndNull() throws Exception {
         memberService.create(createDTO(PHONE));
         Long memberId = memberDao.selectByPhone(PHONE).getId();
 
         // 省略 level 与 phone/name/registered 无关字段：只改性别
         mockMvc.perform(put("/admin/members/" + memberId).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"gender\":2,\"phone\":\"13911111111\",\"name\":\"篡改名\",\"registered\":true}"))
-                .andExpect(jsonPath("$.code").value(200))
-                .andExpect(jsonPath("$.data.id").isString())
-                .andExpect(jsonPath("$.data.gender").value(2))
-                .andExpect(jsonPath("$.data.level").value(0))
-                .andExpect(jsonPath("$.data.phone").value(PHONE))
-                .andExpect(jsonPath("$.data.name").value("忻会员8000"));
+                .andExpect(jsonPath("$.code").value(200)).andExpect(jsonPath("$.data.id").isString())
+                .andExpect(jsonPath("$.data.gender").value(2)).andExpect(jsonPath("$.data.level").value(0))
+                .andExpect(jsonPath("$.data.phone").value(PHONE)).andExpect(jsonPath("$.data.name").value("忻会员8000"));
 
-        mockMvc.perform(put("/admin/members/" + memberId).contentType(MediaType.APPLICATION_JSON)
-                .content("{\"gender\":null}"))
-                .andExpect(jsonPath("$.code").value(500))
-                .andExpect(jsonPath("$.msg").value("性别不能为 null，若要保留原值请省略该字段"));
+        mockMvc.perform(
+                put("/admin/members/" + memberId).contentType(MediaType.APPLICATION_JSON).content("{\"gender\":null}"))
+                .andExpect(jsonPath("$.code").value(500)).andExpect(jsonPath("$.msg").value("性别不能为 null，若要保留原值请省略该字段"));
 
         // 空对象：两个字段都省略，返回当前详情且不报错
         mockMvc.perform(put("/admin/members/" + memberId).contentType(MediaType.APPLICATION_JSON).content("{}"))
-                .andExpect(jsonPath("$.code").value(200))
-                .andExpect(jsonPath("$.data.gender").value(2))
+                .andExpect(jsonPath("$.code").value(200)).andExpect(jsonPath("$.data.gender").value(2))
                 .andExpect(jsonPath("$.data.level").value(0));
     }
 
-    private MemberCreateDTO createDTO(String phone)
-    {
+    private MemberCreateDTO createDTO(String phone) {
         MemberCreateDTO dto = new MemberCreateDTO();
         dto.setPhone(phone);
         return dto;
@@ -222,10 +188,9 @@ class MemberControllerTest extends AbstractYogaIntegrationTest
     /**
      * 取统一响应里的 msg，供缺失字段顺序不确定的用例断言（MockMvc 响应未声明字符集，按 UTF-8 解码）
      */
-    private String performMessage(MockHttpServletRequestBuilder request) throws Exception
-    {
-        MvcResult result = mockMvc.perform(request).andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(500)).andReturn();
+    private String performMessage(MockHttpServletRequestBuilder request) throws Exception {
+        MvcResult result = mockMvc.perform(request).andExpect(status().isOk()).andExpect(jsonPath("$.code").value(500))
+                .andReturn();
         String body = new String(result.getResponse().getContentAsByteArray(), StandardCharsets.UTF_8);
         return objectMapper.readTree(body).get("msg").asText();
     }

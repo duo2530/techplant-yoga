@@ -42,12 +42,11 @@ import com.techplant.yoga.store.service.impl.StoreServiceImpl;
  *
  * <p>会员与门店都走真实的跨模块 Service，不模拟内部调用；会员、门店与计数器夹具由用例自行准备。</p>
  */
-@ContextConfiguration(classes = { YogaMyBatisTestConfig.class, MemberCardDaoImpl.class, MemberDaoImpl.class,
-        MemberLevelDictDaoImpl.class, MemberServiceImpl.class, StoreDaoImpl.class, StoreRegionDictDaoImpl.class,
-        StoreServiceImpl.class, MemberCardServiceImpl.class, CardNoGenerator.class })
+@ContextConfiguration(classes = {YogaMyBatisTestConfig.class, MemberCardDaoImpl.class, MemberDaoImpl.class,
+    MemberLevelDictDaoImpl.class, MemberServiceImpl.class, StoreDaoImpl.class, StoreRegionDictDaoImpl.class,
+    StoreServiceImpl.class, MemberCardServiceImpl.class, CardNoGenerator.class})
 @DisplayName("MemberCardService 集成测试（Testcontainers MySQL：发卡 / 卡号 / 有效期 / 状态流转 / 关联兜底）")
-class MemberCardServiceImplTest extends AbstractYogaIntegrationTest
-{
+class MemberCardServiceImplTest extends AbstractYogaIntegrationTest {
     private static final Long MEMBER_ID = 1856739201475235902L;
 
     private static final Long UNKNOWN_ID = 999999L;
@@ -74,8 +73,7 @@ class MemberCardServiceImplTest extends AbstractYogaIntegrationTest
     private JdbcTemplate jdbcTemplate;
 
     @BeforeEach
-    void resetTables()
-    {
+    void resetTables() {
         YogaSchema.reset(dataSource, "t_member_card", "t_member", "t_store", "t_store_no_counter", "sys_dict_data");
         jdbcTemplate = new JdbcTemplate(dataSource);
         jdbcTemplate.update("INSERT INTO sys_dict_data (dict_sort, dict_label, dict_value, dict_type, css_class,"
@@ -89,8 +87,7 @@ class MemberCardServiceImplTest extends AbstractYogaIntegrationTest
 
     @Test
     @DisplayName("发卡：次数卡生成 18 位卡号（日期＋门店编号＋时间），剩余次数为购买与赠送之和，未写有效期")
-    void create_timesCard_shouldGenerateCardNoAndInitialTimes()
-    {
+    void create_timesCard_shouldGenerateCardNoAndInitialTimes() {
         memberCardService.create(timesCardDTO());
 
         MemberCardDO card = latestCard();
@@ -109,8 +106,7 @@ class MemberCardServiceImplTest extends AbstractYogaIntegrationTest
 
     @Test
     @DisplayName("发卡：年卡不写适用门店与次数字段，有效期数量固定 1 年")
-    void create_annualCard_shouldSkipTimesFields()
-    {
+    void create_annualCard_shouldSkipTimesFields() {
         memberCardService.create(annualCardDTO());
 
         MemberCardDO card = latestCard();
@@ -126,8 +122,7 @@ class MemberCardServiceImplTest extends AbstractYogaIntegrationTest
 
     @Test
     @DisplayName("发卡：次数卡缺适用门店／缺次数／合计为 0／有效期非 3、6、12 → 500；年卡提交次数类字段 → 500")
-    void create_withInvalidCombination_shouldFail()
-    {
+    void create_withInvalidCombination_shouldFail() {
         MemberCardCreateDTO withoutStore = timesCardDTO();
         withoutStore.setStoreId(null);
         assertMessage(withoutStore, 500, "次数卡必须选择适用门店");
@@ -170,8 +165,7 @@ class MemberCardServiceImplTest extends AbstractYogaIntegrationTest
 
     @Test
     @DisplayName("发卡：会员、开卡门店或适用门店不存在 → 404，且不落库")
-    void create_withMissingRelations_shouldReportNotFound()
-    {
+    void create_withMissingRelations_shouldReportNotFound() {
         MemberCardCreateDTO missingMember = timesCardDTO();
         missingMember.setMemberId(UNKNOWN_ID);
         assertMessage(missingMember, 404, "会员不存在或已被删除");
@@ -189,16 +183,15 @@ class MemberCardServiceImplTest extends AbstractYogaIntegrationTest
 
     @Test
     @DisplayName("发卡：同一开卡门店当前时间片已有发卡 → 409 卡号冲突，不覆盖旧卡")
-    void create_withCardNoConflict_shouldReportConflict()
-    {
+    void create_withCardNoConflict_shouldReportConflict() {
         LocalDateTime now = LocalDateTime.now(CardNoGenerator.CARD_ZONE);
         // 覆盖当前秒与后两秒：服务端在真正生成卡号时读时间，落在这个区间内即冲突
-        for (int offset = 0; offset < 3; offset++)
-        {
+        for (int offset = 0; offset < 3; offset++) {
             insertCard(3000L + offset, cardNoGenerator.generate(OPEN_STORE_NO, now.plusSeconds(offset)));
         }
 
-        ServiceException exception = assertThrows(ServiceException.class, () -> memberCardService.create(timesCardDTO()));
+        ServiceException exception = assertThrows(ServiceException.class,
+                () -> memberCardService.create(timesCardDTO()));
         assertEquals(Integer.valueOf(409), exception.getCode());
         assertEquals("该门店当前时间已有发卡记录，请稍后重试", exception.getMessage());
         assertEquals(3L, allCards().size(), "冲突时不覆盖已有卡");
@@ -206,8 +199,7 @@ class MemberCardServiceImplTest extends AbstractYogaIntegrationTest
 
     @Test
     @DisplayName("开卡：次数卡按「月×30 天」写有效期单位与起止，有效期含首尾日")
-    void activate_timesCard_shouldWriteValidityPeriod()
-    {
+    void activate_timesCard_shouldWriteValidityPeriod() {
         memberCardService.create(timesCardDTO());
         Long cardId = latestCard().getId();
 
@@ -226,8 +218,7 @@ class MemberCardServiceImplTest extends AbstractYogaIntegrationTest
 
     @Test
     @DisplayName("开卡：年卡单位是年、有效期 365 天，剩余天数含今天")
-    void activate_annualCard_shouldWriteYearPeriodAndRemainingDays()
-    {
+    void activate_annualCard_shouldWriteYearPeriodAndRemainingDays() {
         memberCardService.create(annualCardDTO());
         Long cardId = latestCard().getId();
 
@@ -245,8 +236,7 @@ class MemberCardServiceImplTest extends AbstractYogaIntegrationTest
 
     @Test
     @DisplayName("开卡：重复开卡 → 409；已停卡不能开卡 → 409；卡不存在 → 404")
-    void activate_shouldRejectIllegalState()
-    {
+    void activate_shouldRejectIllegalState() {
         memberCardService.create(timesCardDTO());
         Long cardId = latestCard().getId();
         memberCardService.activate(cardId);
@@ -267,8 +257,7 @@ class MemberCardServiceImplTest extends AbstractYogaIntegrationTest
 
     @Test
     @DisplayName("停卡：写入原因、保留剩余次数与有效期；重复停卡 → 409；原因缺失 → 500")
-    void stop_shouldWriteReasonAndKeepTimes()
-    {
+    void stop_shouldWriteReasonAndKeepTimes() {
         memberCardService.create(timesCardDTO());
         Long cardId = latestCard().getId();
         memberCardService.activate(cardId);
@@ -299,8 +288,7 @@ class MemberCardServiceImplTest extends AbstractYogaIntegrationTest
 
     @Test
     @DisplayName("列表与详情：枚举成对返回、次数卡与年卡字段分流；会员或门店已删除时按空字符串兜底")
-    void pageAndDetail_shouldTranslateAndTolerateDeletedRelations()
-    {
+    void pageAndDetail_shouldTranslateAndTolerateDeletedRelations() {
         memberCardService.create(timesCardDTO());
         Long timesCardId = latestCard().getId();
         memberCardService.create(annualCardDTO(STORE_ID));
@@ -358,8 +346,7 @@ class MemberCardServiceImplTest extends AbstractYogaIntegrationTest
 
     @Test
     @DisplayName("删除：物理删除卡行，再删 → 404")
-    void delete_shouldRemoveRow()
-    {
+    void delete_shouldRemoveRow() {
         memberCardService.create(timesCardDTO());
         Long cardId = latestCard().getId();
 
@@ -370,20 +357,17 @@ class MemberCardServiceImplTest extends AbstractYogaIntegrationTest
         assertMessage(UNKNOWN_ID, 404, "会员卡不存在或已被删除");
     }
 
-    private void assertCardNo(String cardNo)
-    {
+    private void assertCardNo(String cardNo) {
         assertNotNull(cardNo);
         assertEquals(18, cardNo.length(), "卡号共 18 位：" + cardNo);
         assertTrue(cardNo.matches("\\d{18}"), "卡号必须是 18 位数字：" + cardNo);
         String today = LocalDate.now(CardNoGenerator.CARD_ZONE).toString().replace("-", "");
         assertEquals(today, cardNo.substring(0, 8), "卡号前 8 位是发卡日期");
         assertEquals(OPEN_STORE_NO, cardNo.substring(8, 12), "卡号第 9~12 位是开卡门店编号");
-        assertTrue(Integer.parseInt(cardNo.substring(12, 14)) <= 23, "卡号时间是 24 小时制："
-                + cardNo.substring(12));
+        assertTrue(Integer.parseInt(cardNo.substring(12, 14)) <= 23, "卡号时间是 24 小时制：" + cardNo.substring(12));
     }
 
-    private MemberCardCreateDTO timesCardDTO()
-    {
+    private MemberCardCreateDTO timesCardDTO() {
         return timesCardDTO(OPEN_STORE_ID, STORE_ID);
     }
 
@@ -391,8 +375,7 @@ class MemberCardServiceImplTest extends AbstractYogaIntegrationTest
      * 指定开卡门店与适用门店的发卡请求：卡号按开卡门店编号与发卡时间组成，
      * 同一秒内同一开卡门店铺第二张会卡号冲突，因此需要连续发卡时换开卡门店。
      */
-    private MemberCardCreateDTO timesCardDTO(Long openStoreId, Long storeId)
-    {
+    private MemberCardCreateDTO timesCardDTO(Long openStoreId, Long storeId) {
         MemberCardCreateDTO dto = new MemberCardCreateDTO();
         dto.setMemberId(MEMBER_ID);
         dto.setOpenStoreId(openStoreId);
@@ -406,13 +389,11 @@ class MemberCardServiceImplTest extends AbstractYogaIntegrationTest
         return dto;
     }
 
-    private MemberCardCreateDTO annualCardDTO()
-    {
+    private MemberCardCreateDTO annualCardDTO() {
         return annualCardDTO(OPEN_STORE_ID);
     }
 
-    private MemberCardCreateDTO annualCardDTO(Long openStoreId)
-    {
+    private MemberCardCreateDTO annualCardDTO(Long openStoreId) {
         MemberCardCreateDTO dto = new MemberCardCreateDTO();
         dto.setMemberId(MEMBER_ID);
         dto.setOpenStoreId(openStoreId);
@@ -422,64 +403,56 @@ class MemberCardServiceImplTest extends AbstractYogaIntegrationTest
         return dto;
     }
 
-    private MemberCardStopDTO stopDTO(String reason)
-    {
+    private MemberCardStopDTO stopDTO(String reason) {
         MemberCardStopDTO dto = new MemberCardStopDTO();
         dto.setStopReason(reason);
         return dto;
     }
 
-    private MemberCardQuery query()
-    {
+    private MemberCardQuery query() {
         MemberCardQuery query = new MemberCardQuery();
         query.setPageNum(1);
         query.setPageSize(10);
         return query;
     }
 
-    private List<MemberCardDO> allCards()
-    {
+    private List<MemberCardDO> allCards() {
         IPage<MemberCardDO> page = memberCardDao.selectPage(query());
         return page.getRecords();
     }
 
     /** 最新发卡的那张卡（雪花 ID 递增，取列表首行） */
-    private MemberCardDO latestCard()
-    {
+    private MemberCardDO latestCard() {
         return allCards().get(0);
     }
 
-    private void assertMessage(MemberCardCreateDTO dto, int code, String message)
-    {
+    private void assertMessage(MemberCardCreateDTO dto, int code, String message) {
         ServiceException exception = assertThrows(ServiceException.class, () -> memberCardService.create(dto));
         assertEquals(Integer.valueOf(code), exception.getCode());
         assertEquals(message, exception.getMessage());
     }
 
-    private void assertMessage(Long cardId, int code, String message)
-    {
+    private void assertMessage(Long cardId, int code, String message) {
         ServiceException exception = assertThrows(ServiceException.class, () -> memberCardService.getById(cardId));
         assertEquals(Integer.valueOf(code), exception.getCode());
         assertEquals(message, exception.getMessage());
     }
 
-    private void insertMember()
-    {
+    private void insertMember() {
         jdbcTemplate.update("INSERT INTO t_member (id, phone, password, phone_last4, name, gender, level, create_by,"
                 + " create_time, update_by, update_time) VALUES (?, '13800138000', NULL, '8000', '忻会员8000', 0, 0,"
                 + " 1, NOW(), 1, NOW())", MEMBER_ID);
     }
 
-    private void insertStore(Long id, String storeNo, String name)
-    {
-        jdbcTemplate.update("INSERT INTO t_store (id, store_no, name, store_type, region_code, phone, business_hours,"
-                + " address, image_url, create_by, create_time, update_by, update_time) VALUES (?, ?, ?, 1, ?,"
-                + " '021-12345678', '周一至周日 09:00-22:00', '漕溪北路 88 号', NULL, 1, NOW(), 1, NOW())",
+    private void insertStore(Long id, String storeNo, String name) {
+        jdbcTemplate.update(
+                "INSERT INTO t_store (id, store_no, name, store_type, region_code, phone, business_hours,"
+                        + " address, image_url, create_by, create_time, update_by, update_time) VALUES (?, ?, ?, 1, ?,"
+                        + " '021-12345678', '周一至周日 09:00-22:00', '漕溪北路 88 号', NULL, 1, NOW(), 1, NOW())",
                 id, storeNo, name, REGION_CODE);
     }
 
-    private void insertCard(Long id, String cardNo)
-    {
+    private void insertCard(Long id, String cardNo) {
         jdbcTemplate.update("INSERT INTO t_member_card (id, member_id, open_store_id, card_no, card_name, card_type,"
                 + " course_scope, store_id, purchase_times, gift_times, remaining_times, valid_period_count,"
                 + " create_by, create_time, update_by, update_time) VALUES (?, ?, ?, ?, '已发卡', 1, 1, ?, 10, 2, 12,"

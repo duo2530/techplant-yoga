@@ -12,8 +12,7 @@ import com.techplant.yoga.member.query.MemberQuery;
  *
  * <p>只被 service 调用，屏蔽 mapper 细节；本表无 {@code deleted} 列，查询天然只含现存行。</p>
  */
-public interface MemberDao
-{
+public interface MemberDao {
     /** 分页查询会员列表：后四位精确、显示名模糊、等级精确，按会员 ID 降序稳定排序 */
     IPage<MemberDO> selectPage(MemberQuery query);
 

@@ -8,8 +8,7 @@ import java.util.Map;
  * <p>数据来源是若依字典表 {@code sys_dict_data} 中 {@code dict_type = 'member_level'} 且
  * {@code status = '0'}（正常）的记录；本 DAO <b>只有查询</b>。</p>
  */
-public interface MemberLevelDictDao
-{
+public interface MemberLevelDictDao {
     /**
      * 查询会员等级字典的「等级码 → 等级名称」映射
      *

@@ -14,10 +14,8 @@ import com.techplant.yoga.schedule.vo.ScheduleDetailVO;
 import com.techplant.yoga.schedule.vo.ScheduleListItemVO;
 
 /** 排课对象转换。 */
-public final class ScheduleConverter
-{
-    private ScheduleConverter()
-    {
+public final class ScheduleConverter {
+    private ScheduleConverter() {
     }
 
     /**
@@ -27,8 +25,7 @@ public final class ScheduleConverter
      * @param courseTypeSnapshot 课种快照（从课程复制）
      * @param scheduleDate      上课日期（由 start_time 推导）
      */
-    public static ScheduleDO toDO(ScheduleCreateDTO dto, Integer courseTypeSnapshot, LocalDate scheduleDate)
-    {
+    public static ScheduleDO toDO(ScheduleCreateDTO dto, Integer courseTypeSnapshot, LocalDate scheduleDate) {
         ScheduleDO schedule = new ScheduleDO();
         schedule.setStoreId(dto.getStoreId());
         schedule.setCourseId(dto.getCourseId());
@@ -51,8 +48,7 @@ public final class ScheduleConverter
      * <p>{@code status} 与 {@code booked_persons} **不在这里出现**；课种快照只在「更换课程」时由 service 刷新。</p>
      */
     public static void applyUpdate(ScheduleDO target, ScheduleUpdateDTO dto, Integer courseTypeSnapshot,
-            LocalDate scheduleDate)
-    {
+            LocalDate scheduleDate) {
         target.setStoreId(dto.getStoreId());
         target.setCourseId(dto.getCourseId());
         target.setCourseType(courseTypeSnapshot);
@@ -70,8 +66,7 @@ public final class ScheduleConverter
      *
      * @param now 判定基准时间（同一请求只用同一个 now）
      */
-    public static ScheduleListItemVO toListItemVO(ScheduleDO source, LocalDateTime now)
-    {
+    public static ScheduleListItemVO toListItemVO(ScheduleDO source, LocalDateTime now) {
         ScheduleListItemVO vo = new ScheduleListItemVO();
         fillAdminFields(vo, source, now);
         return vo;
@@ -80,16 +75,14 @@ public final class ScheduleConverter
     /**
      * DO → 管理端详情（字段与列表项完全相同）
      */
-    public static ScheduleDetailVO toDetailVO(ScheduleDO source, LocalDateTime now)
-    {
+    public static ScheduleDetailVO toDetailVO(ScheduleDO source, LocalDateTime now) {
         ScheduleDetailVO vo = new ScheduleDetailVO();
         fillAdminFields(vo, source, now);
         return vo;
     }
 
     /** DO → 用户端卡片（用户端文案只有 可约／已结束／已取消） */
-    public static ScheduleCardVO toCardVO(ScheduleDO source, LocalDateTime now)
-    {
+    public static ScheduleCardVO toCardVO(ScheduleDO source, LocalDateTime now) {
         ScheduleCardVO vo = new ScheduleCardVO();
         fillCardFields(vo, source, now);
         return vo;
@@ -100,8 +93,7 @@ public final class ScheduleConverter
      *
      * <p>课种取**快照**；封面／介绍／难度由 service 实时从课程取；{@code bookers} 由 service 生成脱敏名单。</p>
      */
-    public static PublicScheduleDetailVO toPublicDetailVO(ScheduleDO source, LocalDateTime now)
-    {
+    public static PublicScheduleDetailVO toPublicDetailVO(ScheduleDO source, LocalDateTime now) {
         PublicScheduleDetailVO vo = new PublicScheduleDetailVO();
         fillCardFields(vo, source, now);
         vo.setCourseId(source.getCourseId());
@@ -112,8 +104,7 @@ public final class ScheduleConverter
     }
 
     /** DO → 预约模块用的排课快照（带预约校验、占位与预约列表展示需要的字段） */
-    public static ScheduleBookingSnapshot toBookingSnapshot(ScheduleDO source)
-    {
+    public static ScheduleBookingSnapshot toBookingSnapshot(ScheduleDO source) {
         ScheduleBookingSnapshot snapshot = new ScheduleBookingSnapshot();
         snapshot.setId(source.getId());
         snapshot.setStoreId(source.getStoreId());
@@ -131,8 +122,7 @@ public final class ScheduleConverter
         return snapshot;
     }
 
-    private static void fillAdminFields(ScheduleListItemVO vo, ScheduleDO source, LocalDateTime now)
-    {
+    private static void fillAdminFields(ScheduleListItemVO vo, ScheduleDO source, LocalDateTime now) {
         vo.setId(source.getId());
         vo.setStoreId(source.getStoreId());
         vo.setCourseId(source.getCourseId());
@@ -156,8 +146,7 @@ public final class ScheduleConverter
         vo.setClassroomName("");
     }
 
-    private static void fillCardFields(ScheduleCardVO vo, ScheduleDO source, LocalDateTime now)
-    {
+    private static void fillCardFields(ScheduleCardVO vo, ScheduleDO source, LocalDateTime now) {
         int bookedPersons = source.getBookedPersons() == null ? 0 : source.getBookedPersons();
         vo.setId(source.getId());
         vo.setCourseType(source.getCourseType());
@@ -179,8 +168,7 @@ public final class ScheduleConverter
         vo.setCoachName("");
         vo.setStoreName("");
         vo.setClassroomName("");
-        if (vo instanceof PublicScheduleDetailVO)
-        {
+        if (vo instanceof PublicScheduleDetailVO) {
             ((PublicScheduleDetailVO) vo).setStoreAddress("");
             ((PublicScheduleDetailVO) vo).setCourseIntro("");
             ((PublicScheduleDetailVO) vo).setCoachAvatarUrl("");
@@ -189,18 +177,15 @@ public final class ScheduleConverter
     }
 
     /** 剩余名额：最大人数 − 已预约人数，下限为 0 */
-    public static int remainingPlaces(Integer maxPersons, int bookedPersons)
-    {
-        if (maxPersons == null)
-        {
+    public static int remainingPlaces(Integer maxPersons, int bookedPersons) {
+        if (maxPersons == null) {
             return 0;
         }
         return Math.max(maxPersons - bookedPersons, 0);
     }
 
     /** 空值兜底：契约要求名称字段返回空字符串，不能是 null */
-    private static String emptyIfNull(String value)
-    {
+    private static String emptyIfNull(String value) {
         return value == null ? "" : value;
     }
 }

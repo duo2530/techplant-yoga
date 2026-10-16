@@ -7,8 +7,7 @@ import com.techplant.yoga.course.domain.CourseDO;
 import com.techplant.yoga.course.query.CourseQuery;
 
 /** 课程数据访问。 */
-public interface CourseDao
-{
+public interface CourseDao {
     /**
      * 分页查询课程列表（只取列表列，<b>不含 intro</b>），按 {@code course_type ASC, id DESC} 稳定排序
      */

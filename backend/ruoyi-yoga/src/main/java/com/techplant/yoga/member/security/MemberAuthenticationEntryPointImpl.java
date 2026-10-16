@@ -19,14 +19,12 @@ import com.ruoyi.common.utils.ServletUtils;
  * <b>HTTP 仍是 200</b>，与框架管理端口径一致；文案不暴露内部细节。</p>
  */
 @Component
-public class MemberAuthenticationEntryPointImpl implements AuthenticationEntryPoint, Serializable
-{
+public class MemberAuthenticationEntryPointImpl implements AuthenticationEntryPoint, Serializable {
     private static final long serialVersionUID = 1L;
 
     @Override
     public void commence(HttpServletRequest request, HttpServletResponse response, AuthenticationException e)
-            throws IOException
-    {
+            throws IOException {
         String msg = "登录状态已失效，请重新登录";
         ServletUtils.renderString(response, JSON.toJSONString(AjaxResult.error(HttpStatus.UNAUTHORIZED, msg)));
     }

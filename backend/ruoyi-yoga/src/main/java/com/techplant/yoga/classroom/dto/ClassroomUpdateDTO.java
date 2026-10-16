@@ -1,5 +1,8 @@
 package com.techplant.yoga.classroom.dto;
 
+import lombok.Getter;
+import lombok.Setter;
+
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.Size;
 import io.swagger.annotations.ApiModel;
@@ -12,20 +15,11 @@ import io.swagger.annotations.ApiModelProperty;
  *。</p>
  */
 @ApiModel("修改教室请求")
-public class ClassroomUpdateDTO
-{
+@Getter
+@Setter
+public class ClassroomUpdateDTO {
     @ApiModelProperty(value = "教室名称（同一门店内唯一）", required = true, example = "普拉提小班课")
     @NotBlank(message = "教室名称不能为空")
     @Size(max = 32, message = "教室名称长度不能超过 32")
     private String name;
-
-    public String getName()
-    {
-        return name;
-    }
-
-    public void setName(String name)
-    {
-        this.name = name;
-    }
 }

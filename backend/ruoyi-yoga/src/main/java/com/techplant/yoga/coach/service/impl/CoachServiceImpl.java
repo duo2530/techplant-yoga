@@ -1,5 +1,7 @@
 package com.techplant.yoga.coach.service.impl;
 
+import lombok.RequiredArgsConstructor;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashSet;
@@ -27,8 +29,8 @@ import com.techplant.yoga.schedule.service.ScheduleService;
 
 /** 教练业务实现。 */
 @Service
-public class CoachServiceImpl implements CoachService
-{
+@RequiredArgsConstructor
+public class CoachServiceImpl implements CoachService {
     private static final int NOT_FOUND = 404;
     private static final int CONFLICT = 409;
     private static final int INTERNAL_ERROR = 500;
@@ -39,28 +41,20 @@ public class CoachServiceImpl implements CoachService
     private final CoachDao coachDao;
 
     /** 跨模块依赖：构造器注入环由 @Lazy 解开 */
+    @Lazy
     private final ScheduleService scheduleService;
 
-    public CoachServiceImpl(CoachDao coachDao, @Lazy ScheduleService scheduleService)
-    {
-        this.coachDao = coachDao;
-        this.scheduleService = scheduleService;
-    }
-
     @Override
-    public PageResult<CoachListItemVO> page(CoachQuery query)
-    {
+    public PageResult<CoachListItemVO> page(CoachQuery query) {
         IPage<CoachDO> page = coachDao.selectAdminPage(query);
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(),
                 CoachConverter.toListItemVOList(page.getRecords()));
     }
 
     @Override
-    public CoachDetailVO getById(Long coachId)
-    {
+    public CoachDetailVO getById(Long coachId) {
         CoachDO coach = coachId == null ? null : coachDao.selectById(coachId);
-        if (coach == null)
-        {
+        if (coach == null) {
             throw notFound();
         }
         return CoachConverter.toDetailVO(coach, parseGallery(coach.getGallery()));
@@ -68,24 +62,20 @@ public class CoachServiceImpl implements CoachService
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void create(CoachCreateDTO dto)
-    {
+    public void create(CoachCreateDTO dto) {
         validateGallery(dto.getGallery());
         CoachDO coach = CoachConverter.toDO(dto, toGalleryJson(dto.getGallery()));
         int rows = coachDao.insert(coach);
-        if (rows != 1 || coach.getId() == null)
-        {
+        if (rows != 1 || coach.getId() == null) {
             throw new ServiceException("新增教练失败", INTERNAL_ERROR);
         }
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public CoachDetailVO update(Long coachId, CoachUpdateDTO dto)
-    {
+    public CoachDetailVO update(Long coachId, CoachUpdateDTO dto) {
         CoachDO coach = coachId == null ? null : coachDao.selectById(coachId);
-        if (coach == null)
-        {
+        if (coach == null) {
             throw notFound();
         }
         validateGallery(dto.getGallery());
@@ -94,8 +84,7 @@ public class CoachServiceImpl implements CoachService
         coachDao.updateById(coach);
 
         CoachDO latest = coachDao.selectById(coachId);
-        if (latest == null)
-        {
+        if (latest == null) {
             throw notFound();
         }
         return CoachConverter.toDetailVO(latest, parseGallery(latest.getGallery()));
@@ -103,48 +92,38 @@ public class CoachServiceImpl implements CoachService
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void delete(Long coachId)
-    {
+    public void delete(Long coachId) {
         CoachDO coach = coachId == null ? null : coachDao.selectById(coachId);
-        if (coach == null)
-        {
+        if (coach == null) {
             throw notFound();
         }
         long activeSchedules = countActiveSchedules(coachId);
-        if (activeSchedules > 0)
-        {
+        if (activeSchedules > 0) {
             throw new ServiceException("该教练仍有 " + activeSchedules + " 节未结束的排课，无法删除", CONFLICT);
         }
         coachDao.deleteById(coachId);
     }
 
     @Override
-    public List<CoachSummaryVO> summaries(Collection<Long> ids)
-    {
+    public List<CoachSummaryVO> summaries(Collection<Long> ids) {
         Set<Long> distinctIds = new LinkedHashSet<Long>();
-        if (ids != null)
-        {
-            for (Long id : ids)
-            {
-                if (id != null)
-                {
+        if (ids != null) {
+            for (Long id : ids) {
+                if (id != null) {
                     distinctIds.add(id);
                 }
             }
         }
-        if (distinctIds.isEmpty())
-        {
+        if (distinctIds.isEmpty()) {
             return new ArrayList<CoachSummaryVO>();
         }
         return CoachConverter.toSummaryVOList(coachDao.selectSummaryByIds(distinctIds));
     }
 
     @Override
-    public CoachSummaryVO getSummary(Long coachId)
-    {
+    public CoachSummaryVO getSummary(Long coachId) {
         CoachDO coach = coachId == null ? null : coachDao.selectById(coachId);
-        if (coach == null)
-        {
+        if (coach == null) {
             throw notFound();
         }
         return CoachConverter.toSummaryVO(coach);
@@ -154,64 +133,50 @@ public class CoachServiceImpl implements CoachService
      * 删除门禁统计：调排课模块统计「未结束且状态为待上架或已上架」的排课数。
      * 统计失败一律 fail-closed（不降级放行），由本方法直接终止删除。
      */
-    private long countActiveSchedules(Long coachId)
-    {
-        try
-        {
+    private long countActiveSchedules(Long coachId) {
+        try {
             return scheduleService.countActiveByCoachId(coachId);
-        }
-        catch (Exception e)
-        {
+        } catch (Exception e) {
             throw new ServiceException("引用检查未完成，已拒绝本次删除", CONFLICT);
         }
     }
 
     /** 相册上限校验：新增与修改共用同一段逻辑 */
-    private void validateGallery(List<String> gallery)
-    {
-        if (gallery != null && gallery.size() > MAX_GALLERY_SIZE)
-        {
+    private void validateGallery(List<String> gallery) {
+        if (gallery != null && gallery.size() > MAX_GALLERY_SIZE) {
             throw new ServiceException("相册最多 5 张", CONFLICT);
         }
     }
 
     /** 相册序列化：去空格、丢空串；空相册存 NULL */
-    private String toGalleryJson(List<String> gallery)
-    {
+    private String toGalleryJson(List<String> gallery) {
         List<String> normalized = normalizeGallery(gallery);
         return normalized.isEmpty() ? null : JSON.toJSONString(normalized);
     }
 
     /** 相册反序列化：NULL／空串 → 空列表（详情出参用 List，不用 null） */
-    private List<String> parseGallery(String galleryJson)
-    {
-        if (galleryJson == null || galleryJson.trim().isEmpty())
-        {
+    private List<String> parseGallery(String galleryJson) {
+        if (galleryJson == null || galleryJson.trim().isEmpty()) {
             return new ArrayList<String>();
         }
         List<String> values = JSON.parseArray(galleryJson, String.class);
         return values == null ? new ArrayList<String>() : values;
     }
 
-    private List<String> normalizeGallery(List<String> gallery)
-    {
+    private List<String> normalizeGallery(List<String> gallery) {
         List<String> normalized = new ArrayList<String>();
-        if (gallery == null)
-        {
+        if (gallery == null) {
             return normalized;
         }
-        for (String url : gallery)
-        {
-            if (url != null && !url.trim().isEmpty())
-            {
+        for (String url : gallery) {
+            if (url != null && !url.trim().isEmpty()) {
                 normalized.add(url.trim());
             }
         }
         return normalized;
     }
 
-    private ServiceException notFound()
-    {
+    private ServiceException notFound() {
         return new ServiceException("教练不存在或已被删除", NOT_FOUND);
     }
 }

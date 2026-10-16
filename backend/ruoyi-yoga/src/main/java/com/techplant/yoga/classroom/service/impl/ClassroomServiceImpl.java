@@ -1,5 +1,7 @@
 package com.techplant.yoga.classroom.service.impl;
 
+import lombok.RequiredArgsConstructor;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -28,8 +30,8 @@ import com.techplant.yoga.store.vo.StoreSummaryVO;
 
 /** 教室业务实现。 */
 @Service
-public class ClassroomServiceImpl implements ClassroomService
-{
+@RequiredArgsConstructor
+public class ClassroomServiceImpl implements ClassroomService {
     /** 资源不存在 */
     private static final int NOT_FOUND = 404;
 
@@ -41,24 +43,17 @@ public class ClassroomServiceImpl implements ClassroomService
 
     private final ClassroomDao classroomDao;
 
+    @Lazy
     private final StoreService storeService;
 
+    @Lazy
     private final ScheduleService scheduleService;
-
-    public ClassroomServiceImpl(ClassroomDao classroomDao, @Lazy StoreService storeService,
-            @Lazy ScheduleService scheduleService)
-    {
-        this.classroomDao = classroomDao;
-        this.storeService = storeService;
-        this.scheduleService = scheduleService;
-    }
 
     /**
      * 查询教室列表：分页查询后按门店批量补齐 storeName（不跨模块读表）
      */
     @Override
-    public PageResult<ClassroomListItemVO> page(ClassroomQuery query)
-    {
+    public PageResult<ClassroomListItemVO> page(ClassroomQuery query) {
         IPage<ClassroomDO> page = classroomDao.selectPage(query);
         List<ClassroomDO> records = page.getRecords();
         Map<Long, String> storeNames = loadStoreNames(records);
@@ -69,19 +64,16 @@ public class ClassroomServiceImpl implements ClassroomService
     /** 新增教室：门店必须存在；同一门店内名称唯一；<b>不返回新 ID</b> */
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void create(ClassroomCreateDTO dto)
-    {
+    public void create(ClassroomCreateDTO dto) {
         validateStoreExists(dto.getStoreId());
 
         ClassroomDO classroom = ClassroomConverter.toDO(dto);
-        if (classroomDao.selectByStoreIdAndName(classroom.getStoreId(), classroom.getName()) != null)
-        {
+        if (classroomDao.selectByStoreIdAndName(classroom.getStoreId(), classroom.getName()) != null) {
             throw new ServiceException("该门店下已存在同名教室", CONFLICT);
         }
 
         int rows = classroomDao.insert(classroom);
-        if (rows != 1)
-        {
+        if (rows != 1) {
             throw new ServiceException("新增教室失败", INTERNAL_ERROR);
         }
     }
@@ -91,17 +83,14 @@ public class ClassroomServiceImpl implements ClassroomService
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void update(Long classroomId, ClassroomUpdateDTO dto)
-    {
+    public void update(Long classroomId, ClassroomUpdateDTO dto) {
         ClassroomDO classroom = classroomDao.selectById(classroomId);
-        if (classroom == null)
-        {
+        if (classroom == null) {
             throw notFound();
         }
 
         String name = dto.getName() == null ? null : dto.getName().trim();
-        if (classroomDao.selectByStoreIdAndNameExcludeId(classroom.getStoreId(), name, classroomId) != null)
-        {
+        if (classroomDao.selectByStoreIdAndNameExcludeId(classroom.getStoreId(), name, classroomId) != null) {
             throw new ServiceException("该门店下已存在同名教室", CONFLICT);
         }
 
@@ -114,19 +103,15 @@ public class ClassroomServiceImpl implements ClassroomService
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void delete(Long classroomId)
-    {
+    public void delete(Long classroomId) {
         ClassroomDO classroom = classroomDao.selectById(classroomId);
-        if (classroom == null)
-        {
+        if (classroom == null) {
             throw notFound();
         }
 
         long activeSchedules = countActiveSchedules(classroomId);
-        if (activeSchedules > 0)
-        {
-            throw new ServiceException(
-                    String.format("该教室仍有 %d 节未结束的排课，无法删除", activeSchedules), CONFLICT);
+        if (activeSchedules > 0) {
+            throw new ServiceException(String.format("该教室仍有 %d 节未结束的排课，无法删除", activeSchedules), CONFLICT);
         }
 
         classroomDao.deleteById(classroomId);
@@ -136,10 +121,8 @@ public class ClassroomServiceImpl implements ClassroomService
      * 统计某门店名下的教室数量（门店模块删除门禁用）
      */
     @Override
-    public long countByStoreId(Long storeId)
-    {
-        if (storeId == null)
-        {
+    public long countByStoreId(Long storeId) {
+        if (storeId == null) {
             return 0L;
         }
         return classroomDao.countByStoreId(storeId);
@@ -151,37 +134,29 @@ public class ClassroomServiceImpl implements ClassroomService
      * @throws ServiceException 教室不存在（404）／归属不符（409）
      */
     @Override
-    public void validateExistsAndBelongsToStore(Long classroomId, Long storeId)
-    {
+    public void validateExistsAndBelongsToStore(Long classroomId, Long storeId) {
         ClassroomDO classroom = classroomDao.selectById(classroomId);
-        if (classroom == null)
-        {
+        if (classroom == null) {
             throw notFound();
         }
-        if (storeId == null || !storeId.equals(classroom.getStoreId()))
-        {
+        if (storeId == null || !storeId.equals(classroom.getStoreId())) {
             throw new ServiceException("所选教室不属于该门店", CONFLICT);
         }
     }
 
     /** 批量取教室摘要（跨模块出参）：按编号去重后一次查回，避免 N+1 */
     @Override
-    public List<ClassroomSummaryVO> summaries(Collection<Long> ids)
-    {
-        if (ids == null || ids.isEmpty())
-        {
+    public List<ClassroomSummaryVO> summaries(Collection<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
             return new ArrayList<ClassroomSummaryVO>();
         }
         LinkedHashSet<Long> distinctIds = new LinkedHashSet<Long>();
-        for (Long id : ids)
-        {
-            if (id != null)
-            {
+        for (Long id : ids) {
+            if (id != null) {
                 distinctIds.add(id);
             }
         }
-        if (distinctIds.isEmpty())
-        {
+        if (distinctIds.isEmpty()) {
             return new ArrayList<ClassroomSummaryVO>();
         }
         return ClassroomConverter.toSummaryVOList(classroomDao.selectByIds(distinctIds));
@@ -190,10 +165,8 @@ public class ClassroomServiceImpl implements ClassroomService
     /**
      * 校验门店存在：走 StoreService（跨模块不读表）；门店不存在由对方抛 404「门店不存在或已被删除」
      */
-    private void validateStoreExists(Long storeId)
-    {
-        if (storeService.getById(storeId) == null)
-        {
+    private void validateStoreExists(Long storeId) {
+        if (storeService.getById(storeId) == null) {
             throw new ServiceException("门店不存在或已被删除", NOT_FOUND);
         }
     }
@@ -201,30 +174,23 @@ public class ClassroomServiceImpl implements ClassroomService
     /**
      * 按门店编号批量取门店名称（不跨模块读表；门店已被删除时名称为 null）
      */
-    private Map<Long, String> loadStoreNames(List<ClassroomDO> classrooms)
-    {
+    private Map<Long, String> loadStoreNames(List<ClassroomDO> classrooms) {
         Map<Long, String> storeNames = new HashMap<Long, String>();
-        if (classrooms == null || classrooms.isEmpty())
-        {
+        if (classrooms == null || classrooms.isEmpty()) {
             return storeNames;
         }
         LinkedHashSet<Long> storeIds = new LinkedHashSet<Long>();
-        for (ClassroomDO classroom : classrooms)
-        {
-            if (classroom.getStoreId() != null)
-            {
+        for (ClassroomDO classroom : classrooms) {
+            if (classroom.getStoreId() != null) {
                 storeIds.add(classroom.getStoreId());
             }
         }
-        if (storeIds.isEmpty())
-        {
+        if (storeIds.isEmpty()) {
             return storeNames;
         }
         List<StoreSummaryVO> summaries = storeService.summaries(storeIds);
-        if (summaries != null)
-        {
-            for (StoreSummaryVO summary : summaries)
-            {
+        if (summaries != null) {
+            for (StoreSummaryVO summary : summaries) {
                 storeNames.put(summary.getId(), summary.getName());
             }
         }
@@ -236,20 +202,15 @@ public class ClassroomServiceImpl implements ClassroomService
      *
      * <p><b>fail-closed：</b>统计调用失败不吞异常、不降级放行。</p>
      */
-    private long countActiveSchedules(Long classroomId)
-    {
-        try
-        {
+    private long countActiveSchedules(Long classroomId) {
+        try {
             return scheduleService.countActiveByClassroomId(classroomId);
-        }
-        catch (RuntimeException e)
-        {
+        } catch (RuntimeException e) {
             throw new ServiceException("引用检查未完成，已拒绝本次删除", CONFLICT);
         }
     }
 
-    private ServiceException notFound()
-    {
+    private ServiceException notFound() {
         return new ServiceException("教室不存在或已被删除", NOT_FOUND);
     }
 }

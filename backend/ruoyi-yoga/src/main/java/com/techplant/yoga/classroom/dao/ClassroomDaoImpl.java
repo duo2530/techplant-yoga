@@ -1,5 +1,7 @@
 package com.techplant.yoga.classroom.dao;
 
+import lombok.RequiredArgsConstructor;
+
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
@@ -16,21 +18,14 @@ import com.techplant.yoga.classroom.query.ClassroomQuery;
  * 教室数据访问实现。
  */
 @Repository
-public class ClassroomDaoImpl implements ClassroomDao
-{
+@RequiredArgsConstructor
+public class ClassroomDaoImpl implements ClassroomDao {
     private final ClassroomMapper classroomMapper;
 
-    public ClassroomDaoImpl(ClassroomMapper classroomMapper)
-    {
-        this.classroomMapper = classroomMapper;
-    }
-
     @Override
-    public IPage<ClassroomDO> selectPage(ClassroomQuery query)
-    {
-        LambdaQueryWrapper<ClassroomDO> wrapper = Wrappers.<ClassroomDO>lambdaQuery()
-                .select(ClassroomDO::getId, ClassroomDO::getStoreId, ClassroomDO::getName, ClassroomDO::getCreateTime,
-                        ClassroomDO::getUpdateTime);
+    public IPage<ClassroomDO> selectPage(ClassroomQuery query) {
+        LambdaQueryWrapper<ClassroomDO> wrapper = Wrappers.<ClassroomDO>lambdaQuery().select(ClassroomDO::getId,
+                ClassroomDO::getStoreId, ClassroomDO::getName, ClassroomDO::getCreateTime, ClassroomDO::getUpdateTime);
         boolean hasName = query.getName() != null && !query.getName().trim().isEmpty();
         wrapper.like(hasName, ClassroomDO::getName, query.getName());
         wrapper.eq(query.getStoreId() != null, ClassroomDO::getStoreId, query.getStoreId());
@@ -44,62 +39,50 @@ public class ClassroomDaoImpl implements ClassroomDao
     }
 
     @Override
-    public ClassroomDO selectById(Long id)
-    {
+    public ClassroomDO selectById(Long id) {
         return classroomMapper.selectById(id);
     }
 
     @Override
-    public ClassroomDO selectByStoreIdAndName(Long storeId, String name)
-    {
+    public ClassroomDO selectByStoreIdAndName(Long storeId, String name) {
         return selectByStoreIdAndNameExcludeId(storeId, name, null);
     }
 
     @Override
-    public ClassroomDO selectByStoreIdAndNameExcludeId(Long storeId, String name, Long excludeId)
-    {
+    public ClassroomDO selectByStoreIdAndNameExcludeId(Long storeId, String name, Long excludeId) {
         LambdaQueryWrapper<ClassroomDO> wrapper = Wrappers.<ClassroomDO>lambdaQuery()
-                .eq(ClassroomDO::getStoreId, storeId)
-                .eq(ClassroomDO::getName, name)
-                .ne(excludeId != null, ClassroomDO::getId, excludeId)
-                .last("LIMIT 1");
+                .eq(ClassroomDO::getStoreId, storeId).eq(ClassroomDO::getName, name)
+                .ne(excludeId != null, ClassroomDO::getId, excludeId).last("LIMIT 1");
         return classroomMapper.selectOne(wrapper);
     }
 
     @Override
-    public List<ClassroomDO> selectByIds(Collection<Long> ids)
-    {
+    public List<ClassroomDO> selectByIds(Collection<Long> ids) {
         return classroomMapper.selectBatchIds(ids);
     }
 
     @Override
-    public int insert(ClassroomDO classroom)
-    {
+    public int insert(ClassroomDO classroom) {
         return classroomMapper.insert(classroom);
     }
 
     @Override
-    public int updateName(Long id, String name, Long updateBy)
-    {
-        return classroomMapper.update(null, Wrappers.<ClassroomDO>lambdaUpdate()
-                .eq(ClassroomDO::getId, id)
-                .set(ClassroomDO::getName, name)
-                .set(ClassroomDO::getUpdateBy, updateBy)
-                .set(ClassroomDO::getUpdateTime, LocalDateTime.now()));
+    public int updateName(Long id, String name, Long updateBy) {
+        return classroomMapper.update(null,
+                Wrappers.<ClassroomDO>lambdaUpdate().eq(ClassroomDO::getId, id).set(ClassroomDO::getName, name)
+                        .set(ClassroomDO::getUpdateBy, updateBy).set(ClassroomDO::getUpdateTime, LocalDateTime.now()));
     }
 
     @Override
-    public int deleteById(Long id)
-    {
+    public int deleteById(Long id) {
         // 物理删除：ClassroomDO 没有 @TableLogic，生成 DELETE FROM t_classroom WHERE id = ?
         return classroomMapper.deleteById(id);
     }
 
     @Override
-    public long countByStoreId(Long storeId)
-    {
-        Long count = classroomMapper.selectCount(Wrappers.<ClassroomDO>lambdaQuery()
-                .eq(ClassroomDO::getStoreId, storeId));
+    public long countByStoreId(Long storeId) {
+        Long count = classroomMapper
+                .selectCount(Wrappers.<ClassroomDO>lambdaQuery().eq(ClassroomDO::getStoreId, storeId));
         return count == null ? 0L : count;
     }
 }

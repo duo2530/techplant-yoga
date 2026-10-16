@@ -1,10 +1,12 @@
 package com.techplant.yoga.member.enums;
 
+import lombok.Getter;
+
 import com.ruoyi.common.exception.ServiceException;
 
 /** 会员性别固定枚举：取值范围与「码 → 名」翻译的唯一来源。 */
-public enum MemberGenderEnum
-{
+@Getter
+public enum MemberGenderEnum {
     /** 未知 */
     UNKNOWN(0, "未知"),
 
@@ -32,35 +34,20 @@ public enum MemberGenderEnum
     /** 性别名称 */
     private final String name;
 
-    MemberGenderEnum(Integer code, String name)
-    {
+    MemberGenderEnum(Integer code, String name) {
         this.code = code;
         this.name = name;
-    }
-
-    public Integer getCode()
-    {
-        return code;
-    }
-
-    public String getName()
-    {
-        return name;
     }
 
     /**
      * 按码取枚举，非法码或空返回 {@code null}
      */
-    public static MemberGenderEnum of(Integer code)
-    {
-        if (code == null)
-        {
+    public static MemberGenderEnum of(Integer code) {
+        if (code == null) {
             return null;
         }
-        for (MemberGenderEnum item : values())
-        {
-            if (item.code.equals(code))
-            {
+        for (MemberGenderEnum item : values()) {
+            if (item.code.equals(code)) {
                 return item;
             }
         }
@@ -70,8 +57,7 @@ public enum MemberGenderEnum
     /**
      * 「码 → 名称」翻译，供出参成对返回 {@code gender} ＋ {@code genderText}；非法码或空返回 {@code null}
      */
-    public static String nameOf(Integer code)
-    {
+    public static String nameOf(Integer code) {
         MemberGenderEnum item = of(code);
         return item == null ? null : item.name;
     }
@@ -81,10 +67,8 @@ public enum MemberGenderEnum
      *
      * @throws ServiceException 取值不在 0~2
      */
-    public static void validateIfPresent(Integer code)
-    {
-        if (code != null && of(code) == null)
-        {
+    public static void validateIfPresent(Integer code) {
+        if (code != null && of(code) == null) {
             throw new ServiceException(INVALID_MESSAGE, PARAM_INVALID);
         }
     }

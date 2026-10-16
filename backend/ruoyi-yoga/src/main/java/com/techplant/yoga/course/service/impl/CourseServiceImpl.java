@@ -1,5 +1,7 @@
 package com.techplant.yoga.course.service.impl;
 
+import lombok.RequiredArgsConstructor;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashSet;
@@ -26,8 +28,8 @@ import com.techplant.yoga.schedule.service.ScheduleService;
 
 /** 课程业务实现。 */
 @Service
-public class CourseServiceImpl implements CourseService
-{
+@RequiredArgsConstructor
+public class CourseServiceImpl implements CourseService {
     /** 资源不存在 */
     private static final int NOT_FOUND = 404;
 
@@ -39,20 +41,14 @@ public class CourseServiceImpl implements CourseService
 
     private final CourseDao courseDao;
 
+    @Lazy
     private final ScheduleService scheduleService;
-
-    public CourseServiceImpl(CourseDao courseDao, @Lazy ScheduleService scheduleService)
-    {
-        this.courseDao = courseDao;
-        this.scheduleService = scheduleService;
-    }
 
     /**
      * 查询课程列表：只读，不需要事务
      */
     @Override
-    public PageResult<CourseListItemVO> page(CourseQuery query)
-    {
+    public PageResult<CourseListItemVO> page(CourseQuery query) {
         IPage<CourseDO> page = courseDao.selectPage(query);
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(),
                 CourseConverter.toListItemVOList(page.getRecords()));
@@ -62,11 +58,9 @@ public class CourseServiceImpl implements CourseService
      * 查询课程详情：不存在（或已被物理删除）→ 404
      */
     @Override
-    public CourseDetailVO getById(Long courseId)
-    {
+    public CourseDetailVO getById(Long courseId) {
         CourseDO course = courseDao.selectById(courseId);
-        if (course == null)
-        {
+        if (course == null) {
             throw notFound();
         }
         return CourseConverter.toDetailVO(course);
@@ -77,19 +71,16 @@ public class CourseServiceImpl implements CourseService
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void create(CourseCreateDTO dto)
-    {
+    public void create(CourseCreateDTO dto) {
         CourseDO course = CourseConverter.toDO(dto);
         // 课种取值范围校验只由 CourseTypeEnum 提供（DTO 上的 @CourseTypeValid 已先拦一道，
         // 这里再兜一道，两者都委托同一个枚举，不存在第二份取值表）
         CourseTypeEnum.validate(course.getCourseType());
-        if (courseDao.selectByName(course.getName()) != null)
-        {
+        if (courseDao.selectByName(course.getName()) != null) {
             throw new ServiceException("课程名称已存在", CONFLICT);
         }
         int rows = courseDao.insert(course);
-        if (rows != 1)
-        {
+        if (rows != 1) {
             throw new ServiceException("新增课程失败", INTERNAL_ERROR);
         }
     }
@@ -99,18 +90,15 @@ public class CourseServiceImpl implements CourseService
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public CourseDetailVO update(Long courseId, CourseUpdateDTO dto)
-    {
+    public CourseDetailVO update(Long courseId, CourseUpdateDTO dto) {
         CourseDO course = courseDao.selectById(courseId);
-        if (course == null)
-        {
+        if (course == null) {
             throw notFound();
         }
 
         CourseTypeEnum.validate(dto.getCourseType());
         CourseConverter.applyUpdate(course, dto);
-        if (courseDao.selectByNameExcludeId(course.getName(), courseId) != null)
-        {
+        if (courseDao.selectByNameExcludeId(course.getName(), courseId) != null) {
             throw new ServiceException("课程名称已存在", CONFLICT);
         }
 
@@ -118,8 +106,7 @@ public class CourseServiceImpl implements CourseService
         courseDao.updateById(course);
 
         CourseDO latest = courseDao.selectById(courseId);
-        if (latest == null)
-        {
+        if (latest == null) {
             // 并发下课程被删：存在性校验通过、更新落空
             throw notFound();
         }
@@ -131,19 +118,15 @@ public class CourseServiceImpl implements CourseService
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void delete(Long courseId)
-    {
+    public void delete(Long courseId) {
         CourseDO course = courseDao.selectById(courseId);
-        if (course == null)
-        {
+        if (course == null) {
             throw notFound();
         }
 
         long activeSchedules = countActiveSchedules(courseId);
-        if (activeSchedules > 0)
-        {
-            throw new ServiceException(
-                    String.format("该课程仍有 %d 节未结束的排课，无法删除", activeSchedules), CONFLICT);
+        if (activeSchedules > 0) {
+            throw new ServiceException(String.format("该课程仍有 %d 节未结束的排课，无法删除", activeSchedules), CONFLICT);
         }
 
         courseDao.deleteById(courseId);
@@ -151,22 +134,17 @@ public class CourseServiceImpl implements CourseService
 
     /** 批量取课程摘要（跨模块出参）：按编号去重后一次查回，避免 N+1 */
     @Override
-    public List<CourseSummaryVO> summaries(Collection<Long> ids)
-    {
-        if (ids == null || ids.isEmpty())
-        {
+    public List<CourseSummaryVO> summaries(Collection<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
             return new ArrayList<CourseSummaryVO>();
         }
         LinkedHashSet<Long> distinctIds = new LinkedHashSet<Long>();
-        for (Long id : ids)
-        {
-            if (id != null)
-            {
+        for (Long id : ids) {
+            if (id != null) {
                 distinctIds.add(id);
             }
         }
-        if (distinctIds.isEmpty())
-        {
+        if (distinctIds.isEmpty()) {
             return new ArrayList<CourseSummaryVO>();
         }
         return CourseConverter.toSummaryVOList(courseDao.selectByIds(distinctIds));
@@ -176,10 +154,8 @@ public class CourseServiceImpl implements CourseService
      * 取单个课程摘要（跨模块出参）；课程不存在返回 {@code null}
      */
     @Override
-    public CourseSummaryVO getSummary(Long courseId)
-    {
-        if (courseId == null)
-        {
+    public CourseSummaryVO getSummary(Long courseId) {
+        if (courseId == null) {
             return null;
         }
         CourseDO course = courseDao.selectById(courseId);
@@ -191,20 +167,15 @@ public class CourseServiceImpl implements CourseService
      *
      * <p><b>fail-closed：</b>统计调用失败不吞异常、不降级放行 —— 统计服务一抖动课程就会被误删。</p>
      */
-    private long countActiveSchedules(Long courseId)
-    {
-        try
-        {
+    private long countActiveSchedules(Long courseId) {
+        try {
             return scheduleService.countActiveByCourseId(courseId);
-        }
-        catch (RuntimeException e)
-        {
+        } catch (RuntimeException e) {
             throw new ServiceException("引用检查未完成，已拒绝本次删除", CONFLICT);
         }
     }
 
-    private ServiceException notFound()
-    {
+    private ServiceException notFound() {
         return new ServiceException("课程不存在或已被删除", NOT_FOUND);
     }
 }

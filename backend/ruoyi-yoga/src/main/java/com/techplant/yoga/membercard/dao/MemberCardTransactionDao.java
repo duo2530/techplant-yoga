@@ -5,8 +5,7 @@ import java.util.List;
 import com.techplant.yoga.membercard.domain.MemberCardTransactionDO;
 
 /** 会员卡次数流水数据访问语义。 */
-public interface MemberCardTransactionDao
-{
+public interface MemberCardTransactionDao {
     /** 追加一条流水（主键雪花 ID 由公共机制填充） */
     int insert(MemberCardTransactionDO transaction);
 

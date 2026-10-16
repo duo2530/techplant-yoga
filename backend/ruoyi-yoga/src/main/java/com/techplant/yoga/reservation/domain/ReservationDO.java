@@ -1,5 +1,8 @@
 package com.techplant.yoga.reservation.domain;
 
+import lombok.Getter;
+import lombok.Setter;
+
 import java.time.LocalDateTime;
 import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.annotation.IdType;
@@ -9,8 +12,9 @@ import com.baomidou.mybatisplus.annotation.TableName;
 
 /** 课程预约单数据对象，与 {@code t_reservation} 一一对应。 */
 @TableName("t_reservation")
-public class ReservationDO
-{
+@Getter
+@Setter
+public class ReservationDO {
     /** 预约ID（雪花ID，应用侧生成） */
     @TableId(value = "id", type = IdType.ASSIGN_ID)
     private Long id;
@@ -66,39 +70,4 @@ public class ReservationDO
     /** 更新时间 */
     @TableField(fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updateTime;
-
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
-    public String getRequestId() { return requestId; }
-    public void setRequestId(String requestId) { this.requestId = requestId; }
-    public Long getMemberId() { return memberId; }
-    public void setMemberId(Long memberId) { this.memberId = memberId; }
-    public Long getScheduleId() { return scheduleId; }
-    public void setScheduleId(Long scheduleId) { this.scheduleId = scheduleId; }
-    public LocalDateTime getStartTime() { return startTime; }
-    public void setStartTime(LocalDateTime startTime) { this.startTime = startTime; }
-    public LocalDateTime getEndTime() { return endTime; }
-    public void setEndTime(LocalDateTime endTime) { this.endTime = endTime; }
-    public Integer getPersons() { return persons; }
-    public void setPersons(Integer persons) { this.persons = persons; }
-    public Long getMemberCardId() { return memberCardId; }
-    public void setMemberCardId(Long memberCardId) { this.memberCardId = memberCardId; }
-    public Integer getStatus() { return status; }
-    public void setStatus(Integer status) { this.status = status; }
-    public LocalDateTime getReservationTime() { return reservationTime; }
-    public void setReservationTime(LocalDateTime reservationTime) { this.reservationTime = reservationTime; }
-    public LocalDateTime getCancelTime() { return cancelTime; }
-    public void setCancelTime(LocalDateTime cancelTime) { this.cancelTime = cancelTime; }
-    public Integer getCancelReason() { return cancelReason; }
-    public void setCancelReason(Integer cancelReason) { this.cancelReason = cancelReason; }
-    public LocalDateTime getCheckInTime() { return checkInTime; }
-    public void setCheckInTime(LocalDateTime checkInTime) { this.checkInTime = checkInTime; }
-    public Long getCreateBy() { return createBy; }
-    public void setCreateBy(Long createBy) { this.createBy = createBy; }
-    public LocalDateTime getCreateTime() { return createTime; }
-    public void setCreateTime(LocalDateTime createTime) { this.createTime = createTime; }
-    public Long getUpdateBy() { return updateBy; }
-    public void setUpdateBy(Long updateBy) { this.updateBy = updateBy; }
-    public LocalDateTime getUpdateTime() { return updateTime; }
-    public void setUpdateTime(LocalDateTime updateTime) { this.updateTime = updateTime; }
 }

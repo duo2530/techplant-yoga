@@ -25,10 +25,9 @@ import com.techplant.yoga.member.domain.MemberDO;
 import com.techplant.yoga.member.query.MemberQuery;
 
 /** 会员数据访问的集成测试（Testcontainers MySQL，表结构取自 backend/sql/yoga.sql，不连开发库）。 */
-@ContextConfiguration(classes = { YogaMyBatisTestConfig.class, MemberDaoImpl.class })
+@ContextConfiguration(classes = {YogaMyBatisTestConfig.class, MemberDaoImpl.class})
 @DisplayName("MemberDao 集成测试（Testcontainers MySQL：列映射 / 审计 / 条件更新）")
-class MemberDaoTest extends AbstractYogaIntegrationTest
-{
+class MemberDaoTest extends AbstractYogaIntegrationTest {
     private static final String PHONE = "13800138000";
 
     private static final String HASH_1 = "$2a$10$firstHashValueForTest0000000000000000000000000000000000";
@@ -39,15 +38,13 @@ class MemberDaoTest extends AbstractYogaIntegrationTest
     private MemberDao memberDao;
 
     @BeforeEach
-    void resetTable()
-    {
+    void resetTable() {
         YogaSchema.reset(dataSource, "t_member");
     }
 
     @Test
     @DisplayName("新增：雪花 ID ＋ 审计填充；未注册会员 password 为空")
-    void insert_shouldGenerateSnowflakeIdAndFillAuditFields()
-    {
+    void insert_shouldGenerateSnowflakeIdAndFillAuditFields() {
         MemberDO member = newMember(PHONE, null);
 
         int rows = memberDao.insert(member);
@@ -72,8 +69,7 @@ class MemberDaoTest extends AbstractYogaIntegrationTest
 
     @Test
     @DisplayName("新增：手机号重复 → DuplicateKeyException（上层转 409 的兜底）")
-    void insert_withDuplicatePhone_shouldThrowDuplicateKey()
-    {
+    void insert_withDuplicatePhone_shouldThrowDuplicateKey() {
         memberDao.insert(newMember(PHONE, null));
 
         assertThrows(DuplicateKeyException.class, () -> memberDao.insert(newMember(PHONE, null)));
@@ -81,8 +77,7 @@ class MemberDaoTest extends AbstractYogaIntegrationTest
 
     @Test
     @DisplayName("补齐密码：仅当 password IS NULL 时生效一次，之后按已注册处理")
-    void updatePasswordIfUnregistered_shouldFillOnlyOnce()
-    {
+    void updatePasswordIfUnregistered_shouldFillOnlyOnce() {
         MemberDO member = newMember(PHONE, null);
         memberDao.insert(member);
 
@@ -97,8 +92,7 @@ class MemberDaoTest extends AbstractYogaIntegrationTest
 
     @Test
     @DisplayName("忘记密码：覆盖哈希；刷新最后登录时间只动这两列")
-    void updatePasswordAndLastLoginTime_shouldWork()
-    {
+    void updatePasswordAndLastLoginTime_shouldWork() {
         MemberDO member = newMember(PHONE, HASH_1);
         memberDao.insert(member);
 
@@ -116,8 +110,7 @@ class MemberDaoTest extends AbstractYogaIntegrationTest
 
     @Test
     @DisplayName("查询：按手机号查不到返回 null；按 ID 查不到返回 null（不抛异常）")
-    void select_withUnknownKey_shouldReturnNull()
-    {
+    void select_withUnknownKey_shouldReturnNull() {
         assertNull(memberDao.selectByPhone("13900139000"));
         assertNull(memberDao.selectByPhone(""));
         assertNull(memberDao.selectById(999L));
@@ -127,8 +120,7 @@ class MemberDaoTest extends AbstractYogaIntegrationTest
 
     @Test
     @DisplayName("当前读：存在的会员返回该行，不存在返回 null")
-    void selectByIdForUpdate_shouldReturnRowOrNull()
-    {
+    void selectByIdForUpdate_shouldReturnRowOrNull() {
         memberDao.insert(newMember(1001L, PHONE, HASH_1));
 
         MemberDO found = memberDao.selectByIdForUpdate(1001L);
@@ -140,8 +132,7 @@ class MemberDaoTest extends AbstractYogaIntegrationTest
 
     @Test
     @DisplayName("列表：后四位精确、显示名模糊、等级精确；按 ID 降序分页；password 用于推导 registered")
-    void selectPage_shouldFilterByConditionsAndOrderByIdDesc()
-    {
+    void selectPage_shouldFilterByConditionsAndOrderByIdDesc() {
         memberDao.insert(newMember(1001L, "13800138001", null));
         memberDao.insert(newMember(1002L, "13800138002", HASH_1));
         MemberDO other = newMember(1003L, "13900139003", null);
@@ -174,8 +165,7 @@ class MemberDaoTest extends AbstractYogaIntegrationTest
 
     @Test
     @DisplayName("修改档案：只更新已提交字段，未提交字段保持原值")
-    void updateProfile_shouldUpdateSubmittedFieldsOnly()
-    {
+    void updateProfile_shouldUpdateSubmittedFieldsOnly() {
         MemberDO member = newMember(1001L, PHONE, null);
         member.setGender(1);
         memberDao.insert(member);
@@ -192,8 +182,7 @@ class MemberDaoTest extends AbstractYogaIntegrationTest
 
     @Test
     @DisplayName("删除：物理删除会员行，行内登录凭证一并消失")
-    void deleteById_shouldRemoveRow()
-    {
+    void deleteById_shouldRemoveRow() {
         MemberDO member = newMember(1001L, PHONE, HASH_1);
         memberDao.insert(member);
 
@@ -205,33 +194,28 @@ class MemberDaoTest extends AbstractYogaIntegrationTest
         assertEquals(0, memberDao.deleteById(1001L));
     }
 
-    private MemberQuery query(int pageNum, int pageSize)
-    {
+    private MemberQuery query(int pageNum, int pageSize) {
         MemberQuery query = new MemberQuery();
         query.setPageNum(pageNum);
         query.setPageSize(pageSize);
         return query;
     }
 
-    private List<Long> ids(List<MemberDO> members)
-    {
+    private List<Long> ids(List<MemberDO> members) {
         List<Long> ids = new ArrayList<Long>();
-        for (MemberDO member : members)
-        {
+        for (MemberDO member : members) {
             ids.add(member.getId());
         }
         return ids;
     }
 
-    private MemberDO newMember(Long id, String phone, String passwordHash)
-    {
+    private MemberDO newMember(Long id, String phone, String passwordHash) {
         MemberDO member = newMember(phone, passwordHash);
         member.setId(id);
         return member;
     }
 
-    private MemberDO newMember(String phone, String passwordHash)
-    {
+    private MemberDO newMember(String phone, String passwordHash) {
         MemberDO member = new MemberDO();
         member.setPhone(phone);
         member.setPassword(passwordHash);

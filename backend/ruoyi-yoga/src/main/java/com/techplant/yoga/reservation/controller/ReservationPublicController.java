@@ -1,5 +1,7 @@
 package com.techplant.yoga.reservation.controller;
 
+import lombok.RequiredArgsConstructor;
+
 import javax.validation.Valid;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -27,20 +29,14 @@ import io.swagger.annotations.ApiOperation;
 @Validated
 @RestController
 @RequestMapping("/api/reservations")
-public class ReservationPublicController extends BaseController
-{
+@RequiredArgsConstructor
+public class ReservationPublicController extends BaseController {
     private final ReservationService reservationService;
-
-    public ReservationPublicController(ReservationService reservationService)
-    {
-        this.reservationService = reservationService;
-    }
 
     /** 预约课程：会员身份只取登录态，扣次与占位在同一事务内完成 */
     @ApiOperation("预约课程")
     @PostMapping
-    public AjaxResult create(@Valid @RequestBody ReservationCreateDTO dto)
-    {
+    public AjaxResult create(@Valid @RequestBody ReservationCreateDTO dto) {
         reservationService.create(MemberContextUtils.requireMemberId(), dto);
         return AjaxResult.success("预约成功");
     }
@@ -48,8 +44,7 @@ public class ReservationPublicController extends BaseController
     /** 取消预约：已取消的重复请求按成功返回 */
     @ApiOperation("取消预约")
     @PutMapping("/{reservationId}/cancel")
-    public AjaxResult cancel(@PathVariable Long reservationId)
-    {
+    public AjaxResult cancel(@PathVariable Long reservationId) {
         reservationService.cancel(MemberContextUtils.requireMemberId(), reservationId);
         return AjaxResult.success("取消预约成功");
     }
@@ -57,8 +52,7 @@ public class ReservationPublicController extends BaseController
     /** 预约签到：已有签到记录的重复请求按成功返回 */
     @ApiOperation("预约签到")
     @PutMapping("/{reservationId}/check-in")
-    public AjaxResult checkIn(@PathVariable Long reservationId)
-    {
+    public AjaxResult checkIn(@PathVariable Long reservationId) {
         reservationService.checkIn(MemberContextUtils.requireMemberId(), reservationId);
         return AjaxResult.success("签到成功");
     }
@@ -66,10 +60,9 @@ public class ReservationPublicController extends BaseController
     /** 查询我的预约：会员身份只取登录态，客户端传入值不作为访问依据 */
     @ApiOperation("查询我的预约")
     @GetMapping
-    public TableDataInfo list(@Valid ReservationPublicQuery query)
-    {
-        PageResult<ReservationPublicItemVO> page = reservationService.pageForMember(
-                MemberContextUtils.requireMemberId(), query);
+    public TableDataInfo list(@Valid ReservationPublicQuery query) {
+        PageResult<ReservationPublicItemVO> page = reservationService
+                .pageForMember(MemberContextUtils.requireMemberId(), query);
         TableDataInfo dataTable = new TableDataInfo();
         dataTable.setCode(HttpStatus.SUCCESS);
         dataTable.setMsg("查询成功");

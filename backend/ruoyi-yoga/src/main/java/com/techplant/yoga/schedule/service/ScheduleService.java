@@ -11,8 +11,7 @@ import com.techplant.yoga.schedule.vo.ScheduleDetailVO;
 import com.techplant.yoga.schedule.vo.ScheduleListItemVO;
 
 /** 排课业务服务。 */
-public interface ScheduleService
-{
+public interface ScheduleService {
     // ------------------------------------------------------------------
     // 管理端：6 个接口
     // ------------------------------------------------------------------

@@ -1,5 +1,8 @@
 package com.techplant.yoga.course.domain;
 
+import lombok.Getter;
+import lombok.Setter;
+
 import java.time.LocalDateTime;
 import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.annotation.IdType;
@@ -9,8 +12,9 @@ import com.baomidou.mybatisplus.annotation.TableName;
 
 /** 课程数据对象，与 {@code t_course} 一一对应。 */
 @TableName("t_course")
-public class CourseDO
-{
+@Getter
+@Setter
+public class CourseDO {
     /** 课程ID */
     @TableId(value = "id", type = IdType.ASSIGN_ID)
     private Long id;
@@ -45,104 +49,4 @@ public class CourseDO
     /** 更新时间 */
     @TableField(fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updateTime;
-
-    public Long getId()
-    {
-        return id;
-    }
-
-    public void setId(Long id)
-    {
-        this.id = id;
-    }
-
-    public String getName()
-    {
-        return name;
-    }
-
-    public void setName(String name)
-    {
-        this.name = name;
-    }
-
-    public Integer getCourseType()
-    {
-        return courseType;
-    }
-
-    public void setCourseType(Integer courseType)
-    {
-        this.courseType = courseType;
-    }
-
-    public String getCoverUrl()
-    {
-        return coverUrl;
-    }
-
-    public void setCoverUrl(String coverUrl)
-    {
-        this.coverUrl = coverUrl;
-    }
-
-    public String getIntro()
-    {
-        return intro;
-    }
-
-    public void setIntro(String intro)
-    {
-        this.intro = intro;
-    }
-
-    public Integer getDifficulty()
-    {
-        return difficulty;
-    }
-
-    public void setDifficulty(Integer difficulty)
-    {
-        this.difficulty = difficulty;
-    }
-
-    public Long getCreateBy()
-    {
-        return createBy;
-    }
-
-    public void setCreateBy(Long createBy)
-    {
-        this.createBy = createBy;
-    }
-
-    public LocalDateTime getCreateTime()
-    {
-        return createTime;
-    }
-
-    public void setCreateTime(LocalDateTime createTime)
-    {
-        this.createTime = createTime;
-    }
-
-    public Long getUpdateBy()
-    {
-        return updateBy;
-    }
-
-    public void setUpdateBy(Long updateBy)
-    {
-        this.updateBy = updateBy;
-    }
-
-    public LocalDateTime getUpdateTime()
-    {
-        return updateTime;
-    }
-
-    public void setUpdateTime(LocalDateTime updateTime)
-    {
-        this.updateTime = updateTime;
-    }
 }

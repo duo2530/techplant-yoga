@@ -14,17 +14,14 @@ import com.techplant.yoga.classroom.vo.ClassroomSummaryVO;
  * <p>字段少，本版手写转换方法；{@code storeName} 由 service 从 {@code StoreService.summaries}
  * 拿到的映射传入，本类不跨模块取数。</p>
  */
-public final class ClassroomConverter
-{
-    private ClassroomConverter()
-    {
+public final class ClassroomConverter {
+    private ClassroomConverter() {
     }
 
     /**
      * 新增请求 → 数据对象；<b>主键不赋值</b>（由 MyBatis-Plus 生成雪花ID）
      */
-    public static ClassroomDO toDO(ClassroomCreateDTO dto)
-    {
+    public static ClassroomDO toDO(ClassroomCreateDTO dto) {
         ClassroomDO classroom = new ClassroomDO();
         classroom.setStoreId(dto.getStoreId());
         classroom.setName(trim(dto.getName()));
@@ -34,8 +31,7 @@ public final class ClassroomConverter
     /**
      * 数据对象 → 列表项（{@code storeName} 由调用方按门店名映射补齐）
      */
-    public static ClassroomListItemVO toListItemVO(ClassroomDO classroom, Map<Long, String> storeNames)
-    {
+    public static ClassroomListItemVO toListItemVO(ClassroomDO classroom, Map<Long, String> storeNames) {
         ClassroomListItemVO vo = new ClassroomListItemVO();
         vo.setId(classroom.getId());
         vo.setStoreId(classroom.getStoreId());
@@ -49,13 +45,11 @@ public final class ClassroomConverter
     /**
      * 数据对象集合 → 列表项集合
      */
-    public static List<ClassroomListItemVO> toListItemVOList(List<ClassroomDO> classrooms, Map<Long, String> storeNames)
-    {
+    public static List<ClassroomListItemVO> toListItemVOList(List<ClassroomDO> classrooms,
+            Map<Long, String> storeNames) {
         List<ClassroomListItemVO> list = new ArrayList<ClassroomListItemVO>();
-        if (classrooms != null)
-        {
-            for (ClassroomDO classroom : classrooms)
-            {
+        if (classrooms != null) {
+            for (ClassroomDO classroom : classrooms) {
                 list.add(toListItemVO(classroom, storeNames));
             }
         }
@@ -65,8 +59,7 @@ public final class ClassroomConverter
     /**
      * 数据对象 → 摘要（跨模块出参）
      */
-    public static ClassroomSummaryVO toSummaryVO(ClassroomDO classroom)
-    {
+    public static ClassroomSummaryVO toSummaryVO(ClassroomDO classroom) {
         ClassroomSummaryVO vo = new ClassroomSummaryVO();
         vo.setId(classroom.getId());
         vo.setStoreId(classroom.getStoreId());
@@ -77,13 +70,10 @@ public final class ClassroomConverter
     /**
      * 数据对象集合 → 摘要集合
      */
-    public static List<ClassroomSummaryVO> toSummaryVOList(List<ClassroomDO> classrooms)
-    {
+    public static List<ClassroomSummaryVO> toSummaryVOList(List<ClassroomDO> classrooms) {
         List<ClassroomSummaryVO> list = new ArrayList<ClassroomSummaryVO>();
-        if (classrooms != null)
-        {
-            for (ClassroomDO classroom : classrooms)
-            {
+        if (classrooms != null) {
+            for (ClassroomDO classroom : classrooms) {
                 list.add(toSummaryVO(classroom));
             }
         }
@@ -93,10 +83,8 @@ public final class ClassroomConverter
     /**
      * 去除字符串前后空格；空串归一为 {@code null}
      */
-    private static String trim(String value)
-    {
-        if (value == null)
-        {
+    private static String trim(String value) {
+        if (value == null) {
             return null;
         }
         String trimmed = value.trim();

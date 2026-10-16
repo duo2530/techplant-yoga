@@ -1,5 +1,8 @@
 package com.techplant.yoga.membercard.query;
 
+import lombok.Getter;
+import lombok.Setter;
+
 import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
@@ -13,8 +16,9 @@ import io.swagger.annotations.ApiModelProperty;
  * 两者都不接受客户端传入。排序由 DAO 固定为 {@code id DESC}。</p>
  */
 @ApiModel("我的会员卡查询条件")
-public class MemberCardPublicQuery
-{
+@Getter
+@Setter
+public class MemberCardPublicQuery {
     /** 每页条数上限 */
     public static final int MAX_PAGE_SIZE = 100;
 
@@ -28,9 +32,4 @@ public class MemberCardPublicQuery
     @Min(value = 1, message = "每页条数不能小于 1")
     @Max(value = MAX_PAGE_SIZE, message = "每页条数不能超过 100")
     private Integer pageSize;
-
-    public Integer getPageNum() { return pageNum; }
-    public void setPageNum(Integer pageNum) { this.pageNum = pageNum; }
-    public Integer getPageSize() { return pageSize; }
-    public void setPageSize(Integer pageSize) { this.pageSize = pageSize; }
 }

@@ -1,5 +1,8 @@
 package com.techplant.yoga.classroom.query;
 
+import lombok.Getter;
+import lombok.Setter;
+
 import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.Size;
@@ -12,8 +15,9 @@ import io.swagger.annotations.ApiModelProperty;
  * <p>筛选：{@code storeId}（所属门店，排课表单必传）、{@code name}（模糊）；分页上限 100。</p>
  */
 @ApiModel("教室列表查询条件")
-public class ClassroomQuery
-{
+@Getter
+@Setter
+public class ClassroomQuery {
     /** 默认页码 */
     public static final int DEFAULT_PAGE_NUM = 1;
 
@@ -43,56 +47,14 @@ public class ClassroomQuery
     /**
      * 页码，未传时取默认值
      */
-    public int pageNumOrDefault()
-    {
+    public int pageNumOrDefault() {
         return pageNum == null ? DEFAULT_PAGE_NUM : pageNum;
     }
 
     /**
      * 每页条数，未传时取默认值
      */
-    public int pageSizeOrDefault()
-    {
+    public int pageSizeOrDefault() {
         return pageSize == null ? DEFAULT_PAGE_SIZE : pageSize;
-    }
-
-    public Long getStoreId()
-    {
-        return storeId;
-    }
-
-    public void setStoreId(Long storeId)
-    {
-        this.storeId = storeId;
-    }
-
-    public String getName()
-    {
-        return name;
-    }
-
-    public void setName(String name)
-    {
-        this.name = name;
-    }
-
-    public Integer getPageNum()
-    {
-        return pageNum;
-    }
-
-    public void setPageNum(Integer pageNum)
-    {
-        this.pageNum = pageNum;
-    }
-
-    public Integer getPageSize()
-    {
-        return pageSize;
-    }
-
-    public void setPageSize(Integer pageSize)
-    {
-        this.pageSize = pageSize;
     }
 }

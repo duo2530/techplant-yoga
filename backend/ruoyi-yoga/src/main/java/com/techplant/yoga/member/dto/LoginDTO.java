@@ -1,5 +1,8 @@
 package com.techplant.yoga.member.dto;
 
+import lombok.Getter;
+import lombok.Setter;
+
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.Pattern;
 import javax.validation.constraints.Size;
@@ -13,8 +16,9 @@ import io.swagger.annotations.ApiModelProperty;
  * （老数据／被改过的哈希不该因为规则升级而登录不了）。</p>
  */
 @ApiModel("登录请求")
-public class LoginDTO
-{
+@Getter
+@Setter
+public class LoginDTO {
     @ApiModelProperty(value = "手机号", required = true, example = "13800138000")
     @NotBlank(message = "手机号不能为空")
     @Size(max = 32, message = "手机号长度不能超过 32")
@@ -24,9 +28,4 @@ public class LoginDTO
     @ApiModelProperty(value = "登录密码（非空）", required = true, example = "yoga1234")
     @NotBlank(message = "密码不能为空")
     private String password;
-
-    public String getPhone() { return phone; }
-    public void setPhone(String phone) { this.phone = phone; }
-    public String getPassword() { return password; }
-    public void setPassword(String password) { this.password = password; }
 }

@@ -1,5 +1,8 @@
 package com.techplant.yoga.course.dto;
 
+import lombok.Getter;
+import lombok.Setter;
+
 import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotBlank;
@@ -11,8 +14,9 @@ import io.swagger.annotations.ApiModelProperty;
 
 /** 新增课程的请求体。 */
 @ApiModel("新增课程请求")
-public class CourseCreateDTO
-{
+@Getter
+@Setter
+public class CourseCreateDTO {
     @ApiModelProperty(value = "课程名称", required = true, example = "哈他瑜伽")
     @NotBlank(message = "课程名称不能为空")
     @Size(max = 64, message = "课程名称长度不能超过 64")
@@ -36,54 +40,4 @@ public class CourseCreateDTO
     @Min(value = 1, message = "课程难度取值为 1~5")
     @Max(value = 5, message = "课程难度取值为 1~5")
     private Integer difficulty;
-
-    public String getName()
-    {
-        return name;
-    }
-
-    public void setName(String name)
-    {
-        this.name = name;
-    }
-
-    public Integer getCourseType()
-    {
-        return courseType;
-    }
-
-    public void setCourseType(Integer courseType)
-    {
-        this.courseType = courseType;
-    }
-
-    public String getCoverUrl()
-    {
-        return coverUrl;
-    }
-
-    public void setCoverUrl(String coverUrl)
-    {
-        this.coverUrl = coverUrl;
-    }
-
-    public String getIntro()
-    {
-        return intro;
-    }
-
-    public void setIntro(String intro)
-    {
-        this.intro = intro;
-    }
-
-    public Integer getDifficulty()
-    {
-        return difficulty;
-    }
-
-    public void setDifficulty(Integer difficulty)
-    {
-        this.difficulty = difficulty;
-    }
 }

@@ -16,13 +16,12 @@ import com.techplant.yoga.coach.vo.CoachSummaryVO;
  * JSON ↔ {@code List<String>} 转换 —— 该转换只在 service 层发生，
  * 因此相册的 JSON 字符串（入）与 {@code List<String>}（出）都作为参数传入。</p>
  */
-public final class CoachConverter
-{
-    private CoachConverter() { }
+public final class CoachConverter {
+    private CoachConverter() {
+    }
 
     /** DTO → DO；{@code galleryJson} 由 service 序列化后传入 */
-    public static CoachDO toDO(CoachCreateDTO dto, String galleryJson)
-    {
+    public static CoachDO toDO(CoachCreateDTO dto, String galleryJson) {
         CoachDO coach = new CoachDO();
         coach.setName(trimToNull(dto.getName()));
         coach.setAvatarUrl(trimToNull(dto.getAvatarUrl()));
@@ -33,8 +32,7 @@ public final class CoachConverter
     }
 
     /** 全量覆盖 DO 的业务字段；{@code galleryJson} 由 service 序列化后传入 */
-    public static void applyUpdate(CoachDO coach, CoachUpdateDTO dto, String galleryJson)
-    {
+    public static void applyUpdate(CoachDO coach, CoachUpdateDTO dto, String galleryJson) {
         coach.setName(trimToNull(dto.getName()));
         coach.setAvatarUrl(trimToNull(dto.getAvatarUrl()));
         coach.setIntro(trimToNull(dto.getIntro()));
@@ -42,8 +40,7 @@ public final class CoachConverter
         coach.setGallery(galleryJson);
     }
 
-    public static CoachListItemVO toListItemVO(CoachDO coach)
-    {
+    public static CoachListItemVO toListItemVO(CoachDO coach) {
         CoachListItemVO vo = new CoachListItemVO();
         vo.setId(coach.getId());
         vo.setName(coach.getName());
@@ -54,13 +51,10 @@ public final class CoachConverter
         return vo;
     }
 
-    public static List<CoachListItemVO> toListItemVOList(List<CoachDO> coaches)
-    {
+    public static List<CoachListItemVO> toListItemVOList(List<CoachDO> coaches) {
         List<CoachListItemVO> result = new ArrayList<CoachListItemVO>();
-        if (coaches != null)
-        {
-            for (CoachDO coach : coaches)
-            {
+        if (coaches != null) {
+            for (CoachDO coach : coaches) {
                 result.add(toListItemVO(coach));
             }
         }
@@ -68,8 +62,7 @@ public final class CoachConverter
     }
 
     /** DO → 详情；{@code gallery} 由 service 反序列化后传入 */
-    public static CoachDetailVO toDetailVO(CoachDO coach, List<String> gallery)
-    {
+    public static CoachDetailVO toDetailVO(CoachDO coach, List<String> gallery) {
         CoachDetailVO vo = new CoachDetailVO();
         vo.setId(coach.getId());
         vo.setName(coach.getName());
@@ -82,18 +75,14 @@ public final class CoachConverter
         return vo;
     }
 
-    public static CoachSummaryVO toSummaryVO(CoachDO coach)
-    {
+    public static CoachSummaryVO toSummaryVO(CoachDO coach) {
         return new CoachSummaryVO(coach.getId(), coach.getName(), coach.getAvatarUrl(), coach.getIntro());
     }
 
-    public static List<CoachSummaryVO> toSummaryVOList(List<CoachDO> coaches)
-    {
+    public static List<CoachSummaryVO> toSummaryVOList(List<CoachDO> coaches) {
         List<CoachSummaryVO> result = new ArrayList<CoachSummaryVO>();
-        if (coaches != null)
-        {
-            for (CoachDO coach : coaches)
-            {
+        if (coaches != null) {
+            for (CoachDO coach : coaches) {
                 result.add(toSummaryVO(coach));
             }
         }
@@ -101,10 +90,8 @@ public final class CoachConverter
     }
 
     /** 请求字段前后空格由转换层去除 */
-    private static String trimToNull(String value)
-    {
-        if (value == null)
-        {
+    private static String trimToNull(String value) {
+        if (value == null) {
             return null;
         }
         String trimmed = value.trim();

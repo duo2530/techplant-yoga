@@ -13,8 +13,7 @@ import com.techplant.yoga.reservation.query.ReservationPublicQuery;
  *
  * <p>本表没有 {@code deleted} 列，删除一律物理删除；写操作都带状态条件，影响行数 0 表示并发状态已变更。</p>
  */
-public interface ReservationDao
-{
+public interface ReservationDao {
     /** 按主键查询（快照读） */
     ReservationDO selectById(Long reservationId);
 

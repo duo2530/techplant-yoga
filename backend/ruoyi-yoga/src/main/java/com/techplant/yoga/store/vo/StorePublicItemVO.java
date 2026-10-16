@@ -1,5 +1,8 @@
 package com.techplant.yoga.store.vo;
 
+import lombok.Getter;
+import lombok.Setter;
+
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 
@@ -11,8 +14,9 @@ import io.swagger.annotations.ApiModelProperty;
  * {@code imageUrl} 可空时给<b>空字符串</b>。</p>
  */
 @ApiModel("用户端门店列表项")
-public class StorePublicItemVO
-{
+@Getter
+@Setter
+public class StorePublicItemVO {
     @ApiModelProperty(value = "门店ID（雪花ID，字符串）", example = "1856739201475235901")
     private Long id;
 
@@ -42,25 +46,4 @@ public class StorePublicItemVO
 
     @ApiModelProperty(value = "门店图片 URL（单图，可空 → 空字符串）", example = "https://cdn.example.com/store/1.jpg")
     private String imageUrl;
-
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
-    public Integer getStoreType() { return storeType; }
-    public void setStoreType(Integer storeType) { this.storeType = storeType; }
-    public String getStoreTypeName() { return storeTypeName; }
-    public void setStoreTypeName(String storeTypeName) { this.storeTypeName = storeTypeName; }
-    public String getRegionCode() { return regionCode; }
-    public void setRegionCode(String regionCode) { this.regionCode = regionCode; }
-    public String getRegionName() { return regionName; }
-    public void setRegionName(String regionName) { this.regionName = regionName; }
-    public String getPhone() { return phone; }
-    public void setPhone(String phone) { this.phone = phone; }
-    public String getBusinessHours() { return businessHours; }
-    public void setBusinessHours(String businessHours) { this.businessHours = businessHours; }
-    public String getAddress() { return address; }
-    public void setAddress(String address) { this.address = address; }
-    public String getImageUrl() { return imageUrl; }
-    public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
 }

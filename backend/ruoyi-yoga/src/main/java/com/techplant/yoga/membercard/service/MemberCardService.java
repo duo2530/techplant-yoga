@@ -15,8 +15,7 @@ import com.techplant.yoga.membercard.vo.MemberCardPublicItemVO;
 import com.techplant.yoga.membercard.vo.MemberCardSummaryVO;
 
 /** 会员卡管理业务服务（管理端发卡、开卡、停卡、删除、列表与详情；用户端我的会员卡）。 */
-public interface MemberCardService
-{
+public interface MemberCardService {
     /** 管理端分页查询：按会员、卡号（模糊）、卡类型与适用门店筛选，最新发卡在前 */
     PageResult<MemberCardListItemVO> page(MemberCardQuery query);
 

@@ -18,6 +18,12 @@
 
     <dependencies>
 
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
         <!-- 通用工具（SecurityUtils / StringUtils 等） -->
         <dependency>
             <groupId>com.ruoyi</groupId>

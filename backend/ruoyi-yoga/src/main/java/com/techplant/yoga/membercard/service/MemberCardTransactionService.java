@@ -4,8 +4,7 @@ import java.util.Collection;
 import java.util.Map;
 
 /** 会员卡次数流水写入与查询能力：写入与预约、名额写入同一事务。 */
-public interface MemberCardTransactionService
-{
+public interface MemberCardTransactionService {
     /**
      * 记录预约扣次流水
      *

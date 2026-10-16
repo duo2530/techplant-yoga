@@ -1,5 +1,7 @@
 package com.techplant.yoga.membercard.controller;
 
+import lombok.RequiredArgsConstructor;
+
 import javax.validation.Valid;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -29,20 +31,14 @@ import io.swagger.annotations.ApiOperation;
 @Validated
 @RestController
 @RequestMapping("/admin/member-cards")
-public class MemberCardAdminController extends BaseController
-{
+@RequiredArgsConstructor
+public class MemberCardAdminController extends BaseController {
     private final MemberCardService memberCardService;
-
-    public MemberCardAdminController(MemberCardService memberCardService)
-    {
-        this.memberCardService = memberCardService;
-    }
 
     /** 查询会员卡列表：memberId 精确、cardNo 模糊、cardType 精确、storeId 按适用门店精确，最新发卡在前 */
     @ApiOperation("查询会员卡列表")
     @GetMapping
-    public TableDataInfo list(@Valid MemberCardQuery query)
-    {
+    public TableDataInfo list(@Valid MemberCardQuery query) {
         PageResult<MemberCardListItemVO> page = memberCardService.page(query);
         TableDataInfo dataTable = new TableDataInfo();
         dataTable.setCode(HttpStatus.SUCCESS);
@@ -55,8 +51,7 @@ public class MemberCardAdminController extends BaseController
     /** 查询会员卡详情：不存在 → 业务码 404「会员卡不存在或已被删除」 */
     @ApiOperation("查询会员卡详情")
     @GetMapping("/{cardId}")
-    public AjaxResult detail(@PathVariable("cardId") Long cardId)
-    {
+    public AjaxResult detail(@PathVariable("cardId") Long cardId) {
         MemberCardDetailVO detail = memberCardService.getById(cardId);
         return AjaxResult.success("查询成功", detail);
     }
@@ -64,8 +59,7 @@ public class MemberCardAdminController extends BaseController
     /** 发卡（创建待开卡）：卡号由服务端生成；成功只返回 {@code {code:200,msg:操作成功}}，不返回新 ID */
     @ApiOperation("发卡（创建待开卡）")
     @PostMapping
-    public AjaxResult create(@Valid @RequestBody MemberCardCreateDTO dto)
-    {
+    public AjaxResult create(@Valid @RequestBody MemberCardCreateDTO dto) {
         memberCardService.create(dto);
         return success();
     }
@@ -73,8 +67,7 @@ public class MemberCardAdminController extends BaseController
     /** 正式开卡：无请求体，有效期按当前自然日计算；成功返回开卡后的详情 */
     @ApiOperation("正式开卡")
     @PutMapping("/{cardId}/activate")
-    public AjaxResult activate(@PathVariable("cardId") Long cardId)
-    {
+    public AjaxResult activate(@PathVariable("cardId") Long cardId) {
         MemberCardDetailVO detail = memberCardService.activate(cardId);
         return AjaxResult.success(detail);
     }
@@ -82,8 +75,7 @@ public class MemberCardAdminController extends BaseController
     /** 停卡：原因必填；成功返回停卡后的详情 */
     @ApiOperation("停卡")
     @PutMapping("/{cardId}/stop")
-    public AjaxResult stop(@PathVariable("cardId") Long cardId, @Valid @RequestBody MemberCardStopDTO dto)
-    {
+    public AjaxResult stop(@PathVariable("cardId") Long cardId, @Valid @RequestBody MemberCardStopDTO dto) {
         MemberCardDetailVO detail = memberCardService.stop(cardId, dto);
         return AjaxResult.success(detail);
     }
@@ -91,8 +83,7 @@ public class MemberCardAdminController extends BaseController
     /** 删除会员卡：物理删除 */
     @ApiOperation("删除会员卡")
     @DeleteMapping("/{cardId}")
-    public AjaxResult remove(@PathVariable("cardId") Long cardId)
-    {
+    public AjaxResult remove(@PathVariable("cardId") Long cardId) {
         memberCardService.delete(cardId);
         return success();
     }

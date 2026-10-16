@@ -1,5 +1,7 @@
 package com.techplant.yoga.store.controller;
 
+import lombok.RequiredArgsConstructor;
+
 import javax.validation.Valid;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -29,20 +31,14 @@ import io.swagger.annotations.ApiOperation;
 @Validated
 @RestController
 @RequestMapping("/admin/stores")
-public class StoreController extends BaseController
-{
+@RequiredArgsConstructor
+public class StoreController extends BaseController {
     private final StoreService storeService;
-
-    public StoreController(StoreService storeService)
-    {
-        this.storeService = storeService;
-    }
 
     /** 查询门店列表：name 模糊、regionCode 精确、storeType 精确 */
     @ApiOperation("查询门店列表")
     @GetMapping
-    public TableDataInfo list(@Valid StoreQuery query)
-    {
+    public TableDataInfo list(@Valid StoreQuery query) {
         PageResult<StoreListItemVO> page = storeService.page(query);
         TableDataInfo dataTable = new TableDataInfo();
         dataTable.setCode(HttpStatus.SUCCESS);
@@ -55,8 +51,7 @@ public class StoreController extends BaseController
     /** 查询门店详情：不存在 → 业务码 404「门店不存在或已被删除」 */
     @ApiOperation("查询门店详情")
     @GetMapping("/{storeId}")
-    public AjaxResult detail(@PathVariable("storeId") Long storeId)
-    {
+    public AjaxResult detail(@PathVariable("storeId") Long storeId) {
         StoreDetailVO detail = storeService.getById(storeId);
         return AjaxResult.success(detail);
     }
@@ -64,8 +59,7 @@ public class StoreController extends BaseController
     /** 新增门店：名称重复或编号已用尽 → 409，门店编号由服务端分配；成功只返回 {@code {code:200,msg:操作成功}}，不返回新 ID */
     @ApiOperation("新增门店")
     @PostMapping
-    public AjaxResult create(@Valid @RequestBody StoreCreateDTO dto)
-    {
+    public AjaxResult create(@Valid @RequestBody StoreCreateDTO dto) {
         storeService.create(dto);
         return success();
     }
@@ -73,8 +67,7 @@ public class StoreController extends BaseController
     /** 修改门店：全量编辑，名称重复（排除自身）→ 409；成功返回更新后的详情 */
     @ApiOperation("修改门店")
     @PutMapping("/{storeId}")
-    public AjaxResult update(@PathVariable("storeId") Long storeId, @Valid @RequestBody StoreUpdateDTO dto)
-    {
+    public AjaxResult update(@PathVariable("storeId") Long storeId, @Valid @RequestBody StoreUpdateDTO dto) {
         StoreDetailVO detail = storeService.update(storeId, dto);
         return AjaxResult.success(detail);
     }
@@ -82,8 +75,7 @@ public class StoreController extends BaseController
     /** 删除门店：物理删除；名下有教室或未结束排课 → 409；统计失败 fail-closed → 409 */
     @ApiOperation("删除门店")
     @DeleteMapping("/{storeId}")
-    public AjaxResult remove(@PathVariable("storeId") Long storeId)
-    {
+    public AjaxResult remove(@PathVariable("storeId") Long storeId) {
         storeService.delete(storeId);
         return success();
     }

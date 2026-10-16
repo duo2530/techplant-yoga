@@ -18,8 +18,7 @@ import com.techplant.yoga.common.response.PageResult;
  * <p>同时<b>对外</b>提供三个方法，供门店模块（删除门禁统计）与排课模块（存在性／归属校验、名称补齐）直接依赖
  * ——<b>全项目统一不另立 QueryService</b>。</p>
  */
-public interface ClassroomService
-{
+public interface ClassroomService {
     /**
      * 查询教室列表（分页，按 {@code store_id ASC, name ASC, id DESC} 稳定排序；storeName 批量补齐）
      */

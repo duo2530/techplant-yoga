@@ -11,8 +11,7 @@ import com.techplant.yoga.coach.vo.CoachSummaryVO;
 import com.techplant.yoga.common.response.PageResult;
 
 /** 教练业务服务。 */
-public interface CoachService
-{
+public interface CoachService {
     /** 管理端列表分页（按 id DESC；<b>不返回</b> intro 与 gallery） */
     PageResult<CoachListItemVO> page(CoachQuery query);
 

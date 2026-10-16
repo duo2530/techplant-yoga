@@ -53,16 +53,15 @@ import com.techplant.yoga.store.service.impl.StoreServiceImpl;
  *
  * <p>覆盖统一响应、参数校验、ID 字符串化与时间格式；管理端鉴权链不在本测试范围内。</p>
  */
-@ContextConfiguration(classes = { YogaMyBatisTestConfig.class, StoreDaoImpl.class, StoreRegionDictDaoImpl.class,
-        StoreServiceImpl.class, ClassroomDaoImpl.class, ClassroomServiceImpl.class, CoachDaoImpl.class,
-        CoachServiceImpl.class, CourseDaoImpl.class, CourseServiceImpl.class, MemberDaoImpl.class,
-        MemberLevelDictDaoImpl.class, MemberServiceImpl.class, MemberCardDaoImpl.class,
-        MemberCardTransactionDaoImpl.class, MemberCardTransactionServiceImpl.class, CardNoGenerator.class,
-        MemberCardServiceImpl.class, ScheduleDaoImpl.class, ScheduleBookingServiceImpl.class, ScheduleServiceImpl.class,
-        ReservationDaoImpl.class, ReservationServiceImpl.class })
+@ContextConfiguration(classes = {YogaMyBatisTestConfig.class, StoreDaoImpl.class, StoreRegionDictDaoImpl.class,
+    StoreServiceImpl.class, ClassroomDaoImpl.class, ClassroomServiceImpl.class, CoachDaoImpl.class,
+    CoachServiceImpl.class, CourseDaoImpl.class, CourseServiceImpl.class, MemberDaoImpl.class,
+    MemberLevelDictDaoImpl.class, MemberServiceImpl.class, MemberCardDaoImpl.class, MemberCardTransactionDaoImpl.class,
+    MemberCardTransactionServiceImpl.class, CardNoGenerator.class, MemberCardServiceImpl.class, ScheduleDaoImpl.class,
+    ScheduleBookingServiceImpl.class, ScheduleServiceImpl.class, ReservationDaoImpl.class,
+    ReservationServiceImpl.class})
 @DisplayName("ReservationController 接口测试（MockMvc：管理端列表字段 / 参数校验 / ID 字符串化 / 时间格式）")
-class ReservationControllerTest extends AbstractYogaIntegrationTest
-{
+class ReservationControllerTest extends AbstractYogaIntegrationTest {
     private static final ZoneId BUSINESS_ZONE = ZoneId.of("Asia/Shanghai");
 
     private static final Long STORE_ID = 1000L;
@@ -89,31 +88,25 @@ class ReservationControllerTest extends AbstractYogaIntegrationTest
     private JdbcTemplate jdbcTemplate;
 
     @BeforeEach
-    void setUp()
-    {
+    void setUp() {
         YogaSchema.reset(dataSource, "t_reservation", "t_member_card_transaction", "t_member_card", "t_schedule",
                 "t_course", "t_coach", "t_classroom", "t_store", "t_member");
         jdbcTemplate = new JdbcTemplate(dataSource);
         insertFixtures();
 
         ObjectMapper objectMapper = Jackson2ObjectMapperBuilder.json()
-                .modulesToInstall(new JacksonConfig.BusinessIdToStringModule())
-                .build();
+                .modulesToInstall(new JacksonConfig.BusinessIdToStringModule()).build();
         mockMvc = MockMvcBuilders.standaloneSetup(new ReservationController(reservationService))
                 .setControllerAdvice(new GlobalExceptionHandler())
-                .setMessageConverters(new MappingJackson2HttpMessageConverter(objectMapper))
-                .build();
+                .setMessageConverters(new MappingJackson2HttpMessageConverter(objectMapper)).build();
     }
 
     @Test
     @DisplayName("查询预约列表：返回 TableDataInfo，ID 字符串化、时间按 yyyy-MM-dd HH:mm:ss，关联资料逐项装配")
-    void list_shouldReturnAdminFields() throws Exception
-    {
+    void list_shouldReturnAdminFields() throws Exception {
         mockMvc.perform(get("/admin/reservations").param("pageNum", "1").param("pageSize", "10"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(200))
-                .andExpect(jsonPath("$.msg").value("查询成功"))
-                .andExpect(jsonPath("$.total").value(2))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.msg").value("查询成功")).andExpect(jsonPath("$.total").value(2))
                 .andExpect(jsonPath("$.rows[0].id").isString())
                 .andExpect(jsonPath("$.rows[0].scheduleId").value(String.valueOf(SCHEDULE_ID)))
                 .andExpect(jsonPath("$.rows[0].courseId").value(String.valueOf(COURSE_ID)))
@@ -129,10 +122,10 @@ class ReservationControllerTest extends AbstractYogaIntegrationTest
                 .andExpect(jsonPath("$.rows[0].storeName").value("徐汇店"))
                 .andExpect(jsonPath("$.rows[0].storeAddress").value("漕溪北路 88 号"))
                 .andExpect(jsonPath("$.rows[0].scheduleDate").value(tomorrow().toString()))
-                .andExpect(jsonPath("$.rows[0].startTime").value(tomorrow().atTime(10, 0).toString()
-                        .replace('T', ' ') + ":00"))
-                .andExpect(jsonPath("$.rows[0].endTime").value(tomorrow().atTime(11, 0).toString()
-                        .replace('T', ' ') + ":00"))
+                .andExpect(jsonPath("$.rows[0].startTime")
+                        .value(tomorrow().atTime(10, 0).toString().replace('T', ' ') + ":00"))
+                .andExpect(jsonPath("$.rows[0].endTime")
+                        .value(tomorrow().atTime(11, 0).toString().replace('T', ' ') + ":00"))
                 .andExpect(jsonPath("$.rows[0].durationMinutes").value(60))
                 .andExpect(jsonPath("$.rows[0].persons").value(2))
                 .andExpect(jsonPath("$.rows[0].memberCardId").value(String.valueOf(TIMES_CARD_ID)))
@@ -140,8 +133,7 @@ class ReservationControllerTest extends AbstractYogaIntegrationTest
                 .andExpect(jsonPath("$.rows[0].cardName").value("瑜伽团课次卡"))
                 .andExpect(jsonPath("$.rows[0].cardType").value(1))
                 .andExpect(jsonPath("$.rows[0].cardTypeText").value("次数卡"))
-                .andExpect(jsonPath("$.rows[0].deductTimes").value(2))
-                .andExpect(jsonPath("$.rows[0].status").value(1))
+                .andExpect(jsonPath("$.rows[0].deductTimes").value(2)).andExpect(jsonPath("$.rows[0].status").value(1))
                 .andExpect(jsonPath("$.rows[0].statusText").value("已预约"))
                 .andExpect(jsonPath("$.rows[0].scheduleStatus").value(2))
                 .andExpect(jsonPath("$.rows[0].scheduleStatusText").value("已上架"))
@@ -156,25 +148,20 @@ class ReservationControllerTest extends AbstractYogaIntegrationTest
 
     @Test
     @DisplayName("查询预约列表：按排课查询名单（含取消记录），按状态与日期筛选")
-    void list_shouldFilterByScheduleStatusAndDate() throws Exception
-    {
-        mockMvc.perform(get("/admin/reservations").param("pageNum", "1").param("pageSize", "10")
-                .param("scheduleId", String.valueOf(SCHEDULE_ID)))
-                .andExpect(jsonPath("$.total").value(2));
+    void list_shouldFilterByScheduleStatusAndDate() throws Exception {
+        mockMvc.perform(get("/admin/reservations").param("pageNum", "1").param("pageSize", "10").param("scheduleId",
+                String.valueOf(SCHEDULE_ID))).andExpect(jsonPath("$.total").value(2));
 
         mockMvc.perform(get("/admin/reservations").param("pageNum", "1").param("pageSize", "10")
                 .param("scheduleId", String.valueOf(SCHEDULE_ID)).param("status", "1"))
-                .andExpect(jsonPath("$.total").value(1))
-                .andExpect(jsonPath("$.rows[0].statusText").value("已预约"));
+                .andExpect(jsonPath("$.total").value(1)).andExpect(jsonPath("$.rows[0].statusText").value("已预约"));
 
         mockMvc.perform(get("/admin/reservations").param("pageNum", "1").param("pageSize", "10")
                 .param("scheduleId", String.valueOf(SCHEDULE_ID)).param("status", "2"))
-                .andExpect(jsonPath("$.total").value(1))
-                .andExpect(jsonPath("$.rows[0].statusText").value("已取消"));
+                .andExpect(jsonPath("$.total").value(1)).andExpect(jsonPath("$.rows[0].statusText").value("已取消"));
 
-        mockMvc.perform(get("/admin/reservations").param("pageNum", "1").param("pageSize", "10")
-                .param("scheduleId", String.valueOf(OTHER_SCHEDULE_ID)))
-                .andExpect(jsonPath("$.total").value(0));
+        mockMvc.perform(get("/admin/reservations").param("pageNum", "1").param("pageSize", "10").param("scheduleId",
+                String.valueOf(OTHER_SCHEDULE_ID))).andExpect(jsonPath("$.total").value(0));
 
         // 上课日期含当天：只查明天的场次
         mockMvc.perform(get("/admin/reservations").param("pageNum", "1").param("pageSize", "10")
@@ -183,46 +170,36 @@ class ReservationControllerTest extends AbstractYogaIntegrationTest
 
         // 超出日期范围返回空 rows，total 仍为筛选结果总数
         mockMvc.perform(get("/admin/reservations").param("pageNum", "9").param("pageSize", "10"))
-                .andExpect(jsonPath("$.total").value(2))
-                .andExpect(jsonPath("$.rows").isEmpty());
+                .andExpect(jsonPath("$.total").value(2)).andExpect(jsonPath("$.rows").isEmpty());
     }
 
     @Test
     @DisplayName("查询预约列表：分页缺失、状态非法与日期范围倒置都返回业务码 500")
-    void list_withIllegalQuery_shouldReject() throws Exception
-    {
-        mockMvc.perform(get("/admin/reservations"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(500))
-                .andExpect(jsonPath("$.msg", Matchers.anyOf(Matchers.is("页码不能为空"),
-                        Matchers.is("每页条数不能为空"))));
+    void list_withIllegalQuery_shouldReject() throws Exception {
+        mockMvc.perform(get("/admin/reservations")).andExpect(status().isOk()).andExpect(jsonPath("$.code").value(500))
+                .andExpect(jsonPath("$.msg", Matchers.anyOf(Matchers.is("页码不能为空"), Matchers.is("每页条数不能为空"))));
 
         mockMvc.perform(get("/admin/reservations").param("pageNum", "1").param("pageSize", "10").param("status", "9"))
                 .andExpect(jsonPath("$.code").value(500));
 
         mockMvc.perform(get("/admin/reservations").param("pageNum", "1").param("pageSize", "10")
                 .param("startDate", tomorrow().plusDays(1).toString()).param("endDate", tomorrow().toString()))
-                .andExpect(jsonPath("$.code").value(500))
-                .andExpect(jsonPath("$.msg").value("结束日期不能早于起始日期"));
+                .andExpect(jsonPath("$.code").value(500)).andExpect(jsonPath("$.msg").value("结束日期不能早于起始日期"));
 
         mockMvc.perform(get("/admin/reservations").param("pageNum", "1").param("pageSize", "101"))
-                .andExpect(jsonPath("$.code").value(500))
-                .andExpect(jsonPath("$.msg").value("每页条数不能超过 100"));
+                .andExpect(jsonPath("$.code").value(500)).andExpect(jsonPath("$.msg").value("每页条数不能超过 100"));
     }
 
-    private LocalDate tomorrow()
-    {
+    private LocalDate tomorrow() {
         return LocalDate.now(BUSINESS_ZONE).plusDays(1);
     }
 
-    private String cardNo()
-    {
+    private String cardNo() {
         return jdbcTemplate.queryForObject("SELECT card_no FROM t_member_card WHERE id = ?", String.class,
                 TIMES_CARD_ID);
     }
 
-    private void insertFixtures()
-    {
+    private void insertFixtures() {
         jdbcTemplate.update("INSERT INTO t_store (id, store_no, name, store_type, region_code, phone,"
                 + " business_hours, address, create_by, create_time, update_by, update_time)"
                 + " VALUES (?, '0001', '徐汇店', 1, '310104', '021-12345678', '周一至周日 09:00-22:00',"
@@ -243,8 +220,8 @@ class ReservationControllerTest extends AbstractYogaIntegrationTest
                 + " course_scope, store_id, purchase_times, gift_times, remaining_times, valid_period_unit,"
                 + " valid_period_count, valid_start_time, valid_end_time, activate_time, stop_time, stop_reason,"
                 + " create_by, create_time, update_by, update_time) VALUES (?, ?, ?, '202610150007000', '瑜伽团课次卡',"
-                + " 1, 1, ?, 12, 0, 12, 1, 12, ?, ?, ?, NULL, NULL, 1, NOW(), 1, NOW())",
-                TIMES_CARD_ID, MEMBER_ID, STORE_ID, STORE_ID, now.minusDays(1), now.plusDays(300), now.minusDays(1));
+                + " 1, 1, ?, 12, 0, 12, 1, 12, ?, ?, ?, NULL, NULL, 1, NOW(), 1, NOW())", TIMES_CARD_ID, MEMBER_ID,
+                STORE_ID, STORE_ID, now.minusDays(1), now.plusDays(300), now.minusDays(1));
 
         insertSchedule(SCHEDULE_ID, tomorrow().atTime(10, 0), tomorrow().atTime(11, 0));
         insertSchedule(OTHER_SCHEDULE_ID, tomorrow().plusDays(1).atTime(10, 0), tomorrow().plusDays(1).atTime(11, 0));
@@ -258,59 +235,50 @@ class ReservationControllerTest extends AbstractYogaIntegrationTest
                 + " VALUES (?, ?, ?, ?, 1, 2, -2, 12, 10, NOW())", 1950100L, TIMES_CARD_ID, MEMBER_ID, 9501L);
     }
 
-    private void insertSchedule(Long id, LocalDateTime startTime, LocalDateTime endTime)
-    {
-        jdbcTemplate.update("INSERT INTO t_schedule (id, store_id, course_id, course_type, coach_id, classroom_id,"
-                + " schedule_date, start_time, end_time, max_persons, min_persons, booked_persons, status,"
-                + " create_by, create_time, update_by, update_time)"
-                + " VALUES (?, ?, ?, 1, ?, ?, ?, ?, ?, 5, 1, 0, 2, 1, NOW(), 1, NOW())",
+    private void insertSchedule(Long id, LocalDateTime startTime, LocalDateTime endTime) {
+        jdbcTemplate.update(
+                "INSERT INTO t_schedule (id, store_id, course_id, course_type, coach_id, classroom_id,"
+                        + " schedule_date, start_time, end_time, max_persons, min_persons, booked_persons, status,"
+                        + " create_by, create_time, update_by, update_time)"
+                        + " VALUES (?, ?, ?, 1, ?, ?, ?, ?, ?, 5, 1, 0, 2, 1, NOW(), 1, NOW())",
                 id, STORE_ID, COURSE_ID, COACH_ID, CLASSROOM_ID, startTime.toLocalDate(), startTime, endTime);
     }
 
     private void insertReservation(Long id, String requestId, Long scheduleId, int persons, int status,
-            LocalDateTime reservationTime, LocalDateTime cancelTime, Integer cancelReason)
-    {
+            LocalDateTime reservationTime, LocalDateTime cancelTime, Integer cancelReason) {
         jdbcTemplate.update("INSERT INTO t_reservation (id, request_id, member_id, schedule_id, start_time, end_time,"
                 + " persons, member_card_id, status, reservation_time, cancel_time, cancel_reason, check_in_time,"
                 + " create_by, create_time, update_by, update_time)"
-                + " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, 1, NOW(), 1, NOW())",
-                id, requestId, MEMBER_ID, scheduleId, scheduleStartTime(scheduleId), scheduleEndTime(scheduleId),
-                persons, TIMES_CARD_ID, status, reservationTime, cancelTime, cancelReason);
+                + " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, 1, NOW(), 1, NOW())", id, requestId, MEMBER_ID,
+                scheduleId, scheduleStartTime(scheduleId), scheduleEndTime(scheduleId), persons, TIMES_CARD_ID, status,
+                reservationTime, cancelTime, cancelReason);
     }
 
-    private LocalDateTime scheduleStartTime(Long scheduleId)
-    {
+    private LocalDateTime scheduleStartTime(Long scheduleId) {
         return jdbcTemplate.queryForObject("SELECT start_time FROM t_schedule WHERE id = ?", LocalDateTime.class,
                 scheduleId);
     }
 
-    private LocalDateTime scheduleEndTime(Long scheduleId)
-    {
+    private LocalDateTime scheduleEndTime(Long scheduleId) {
         return jdbcTemplate.queryForObject("SELECT end_time FROM t_schedule WHERE id = ?", LocalDateTime.class,
                 scheduleId);
     }
 
     @Test
     @DisplayName("查询预约列表：筛选参数为门店／课程／卡类型时同样只返回命中记录")
-    void list_shouldFilterByStoreCourseAndCardType() throws Exception
-    {
-        mockMvc.perform(get("/admin/reservations").param("pageNum", "1").param("pageSize", "10")
-                .param("storeId", String.valueOf(STORE_ID)))
+    void list_shouldFilterByStoreCourseAndCardType() throws Exception {
+        mockMvc.perform(get("/admin/reservations").param("pageNum", "1").param("pageSize", "10").param("storeId",
+                String.valueOf(STORE_ID))).andExpect(jsonPath("$.total").value(2));
+        mockMvc.perform(get("/admin/reservations").param("pageNum", "1").param("pageSize", "10").param("courseId",
+                String.valueOf(COURSE_ID))).andExpect(jsonPath("$.total").value(2));
+        mockMvc.perform(get("/admin/reservations").param("pageNum", "1").param("pageSize", "10").param("cardType", "1"))
                 .andExpect(jsonPath("$.total").value(2));
-        mockMvc.perform(get("/admin/reservations").param("pageNum", "1").param("pageSize", "10")
-                .param("courseId", String.valueOf(COURSE_ID)))
-                .andExpect(jsonPath("$.total").value(2));
-        mockMvc.perform(get("/admin/reservations").param("pageNum", "1").param("pageSize", "10")
-                .param("cardType", "1"))
-                .andExpect(jsonPath("$.total").value(2));
-        mockMvc.perform(get("/admin/reservations").param("pageNum", "1").param("pageSize", "10")
-                .param("cardType", "2"))
+        mockMvc.perform(get("/admin/reservations").param("pageNum", "1").param("pageSize", "10").param("cardType", "2"))
                 .andExpect(jsonPath("$.total").value(0));
-        mockMvc.perform(get("/admin/reservations").param("pageNum", "1").param("pageSize", "10")
-                .param("memberId", String.valueOf(MEMBER_ID)))
-                .andExpect(jsonPath("$.total").value(2));
-        mockMvc.perform(get("/admin/reservations").param("pageNum", "1").param("pageSize", "10")
-                .param("memberId", "999999"))
+        mockMvc.perform(get("/admin/reservations").param("pageNum", "1").param("pageSize", "10").param("memberId",
+                String.valueOf(MEMBER_ID))).andExpect(jsonPath("$.total").value(2));
+        mockMvc.perform(
+                get("/admin/reservations").param("pageNum", "1").param("pageSize", "10").param("memberId", "999999"))
                 .andExpect(jsonPath("$.total").value(0));
     }
 }

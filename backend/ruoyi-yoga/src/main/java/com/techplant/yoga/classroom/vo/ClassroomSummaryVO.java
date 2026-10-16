@@ -1,5 +1,8 @@
 package com.techplant.yoga.classroom.vo;
 
+import lombok.Getter;
+import lombok.Setter;
+
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 
@@ -10,8 +13,9 @@ import io.swagger.annotations.ApiModelProperty;
  * 用 {@code name} 补齐卡片上的教室名。</p>
  */
 @ApiModel("教室摘要")
-public class ClassroomSummaryVO
-{
+@Getter
+@Setter
+public class ClassroomSummaryVO {
     @ApiModelProperty(value = "教室ID（雪花ID，字符串）", example = "1856739201475236001")
     private Long id;
 
@@ -20,34 +24,4 @@ public class ClassroomSummaryVO
 
     @ApiModelProperty(value = "教室名称", example = "瑜伽团课大教室")
     private String name;
-
-    public Long getId()
-    {
-        return id;
-    }
-
-    public void setId(Long id)
-    {
-        this.id = id;
-    }
-
-    public Long getStoreId()
-    {
-        return storeId;
-    }
-
-    public void setStoreId(Long storeId)
-    {
-        this.storeId = storeId;
-    }
-
-    public String getName()
-    {
-        return name;
-    }
-
-    public void setName(String name)
-    {
-        this.name = name;
-    }
 }

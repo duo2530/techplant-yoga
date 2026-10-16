@@ -1,5 +1,8 @@
 package com.techplant.yoga.schedule.vo;
 
+import lombok.Getter;
+import lombok.Setter;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import com.fasterxml.jackson.annotation.JsonFormat;
@@ -8,8 +11,9 @@ import io.swagger.annotations.ApiModelProperty;
 
 /** 管理端排课列表项。 */
 @ApiModel("管理端排课列表项")
-public class ScheduleListItemVO
-{
+@Getter
+@Setter
+public class ScheduleListItemVO {
     @ApiModelProperty(value = "排课ID（雪花ID，字符串）", example = "1856739201475239001")
     private Long id;
 
@@ -72,204 +76,4 @@ public class ScheduleListItemVO
 
     @ApiModelProperty(value = "是否已结束（status=2 且 end_time<=当前时间）", example = "false")
     private Boolean finished;
-
-    public Long getId()
-    {
-        return id;
-    }
-
-    public void setId(Long id)
-    {
-        this.id = id;
-    }
-
-    public Long getStoreId()
-    {
-        return storeId;
-    }
-
-    public void setStoreId(Long storeId)
-    {
-        this.storeId = storeId;
-    }
-
-    public String getStoreName()
-    {
-        return storeName;
-    }
-
-    public void setStoreName(String storeName)
-    {
-        this.storeName = storeName;
-    }
-
-    public Long getCourseId()
-    {
-        return courseId;
-    }
-
-    public void setCourseId(Long courseId)
-    {
-        this.courseId = courseId;
-    }
-
-    public String getCourseName()
-    {
-        return courseName;
-    }
-
-    public void setCourseName(String courseName)
-    {
-        this.courseName = courseName;
-    }
-
-    public Integer getCourseType()
-    {
-        return courseType;
-    }
-
-    public void setCourseType(Integer courseType)
-    {
-        this.courseType = courseType;
-    }
-
-    public String getCourseTypeName()
-    {
-        return courseTypeName;
-    }
-
-    public void setCourseTypeName(String courseTypeName)
-    {
-        this.courseTypeName = courseTypeName;
-    }
-
-    public Long getCoachId()
-    {
-        return coachId;
-    }
-
-    public void setCoachId(Long coachId)
-    {
-        this.coachId = coachId;
-    }
-
-    public String getCoachName()
-    {
-        return coachName;
-    }
-
-    public void setCoachName(String coachName)
-    {
-        this.coachName = coachName;
-    }
-
-    public Long getClassroomId()
-    {
-        return classroomId;
-    }
-
-    public void setClassroomId(Long classroomId)
-    {
-        this.classroomId = classroomId;
-    }
-
-    public String getClassroomName()
-    {
-        return classroomName;
-    }
-
-    public void setClassroomName(String classroomName)
-    {
-        this.classroomName = classroomName;
-    }
-
-    public LocalDate getScheduleDate()
-    {
-        return scheduleDate;
-    }
-
-    public void setScheduleDate(LocalDate scheduleDate)
-    {
-        this.scheduleDate = scheduleDate;
-    }
-
-    public LocalDateTime getStartTime()
-    {
-        return startTime;
-    }
-
-    public void setStartTime(LocalDateTime startTime)
-    {
-        this.startTime = startTime;
-    }
-
-    public LocalDateTime getEndTime()
-    {
-        return endTime;
-    }
-
-    public void setEndTime(LocalDateTime endTime)
-    {
-        this.endTime = endTime;
-    }
-
-    public Integer getMaxPersons()
-    {
-        return maxPersons;
-    }
-
-    public void setMaxPersons(Integer maxPersons)
-    {
-        this.maxPersons = maxPersons;
-    }
-
-    public Integer getMinPersons()
-    {
-        return minPersons;
-    }
-
-    public void setMinPersons(Integer minPersons)
-    {
-        this.minPersons = minPersons;
-    }
-
-    public Integer getBookedPersons()
-    {
-        return bookedPersons;
-    }
-
-    public void setBookedPersons(Integer bookedPersons)
-    {
-        this.bookedPersons = bookedPersons;
-    }
-
-    public Integer getStatus()
-    {
-        return status;
-    }
-
-    public void setStatus(Integer status)
-    {
-        this.status = status;
-    }
-
-    public String getStatusText()
-    {
-        return statusText;
-    }
-
-    public void setStatusText(String statusText)
-    {
-        this.statusText = statusText;
-    }
-
-    public Boolean getFinished()
-    {
-        return finished;
-    }
-
-    public void setFinished(Boolean finished)
-    {
-        this.finished = finished;
-    }
 }

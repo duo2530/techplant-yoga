@@ -9,6 +9,5 @@ import com.techplant.yoga.member.domain.MemberLevelDictDO;
  * <p>本 Mapper 覆盖的是若依系统表 {@code sys_dict_data}，<b>只允许 select</b>：
  * 字典数据的维护仍然走若依「系统管理／字典管理」。</p>
  */
-public interface MemberLevelDictMapper extends BaseMapper<MemberLevelDictDO>
-{
+public interface MemberLevelDictMapper extends BaseMapper<MemberLevelDictDO> {
 }

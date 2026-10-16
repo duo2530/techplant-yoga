@@ -1,5 +1,7 @@
 package com.techplant.yoga.coach.controller;
 
+import lombok.RequiredArgsConstructor;
+
 import javax.validation.Valid;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -26,20 +28,14 @@ import io.swagger.annotations.ApiOperation;
 @Api(tags = "管理端-教练管理")
 @RestController
 @RequestMapping("/admin/coaches")
-public class CoachController extends BaseController
-{
+@RequiredArgsConstructor
+public class CoachController extends BaseController {
     private final CoachService coachService;
-
-    public CoachController(CoachService coachService)
-    {
-        this.coachService = coachService;
-    }
 
     /**  查询教练列表 */
     @ApiOperation("查询教练列表")
     @GetMapping
-    public TableDataInfo list(@Valid CoachQuery query)
-    {
+    public TableDataInfo list(@Valid CoachQuery query) {
         PageResult<CoachListItemVO> page = coachService.page(query);
         TableDataInfo dataTable = new TableDataInfo();
         dataTable.setCode(HttpStatus.SUCCESS);
@@ -52,16 +48,14 @@ public class CoachController extends BaseController
     /**  查询教练详情；不存在 → 404 */
     @ApiOperation("查询教练详情")
     @GetMapping("/{coachId}")
-    public AjaxResult detail(@PathVariable("coachId") Long coachId)
-    {
+    public AjaxResult detail(@PathVariable("coachId") Long coachId) {
         return AjaxResult.success(coachService.getById(coachId));
     }
 
     /**  新增教练；成功只返回 {@code {code,msg}}，不返回新 ID */
     @ApiOperation("新增教练")
     @PostMapping
-    public AjaxResult create(@Valid @RequestBody CoachCreateDTO dto)
-    {
+    public AjaxResult create(@Valid @RequestBody CoachCreateDTO dto) {
         coachService.create(dto);
         return success();
     }
@@ -69,16 +63,14 @@ public class CoachController extends BaseController
     /**  修改教练（全量编辑）；成功返回最新详情 */
     @ApiOperation("修改教练")
     @PutMapping("/{coachId}")
-    public AjaxResult update(@PathVariable("coachId") Long coachId, @Valid @RequestBody CoachUpdateDTO dto)
-    {
+    public AjaxResult update(@PathVariable("coachId") Long coachId, @Valid @RequestBody CoachUpdateDTO dto) {
         return AjaxResult.success(coachService.update(coachId, dto));
     }
 
     /**  删除教练（物理删除，带排课删除门禁） */
     @ApiOperation("删除教练")
     @DeleteMapping("/{coachId}")
-    public AjaxResult delete(@PathVariable("coachId") Long coachId)
-    {
+    public AjaxResult delete(@PathVariable("coachId") Long coachId) {
         coachService.delete(coachId);
         return success();
     }

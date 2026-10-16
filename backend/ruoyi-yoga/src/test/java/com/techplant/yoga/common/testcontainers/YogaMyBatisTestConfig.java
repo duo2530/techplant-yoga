@@ -16,18 +16,15 @@ import com.techplant.yoga.common.mybatis.AuditMetaObjectHandler;
 @Configuration
 @EnableTransactionManagement
 @PropertySource(value = "classpath:application.yml", factory = YamlPropertySourceFactory.class)
-@Import({ MyBatisConfig.class, MybatisPlusConfig.class, AuditMetaObjectHandler.class })
-public class YogaMyBatisTestConfig
-{
+@Import({MyBatisConfig.class, MybatisPlusConfig.class, AuditMetaObjectHandler.class})
+public class YogaMyBatisTestConfig {
     @Bean
-    public DataSource dataSource()
-    {
+    public DataSource dataSource() {
         return YogaMySqlContainer.dataSource();
     }
 
     @Bean
-    public PlatformTransactionManager transactionManager(DataSource dataSource)
-    {
+    public PlatformTransactionManager transactionManager(DataSource dataSource) {
         return new DataSourceTransactionManager(dataSource);
     }
 }

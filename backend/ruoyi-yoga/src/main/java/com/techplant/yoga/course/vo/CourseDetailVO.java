@@ -1,5 +1,8 @@
 package com.techplant.yoga.course.vo;
 
+import lombok.Getter;
+import lombok.Setter;
+
 import java.time.LocalDateTime;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.annotations.ApiModel;
@@ -11,8 +14,9 @@ import io.swagger.annotations.ApiModelProperty;
  * <p>同样<b>成对返回</b> {@code courseType} ＋ {@code courseTypeName}；不返回审计人字段。</p>
  */
 @ApiModel("课程详情")
-public class CourseDetailVO
-{
+@Getter
+@Setter
+public class CourseDetailVO {
     @ApiModelProperty(value = "课程ID（雪花ID，字符串）", example = "1856739201475235801")
     private Long id;
 
@@ -41,94 +45,4 @@ public class CourseDetailVO
     @ApiModelProperty(value = "更新时间", example = "2026-09-21 09:03:11")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime updateTime;
-
-    public Long getId()
-    {
-        return id;
-    }
-
-    public void setId(Long id)
-    {
-        this.id = id;
-    }
-
-    public String getName()
-    {
-        return name;
-    }
-
-    public void setName(String name)
-    {
-        this.name = name;
-    }
-
-    public Integer getCourseType()
-    {
-        return courseType;
-    }
-
-    public void setCourseType(Integer courseType)
-    {
-        this.courseType = courseType;
-    }
-
-    public String getCourseTypeName()
-    {
-        return courseTypeName;
-    }
-
-    public void setCourseTypeName(String courseTypeName)
-    {
-        this.courseTypeName = courseTypeName;
-    }
-
-    public String getCoverUrl()
-    {
-        return coverUrl;
-    }
-
-    public void setCoverUrl(String coverUrl)
-    {
-        this.coverUrl = coverUrl;
-    }
-
-    public Integer getDifficulty()
-    {
-        return difficulty;
-    }
-
-    public void setDifficulty(Integer difficulty)
-    {
-        this.difficulty = difficulty;
-    }
-
-    public String getIntro()
-    {
-        return intro;
-    }
-
-    public void setIntro(String intro)
-    {
-        this.intro = intro;
-    }
-
-    public LocalDateTime getCreateTime()
-    {
-        return createTime;
-    }
-
-    public void setCreateTime(LocalDateTime createTime)
-    {
-        this.createTime = createTime;
-    }
-
-    public LocalDateTime getUpdateTime()
-    {
-        return updateTime;
-    }
-
-    public void setUpdateTime(LocalDateTime updateTime)
-    {
-        this.updateTime = updateTime;
-    }
 }

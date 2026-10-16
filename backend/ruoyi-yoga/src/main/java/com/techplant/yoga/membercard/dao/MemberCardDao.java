@@ -14,8 +14,7 @@ import com.techplant.yoga.membercard.query.MemberCardQuery;
  * <p>屏蔽 Mapper 细节：筛选条件、字段选择与<b>稳定排序</b>在这里组装；
  * 删除是<b>物理删除</b>（{@code MemberCardDO} 不标 {@code @TableLogic}）。</p>
  */
-public interface MemberCardDao
-{
+public interface MemberCardDao {
     /** 管理端分页：筛选 memberId（精确）／cardNo（模糊）／cardType（精确）／storeId（适用门店精确），排序 id DESC */
     IPage<MemberCardDO> selectPage(MemberCardQuery query);
 

@@ -1,5 +1,7 @@
 package com.techplant.yoga.member.service;
 
+import lombok.RequiredArgsConstructor;
+
 import java.util.Collections;
 import java.util.concurrent.TimeUnit;
 import org.springframework.beans.factory.annotation.Value;
@@ -13,8 +15,8 @@ import com.techplant.yoga.member.enums.SmsSceneEnum;
 
 /** 短信验证码发送与原子消费；Redis 值使用原始字符串。 */
 @Service
-public class SmsCodeService
-{
+@RequiredArgsConstructor
+public class SmsCodeService {
     /** 验证码过期／错误／发送过频：统一按状态冲突返回 409 */
     private static final int CONFLICT = 409;
 
@@ -27,15 +29,12 @@ public class SmsCodeService
      * <p>返回：{@code 1} 校验成功并已消费；{@code -1} 验证码错误（<b>保留</b>，允许重试）；
      * {@code 0} 验证码不存在或已过期。</p>
      */
-    private static final String VERIFY_AND_CONSUME_LUA =
-            "local saved = redis.call('GET', KEYS[1])\n"
-            + "if not saved then return 0 end\n"
-            + "if saved ~= ARGV[1] then return -1 end\n"
-            + "redis.call('DEL', KEYS[1])\n"
-            + "return 1";
+    private static final String VERIFY_AND_CONSUME_LUA = "local saved = redis.call('GET', KEYS[1])\n"
+            + "if not saved then return 0 end\n" + "if saved ~= ARGV[1] then return -1 end\n"
+            + "redis.call('DEL', KEYS[1])\n" + "return 1";
 
-    private static final RedisScript<Long> VERIFY_AND_CONSUME_SCRIPT =
-            new DefaultRedisScript<Long>(VERIFY_AND_CONSUME_LUA, Long.class);
+    private static final RedisScript<Long> VERIFY_AND_CONSUME_SCRIPT = new DefaultRedisScript<Long>(
+            VERIFY_AND_CONSUME_LUA, Long.class);
 
     /** 验证码有效期（秒），默认 5 分钟 */
     @Value("${sms.code.expireSeconds:300}")
@@ -53,24 +52,16 @@ public class SmsCodeService
 
     private final SmsSender smsSender;
 
-    public SmsCodeService(StringRedisTemplate stringRedisTemplate, SmsSender smsSender)
-    {
-        this.stringRedisTemplate = stringRedisTemplate;
-        this.smsSender = smsSender;
-    }
-
     /**
      * 发送验证码：原子抢发送间隔 → 生成并落 Redis（覆盖旧码）→ 交给 {@link SmsSender}
      *
      * @throws ServiceException 发送过频（409）
      */
-    public void send(String scene, String phone)
-    {
+    public void send(String scene, String phone) {
         String limitKey = intervalKey(scene, phone);
-        Boolean acquired = stringRedisTemplate.opsForValue()
-                .setIfAbsent(limitKey, "1", intervalSeconds, TimeUnit.SECONDS);
-        if (!Boolean.TRUE.equals(acquired))
-        {
+        Boolean acquired = stringRedisTemplate.opsForValue().setIfAbsent(limitKey, "1", intervalSeconds,
+                TimeUnit.SECONDS);
+        if (!Boolean.TRUE.equals(acquired)) {
             throw new ServiceException("验证码发送过于频繁，请稍后再试", CONFLICT);
         }
 
@@ -86,48 +77,39 @@ public class SmsCodeService
      * <p>错误／过期返回 409 且<b>保留</b>未过期验证码；校验成功才删除，
      * 并发提交同一个验证码只有一个能成功。</p>
      */
-    public void verifyAndConsume(String scene, String phone, String code)
-    {
+    public void verifyAndConsume(String scene, String phone, String code) {
         String candidate = code == null ? "" : code;
         Long result = stringRedisTemplate.execute(VERIFY_AND_CONSUME_SCRIPT,
                 Collections.singletonList(codeKey(scene, phone)), candidate);
-        if (result == null || result.longValue() == 0L)
-        {
+        if (result == null || result.longValue() == 0L) {
             throw new ServiceException("验证码已过期，请重新获取", CONFLICT);
         }
-        if (result.longValue() < 0L)
-        {
+        if (result.longValue() < 0L) {
             // 不删除：有效期内允许继续重试
             throw new ServiceException("验证码错误", CONFLICT);
         }
     }
 
     /** 6 位验证码：配置了固定码就用固定码，否则随机（首位允许 0，按字符串比较） */
-    private String nextCode()
-    {
-        if (fixedCode != null && !fixedCode.trim().isEmpty())
-        {
+    private String nextCode() {
+        if (fixedCode != null && !fixedCode.trim().isEmpty()) {
             return fixedCode.trim();
         }
         int value = (int) (Math.random() * 1000000);
         return String.format("%06d", value);
     }
 
-    private String codeKey(String scene, String phone)
-    {
+    private String codeKey(String scene, String phone) {
         return CacheConstants.SMS_CODE_KEY + scene + ":" + phone;
     }
 
-    private String intervalKey(String scene, String phone)
-    {
+    private String intervalKey(String scene, String phone) {
         return CacheConstants.SMS_CODE_INTERVAL_KEY + scene + ":" + phone;
     }
 
     /** 场景合法性（接口层已用 @Pattern 校验，这里保证 service 直调也安全） */
-    public static void requireValidScene(String scene)
-    {
-        if (!SmsSceneEnum.isValid(scene))
-        {
+    public static void requireValidScene(String scene) {
+        if (!SmsSceneEnum.isValid(scene)) {
             throw new ServiceException("验证码场景取值为 " + SmsSceneEnum.codes(), PARAM_INVALID);
         }
     }

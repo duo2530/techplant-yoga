@@ -1,5 +1,7 @@
 package com.techplant.yoga.member.controller;
 
+import lombok.RequiredArgsConstructor;
+
 import javax.validation.Valid;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -29,20 +31,14 @@ import io.swagger.annotations.ApiOperation;
 @Validated
 @RestController
 @RequestMapping("/admin/members")
-public class MemberController extends BaseController
-{
+@RequiredArgsConstructor
+public class MemberController extends BaseController {
     private final MemberService memberService;
-
-    public MemberController(MemberService memberService)
-    {
-        this.memberService = memberService;
-    }
 
     /** 查询会员列表：手机号后四位精确、显示名模糊、等级精确，按会员 ID 降序 */
     @ApiOperation("查询会员列表")
     @GetMapping
-    public TableDataInfo list(@Valid MemberQuery query)
-    {
+    public TableDataInfo list(@Valid MemberQuery query) {
         PageResult<MemberListItemVO> page = memberService.page(query);
         TableDataInfo dataTable = new TableDataInfo();
         dataTable.setCode(HttpStatus.SUCCESS);
@@ -55,8 +51,7 @@ public class MemberController extends BaseController
     /** 查询会员详情：不存在 → 业务码 404「会员不存在或已被删除」 */
     @ApiOperation("查询会员详情")
     @GetMapping("/{memberId}")
-    public AjaxResult detail(@PathVariable("memberId") Long memberId)
-    {
+    public AjaxResult detail(@PathVariable("memberId") Long memberId) {
         MemberDetailVO detail = memberService.getById(memberId);
         return AjaxResult.success("查询成功", detail);
     }
@@ -64,8 +59,7 @@ public class MemberController extends BaseController
     /** 新增会员：只建档不建账号，显示名由服务端生成；成功不返回新 ID */
     @ApiOperation("新增会员")
     @PostMapping
-    public AjaxResult create(@Valid @RequestBody MemberCreateDTO dto)
-    {
+    public AjaxResult create(@Valid @RequestBody MemberCreateDTO dto) {
         memberService.create(dto);
         return success();
     }
@@ -73,8 +67,7 @@ public class MemberController extends BaseController
     /** 修改会员：只维护性别与等级，省略字段保留原值；成功返回更新后的详情 */
     @ApiOperation("修改会员")
     @PutMapping("/{memberId}")
-    public AjaxResult update(@PathVariable("memberId") Long memberId, @Valid @RequestBody MemberUpdateDTO dto)
-    {
+    public AjaxResult update(@PathVariable("memberId") Long memberId, @Valid @RequestBody MemberUpdateDTO dto) {
         MemberDetailVO detail = memberService.update(memberId, dto);
         return AjaxResult.success(detail);
     }
@@ -82,8 +75,7 @@ public class MemberController extends BaseController
     /** 删除会员：物理删除，登录凭证随行删除，既有登录态因会员不存在而失效 */
     @ApiOperation("删除会员")
     @DeleteMapping("/{memberId}")
-    public AjaxResult remove(@PathVariable("memberId") Long memberId)
-    {
+    public AjaxResult remove(@PathVariable("memberId") Long memberId) {
         memberService.delete(memberId);
         return success();
     }

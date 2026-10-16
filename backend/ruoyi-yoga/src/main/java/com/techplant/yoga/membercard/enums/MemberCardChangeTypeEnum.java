@@ -1,8 +1,10 @@
 package com.techplant.yoga.membercard.enums;
 
+import lombok.Getter;
+
 /** 会员卡次数流水类型。 */
-public enum MemberCardChangeTypeEnum
-{
+@Getter
+public enum MemberCardChangeTypeEnum {
     /** 预约扣次：change_times 为负数 */
     DEDUCT(1, "预约扣次"),
 
@@ -15,33 +17,18 @@ public enum MemberCardChangeTypeEnum
     /** 流水类型文案 */
     private final String name;
 
-    MemberCardChangeTypeEnum(Integer code, String name)
-    {
+    MemberCardChangeTypeEnum(Integer code, String name) {
         this.code = code;
         this.name = name;
     }
 
-    public Integer getCode()
-    {
-        return code;
-    }
-
-    public String getName()
-    {
-        return name;
-    }
-
     /** 按码取枚举，非法或空返回 {@code null} */
-    public static MemberCardChangeTypeEnum of(Integer code)
-    {
-        if (code == null)
-        {
+    public static MemberCardChangeTypeEnum of(Integer code) {
+        if (code == null) {
             return null;
         }
-        for (MemberCardChangeTypeEnum item : values())
-        {
-            if (item.code.equals(code))
-            {
+        for (MemberCardChangeTypeEnum item : values()) {
+            if (item.code.equals(code)) {
                 return item;
             }
         }

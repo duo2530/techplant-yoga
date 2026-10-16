@@ -33,11 +33,10 @@ import com.techplant.yoga.store.vo.StoreSummaryVO;
  * <p>计数器是编号的唯一来源，用例自行准备计数器与区域字典夹具；
  * 教室与排课服务在 {@code StoreServiceImpl} 上是延迟注入，删除门禁不在本用例覆盖范围。</p>
  */
-@ContextConfiguration(classes = { YogaMyBatisTestConfig.class, StoreDaoImpl.class, StoreRegionDictDaoImpl.class,
-        StoreServiceImpl.class })
+@ContextConfiguration(classes = {YogaMyBatisTestConfig.class, StoreDaoImpl.class, StoreRegionDictDaoImpl.class,
+    StoreServiceImpl.class})
 @DisplayName("StoreService 集成测试（Testcontainers MySQL：编号分配 / 上限 / 冲突归类 / 编号不可修改）")
-class StoreServiceImplTest extends AbstractYogaIntegrationTest
-{
+class StoreServiceImplTest extends AbstractYogaIntegrationTest {
     private static final String REGION_CODE = "310104";
 
     @Autowired
@@ -49,8 +48,7 @@ class StoreServiceImplTest extends AbstractYogaIntegrationTest
     private JdbcTemplate jdbcTemplate;
 
     @BeforeEach
-    void resetTables()
-    {
+    void resetTables() {
         YogaSchema.reset(dataSource, "t_store", "t_store_no_counter", "sys_dict_data");
         jdbcTemplate = new JdbcTemplate(dataSource);
         jdbcTemplate.update("INSERT INTO sys_dict_data (dict_sort, dict_label, dict_value, dict_type, css_class,"
@@ -60,8 +58,7 @@ class StoreServiceImplTest extends AbstractYogaIntegrationTest
 
     @Test
     @DisplayName("新增：编号从计数器递增，补零为四位；连续新增不重号")
-    void create_shouldAllocateSequentialStoreNo()
-    {
+    void create_shouldAllocateSequentialStoreNo() {
         insertCounter(3);
 
         storeService.create(createDTO("徐汇新店"));
@@ -70,18 +67,16 @@ class StoreServiceImplTest extends AbstractYogaIntegrationTest
         assertEquals("0004", storeDao.selectByName("徐汇新店").getStoreNo());
         assertEquals("0005", storeDao.selectByName("浦东新店").getStoreNo());
         assertEquals(Integer.valueOf(5), counterValue(), "计数器应随新增递增");
-        assertEquals(Integer.valueOf(1), jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM t_store WHERE store_no = '0004'", Integer.class));
+        assertEquals(Integer.valueOf(1),
+                jdbcTemplate.queryForObject("SELECT COUNT(*) FROM t_store WHERE store_no = '0004'", Integer.class));
     }
 
     @Test
     @DisplayName("新增：计数器已到 9999 → 409 编号已用尽，且不落库")
-    void create_whenCounterExhausted_shouldReportConflict()
-    {
+    void create_whenCounterExhausted_shouldReportConflict() {
         insertCounter(9999);
 
-        ServiceException exception = assertThrows(ServiceException.class,
-                () -> storeService.create(createDTO("徐汇新店")));
+        ServiceException exception = assertThrows(ServiceException.class, () -> storeService.create(createDTO("徐汇新店")));
         assertEquals(Integer.valueOf(409), exception.getCode());
         assertEquals("门店编号已用尽", exception.getMessage());
         assertNull(storeDao.selectByName("徐汇新店"));
@@ -90,10 +85,8 @@ class StoreServiceImplTest extends AbstractYogaIntegrationTest
 
     @Test
     @DisplayName("新增：计数器未初始化 → 500，不退回按门店表最大值推算")
-    void create_whenCounterMissing_shouldFail()
-    {
-        ServiceException exception = assertThrows(ServiceException.class,
-                () -> storeService.create(createDTO("徐汇新店")));
+    void create_whenCounterMissing_shouldFail() {
+        ServiceException exception = assertThrows(ServiceException.class, () -> storeService.create(createDTO("徐汇新店")));
         assertEquals(Integer.valueOf(500), exception.getCode());
         assertEquals("门店编号计数器未初始化，无法新增门店", exception.getMessage());
         assertNull(storeDao.selectByName("徐汇新店"));
@@ -101,13 +94,11 @@ class StoreServiceImplTest extends AbstractYogaIntegrationTest
 
     @Test
     @DisplayName("新增：分配到的编号已被占用（uk_store_no 兜底）→ 409 编号冲突，不与名称重复混淆")
-    void create_whenStoreNoTaken_shouldReportNoConflict()
-    {
+    void create_whenStoreNoTaken_shouldReportNoConflict() {
         insertCounter(3);
         insertStore(2001L, "0004", "已占号门店");
 
-        ServiceException exception = assertThrows(ServiceException.class,
-                () -> storeService.create(createDTO("徐汇新店")));
+        ServiceException exception = assertThrows(ServiceException.class, () -> storeService.create(createDTO("徐汇新店")));
         assertEquals(Integer.valueOf(409), exception.getCode());
         assertEquals("门店编号生成冲突，请稍后重试", exception.getMessage());
         assertNull(storeDao.selectByName("徐汇新店"));
@@ -115,13 +106,11 @@ class StoreServiceImplTest extends AbstractYogaIntegrationTest
 
     @Test
     @DisplayName("新增：名称重复 → 409 名称已存在，编号不被消耗")
-    void create_withDuplicateName_shouldReportConflict()
-    {
+    void create_withDuplicateName_shouldReportConflict() {
         insertCounter(3);
         insertStore(2001L, "0001", "徐汇店");
 
-        ServiceException exception = assertThrows(ServiceException.class,
-                () -> storeService.create(createDTO("徐汇店")));
+        ServiceException exception = assertThrows(ServiceException.class, () -> storeService.create(createDTO("徐汇店")));
         assertEquals(Integer.valueOf(409), exception.getCode());
         assertEquals("门店名称已存在", exception.getMessage());
         assertEquals(Integer.valueOf(3), counterValue(), "名称重复时不应消耗门店编号");
@@ -129,8 +118,7 @@ class StoreServiceImplTest extends AbstractYogaIntegrationTest
 
     @Test
     @DisplayName("修改：业务字段被覆盖，门店编号保持不变")
-    void update_shouldKeepStoreNo()
-    {
+    void update_shouldKeepStoreNo() {
         insertCounter(3);
         storeService.create(createDTO("徐汇新店"));
         StoreDO created = storeDao.selectByName("徐汇新店");
@@ -145,8 +133,7 @@ class StoreServiceImplTest extends AbstractYogaIntegrationTest
 
     @Test
     @DisplayName("跨模块摘要：返回 id、门店编号与名称；已删除门店不在结果中")
-    void summaries_shouldReturnStoreNo()
-    {
+    void summaries_shouldReturnStoreNo() {
         insertCounter(3);
         storeService.create(createDTO("徐汇新店"));
         StoreDO created = storeDao.selectByName("徐汇新店");
@@ -161,8 +148,7 @@ class StoreServiceImplTest extends AbstractYogaIntegrationTest
         assertEquals(0, storeService.summaries(null).size());
     }
 
-    private StoreCreateDTO createDTO(String name)
-    {
+    private StoreCreateDTO createDTO(String name) {
         StoreCreateDTO dto = new StoreCreateDTO();
         dto.setName(name);
         dto.setStoreType(1);
@@ -173,8 +159,7 @@ class StoreServiceImplTest extends AbstractYogaIntegrationTest
         return dto;
     }
 
-    private StoreUpdateDTO updateDTO(String name)
-    {
+    private StoreUpdateDTO updateDTO(String name) {
         StoreUpdateDTO dto = new StoreUpdateDTO();
         dto.setName(name);
         dto.setStoreType(2);
@@ -185,22 +170,20 @@ class StoreServiceImplTest extends AbstractYogaIntegrationTest
         return dto;
     }
 
-    private void insertCounter(int lastNo)
-    {
+    private void insertCounter(int lastNo) {
         jdbcTemplate.update("INSERT INTO t_store_no_counter (id, last_no) VALUES (1, ?)", lastNo);
     }
 
-    private Integer counterValue()
-    {
+    private Integer counterValue() {
         return jdbcTemplate.queryForObject("SELECT last_no FROM t_store_no_counter WHERE id = 1", Integer.class);
     }
 
     /** 直接落一条已占号的门店，制造 uk_store_no 冲突 */
-    private void insertStore(Long id, String storeNo, String name)
-    {
-        jdbcTemplate.update("INSERT INTO t_store (id, store_no, name, store_type, region_code, phone, business_hours,"
-                + " address, image_url, create_by, create_time, update_by, update_time) VALUES (?, ?, ?, 1, ?,"
-                + " '021-12345678', '周一至周日 09:00-22:00', '漕溪北路 88 号', NULL, 1, NOW(), 1, NOW())",
+    private void insertStore(Long id, String storeNo, String name) {
+        jdbcTemplate.update(
+                "INSERT INTO t_store (id, store_no, name, store_type, region_code, phone, business_hours,"
+                        + " address, image_url, create_by, create_time, update_by, update_time) VALUES (?, ?, ?, 1, ?,"
+                        + " '021-12345678', '周一至周日 09:00-22:00', '漕溪北路 88 号', NULL, 1, NOW(), 1, NOW())",
                 id, storeNo, name, REGION_CODE);
     }
 }

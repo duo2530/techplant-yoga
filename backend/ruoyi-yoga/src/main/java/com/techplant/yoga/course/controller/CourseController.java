@@ -1,5 +1,7 @@
 package com.techplant.yoga.course.controller;
 
+import lombok.RequiredArgsConstructor;
+
 import javax.validation.Valid;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -27,14 +29,9 @@ import io.swagger.annotations.ApiOperation;
 @Api(tags = "管理端-课程管理")
 @RestController
 @RequestMapping("/admin/courses")
-public class CourseController extends BaseController
-{
+@RequiredArgsConstructor
+public class CourseController extends BaseController {
     private final CourseService courseService;
-
-    public CourseController(CourseService courseService)
-    {
-        this.courseService = courseService;
-    }
 
     /**
      * 查询课程列表：支持名称模糊、课种筛选；不返回 intro；课种成对返回
@@ -43,8 +40,7 @@ public class CourseController extends BaseController
      */
     @ApiOperation("查询课程列表")
     @GetMapping
-    public TableDataInfo list(@Valid CourseQuery query)
-    {
+    public TableDataInfo list(@Valid CourseQuery query) {
         PageResult<CourseListItemVO> page = courseService.page(query);
         TableDataInfo dataTable = new TableDataInfo();
         dataTable.setCode(HttpStatus.SUCCESS);
@@ -59,8 +55,7 @@ public class CourseController extends BaseController
      */
     @ApiOperation("查询课程详情")
     @GetMapping("/{courseId}")
-    public AjaxResult detail(@PathVariable("courseId") Long courseId)
-    {
+    public AjaxResult detail(@PathVariable("courseId") Long courseId) {
         return AjaxResult.success(courseService.getById(courseId));
     }
 
@@ -69,8 +64,7 @@ public class CourseController extends BaseController
      */
     @ApiOperation("新增课程")
     @PostMapping
-    public AjaxResult create(@Valid @RequestBody CourseCreateDTO dto)
-    {
+    public AjaxResult create(@Valid @RequestBody CourseCreateDTO dto) {
         courseService.create(dto);
         return success();
     }
@@ -80,8 +74,7 @@ public class CourseController extends BaseController
      */
     @ApiOperation("修改课程")
     @PutMapping("/{courseId}")
-    public AjaxResult update(@PathVariable("courseId") Long courseId, @Valid @RequestBody CourseUpdateDTO dto)
-    {
+    public AjaxResult update(@PathVariable("courseId") Long courseId, @Valid @RequestBody CourseUpdateDTO dto) {
         CourseDetailVO detail = courseService.update(courseId, dto);
         return AjaxResult.success(detail);
     }
@@ -91,8 +84,7 @@ public class CourseController extends BaseController
      */
     @ApiOperation("删除课程")
     @DeleteMapping("/{courseId}")
-    public AjaxResult delete(@PathVariable("courseId") Long courseId)
-    {
+    public AjaxResult delete(@PathVariable("courseId") Long courseId) {
         courseService.delete(courseId);
         return success();
     }

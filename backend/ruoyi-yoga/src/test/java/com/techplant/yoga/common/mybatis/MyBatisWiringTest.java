@@ -20,23 +20,20 @@ import com.techplant.yoga.course.domain.CourseDO;
 import com.techplant.yoga.course.query.CourseQuery;
 
 /** MyBatis-Plus 装配的集成测试：SqlSessionFactory、分页插件与审计填充都用运行环境的配置类。 */
-@ContextConfiguration(classes = { YogaMyBatisTestConfig.class, CourseDaoImpl.class })
+@ContextConfiguration(classes = {YogaMyBatisTestConfig.class, CourseDaoImpl.class})
 @DisplayName("MyBatis-Plus 装配集成测试（Testcontainers MySQL：雪花ID / 物理删除 / 分页 / 审计填充）")
-class MyBatisWiringTest extends AbstractYogaIntegrationTest
-{
+class MyBatisWiringTest extends AbstractYogaIntegrationTest {
     @Autowired
     private CourseDao courseDao;
 
     @BeforeEach
-    void resetTable()
-    {
+    void resetTable() {
         YogaSchema.reset(dataSource, "t_course");
     }
 
     @Test
     @DisplayName("新增：主键由 MyBatis-Plus 生成（雪花ID），审计字段由 MetaObjectHandler 填充")
-    void insert_shouldGenerateSnowflakeIdAndFillAuditFields()
-    {
+    void insert_shouldGenerateSnowflakeIdAndFillAuditFields() {
         CourseDO course = new CourseDO();
         course.setName("哈他瑜伽");
         course.setCourseType(1);
@@ -55,8 +52,7 @@ class MyBatisWiringTest extends AbstractYogaIntegrationTest
 
     @Test
     @DisplayName("物理删除：deleteById 后该行真的查不到（没有 deleted 列、没有 @TableLogic）")
-    void deleteById_shouldPhysicallyRemoveRow()
-    {
+    void deleteById_shouldPhysicallyRemoveRow() {
         CourseDO course = insert("待删除课程", 1, 3);
 
         int rows = courseDao.deleteById(course.getId());
@@ -69,8 +65,7 @@ class MyBatisWiringTest extends AbstractYogaIntegrationTest
 
     @Test
     @DisplayName("详情：selectById 按主键查回全部业务字段")
-    void selectById_shouldReturnBusinessFields()
-    {
+    void selectById_shouldReturnBusinessFields() {
         CourseDO course = new CourseDO();
         course.setName("流瑜伽");
         course.setCourseType(2);
@@ -91,8 +86,7 @@ class MyBatisWiringTest extends AbstractYogaIntegrationTest
 
     @Test
     @DisplayName("列表：按 course_type 升序、同课种内 id 降序稳定排序，且列表查询不含 intro")
-    void selectPage_shouldReturnStableOrder()
-    {
+    void selectPage_shouldReturnStableOrder() {
         insert("特色课A", 4, 1);
         insert("团课B", 1, 1);
         insert("团课C", 1, 1);
@@ -114,8 +108,7 @@ class MyBatisWiringTest extends AbstractYogaIntegrationTest
 
     @Test
     @DisplayName("全量更新：显式 SET 让传 null 的字段被真正清空")
-    void updateById_shouldClearNullFields()
-    {
+    void updateById_shouldClearNullFields() {
         CourseDO course = new CourseDO();
         course.setName("哈他瑜伽");
         course.setCourseType(1);
@@ -143,8 +136,7 @@ class MyBatisWiringTest extends AbstractYogaIntegrationTest
         assertEquals(OPERATOR_ID, updated.getUpdateBy());
     }
 
-    private CourseDO insert(String name, int courseType, int difficulty)
-    {
+    private CourseDO insert(String name, int courseType, int difficulty) {
         CourseDO course = new CourseDO();
         course.setName(name);
         course.setCourseType(courseType);

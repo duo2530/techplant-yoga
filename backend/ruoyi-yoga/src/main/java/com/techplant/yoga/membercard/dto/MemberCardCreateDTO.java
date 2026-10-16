@@ -1,5 +1,8 @@
 package com.techplant.yoga.membercard.dto;
 
+import lombok.Getter;
+import lombok.Setter;
+
 import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotBlank;
@@ -15,8 +18,9 @@ import io.swagger.annotations.ApiModelProperty;
  * 只在次数卡上出现：次数卡必填，年卡必须为空，字段组合由 service 校验。</p>
  */
 @ApiModel("发卡请求")
-public class MemberCardCreateDTO
-{
+@Getter
+@Setter
+public class MemberCardCreateDTO {
     @ApiModelProperty(value = "所属会员 ID", required = true, example = "1856739201475235902")
     @NotNull(message = "所属会员不能为空")
     private Long memberId;
@@ -55,23 +59,4 @@ public class MemberCardCreateDTO
 
     @ApiModelProperty(value = "有效期数量（次数卡必填，仅 3／6／12 个月；年卡不填）", example = "12")
     private Integer validPeriodCount;
-
-    public Long getMemberId() { return memberId; }
-    public void setMemberId(Long memberId) { this.memberId = memberId; }
-    public Long getOpenStoreId() { return openStoreId; }
-    public void setOpenStoreId(Long openStoreId) { this.openStoreId = openStoreId; }
-    public String getCardName() { return cardName; }
-    public void setCardName(String cardName) { this.cardName = cardName; }
-    public Integer getCardType() { return cardType; }
-    public void setCardType(Integer cardType) { this.cardType = cardType; }
-    public Integer getCourseScope() { return courseScope; }
-    public void setCourseScope(Integer courseScope) { this.courseScope = courseScope; }
-    public Long getStoreId() { return storeId; }
-    public void setStoreId(Long storeId) { this.storeId = storeId; }
-    public Integer getPurchaseTimes() { return purchaseTimes; }
-    public void setPurchaseTimes(Integer purchaseTimes) { this.purchaseTimes = purchaseTimes; }
-    public Integer getGiftTimes() { return giftTimes; }
-    public void setGiftTimes(Integer giftTimes) { this.giftTimes = giftTimes; }
-    public Integer getValidPeriodCount() { return validPeriodCount; }
-    public void setValidPeriodCount(Integer validPeriodCount) { this.validPeriodCount = validPeriodCount; }
 }

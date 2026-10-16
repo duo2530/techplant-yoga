@@ -1,10 +1,12 @@
 package com.techplant.yoga.schedule.enums;
 
+import lombok.Getter;
+
 import java.time.LocalDateTime;
 
 /** 排课状态枚举：状态码、「已结束」的推导、两套状态文案与 {@code bookable} 都收在这一处。 */
-public enum ScheduleStatusEnum
-{
+@Getter
+public enum ScheduleStatusEnum {
     /** 1 待上架：用户端不可见，可编辑、可物理删除 */
     PENDING(1, "待上架"),
 
@@ -32,20 +34,9 @@ public enum ScheduleStatusEnum
     /** 管理端展示文案 */
     private final String adminText;
 
-    ScheduleStatusEnum(int code, String adminText)
-    {
+    ScheduleStatusEnum(int code, String adminText) {
         this.code = code;
         this.adminText = adminText;
-    }
-
-    public int getCode()
-    {
-        return code;
-    }
-
-    public String getAdminText()
-    {
-        return adminText;
     }
 
     /**
@@ -54,16 +45,12 @@ public enum ScheduleStatusEnum
      * @param code 状态码
      * @return 命中返回枚举，{@code null} 或越界返回 {@code null}
      */
-    public static ScheduleStatusEnum of(Integer code)
-    {
-        if (code == null)
-        {
+    public static ScheduleStatusEnum of(Integer code) {
+        if (code == null) {
             return null;
         }
-        for (ScheduleStatusEnum status : values())
-        {
-            if (status.code == code)
-            {
+        for (ScheduleStatusEnum status : values()) {
+            if (status.code == code) {
                 return status;
             }
         }
@@ -73,8 +60,7 @@ public enum ScheduleStatusEnum
     /**
      * 状态码是否合法（{@code 1}~{@code 3}）；{@code null} 视为不合法
      */
-    public static boolean isValid(Integer code)
-    {
+    public static boolean isValid(Integer code) {
         return of(code) != null;
     }
 
@@ -86,10 +72,8 @@ public enum ScheduleStatusEnum
      * @param now     判定基准时间（同一个请求内只用同一个 {@code now}，保证同一页数据口径一致）
      * @return 是否已结束
      */
-    public static boolean isFinished(Integer status, LocalDateTime endTime, LocalDateTime now)
-    {
-        if (status == null || endTime == null || now == null)
-        {
+    public static boolean isFinished(Integer status, LocalDateTime endTime, LocalDateTime now) {
+        if (status == null || endTime == null || now == null) {
             return false;
         }
         return status == PUBLISHED.code && !endTime.isAfter(now);
@@ -98,15 +82,12 @@ public enum ScheduleStatusEnum
     /**
      * 管理端展示文案：待上架／已上架／已取消／已结束
      */
-    public static String adminTextOf(Integer status, LocalDateTime endTime, LocalDateTime now)
-    {
+    public static String adminTextOf(Integer status, LocalDateTime endTime, LocalDateTime now) {
         ScheduleStatusEnum matched = of(status);
-        if (matched == null)
-        {
+        if (matched == null) {
             return UNKNOWN_TEXT;
         }
-        if (isFinished(status, endTime, now))
-        {
+        if (isFinished(status, endTime, now)) {
             return FINISHED_TEXT;
         }
         return matched.adminText;
@@ -117,19 +98,15 @@ public enum ScheduleStatusEnum
      *
      * <p>只可能是这三种之一；待上架（1）理论上查不到，兜底为空字符串。</p>
      */
-    public static String publicTextOf(Integer status, LocalDateTime endTime, LocalDateTime now)
-    {
+    public static String publicTextOf(Integer status, LocalDateTime endTime, LocalDateTime now) {
         ScheduleStatusEnum matched = of(status);
-        if (matched == null)
-        {
+        if (matched == null) {
             return UNKNOWN_TEXT;
         }
-        if (matched == PENDING)
-        {
+        if (matched == PENDING) {
             return INVISIBLE_TEXT;
         }
-        if (matched == CANCELLED)
-        {
+        if (matched == CANCELLED) {
             return CANCELLED.adminText;
         }
         return isFinished(status, endTime, now) ? FINISHED_TEXT : BOOKABLE_TEXT;
@@ -141,8 +118,7 @@ public enum ScheduleStatusEnum
      * <p>「今天起 14 天内」的窗口由排课服务按上课日期判定，这里只看状态、开始时间与名额。</p>
      */
     public static boolean isBookable(Integer status, LocalDateTime startTime, LocalDateTime endTime,
-            Integer remainingPlaces, LocalDateTime now)
-    {
+            Integer remainingPlaces, LocalDateTime now) {
         return status != null && status == PUBLISHED.code && startTime != null && endTime != null && now != null
                 && startTime.isAfter(now) && remainingPlaces != null && remainingPlaces > 0;
     }

@@ -5,8 +5,7 @@ import java.util.List;
 import com.techplant.yoga.schedule.vo.ScheduleBookingSnapshot;
 
 /** 排课为预约模块提供的读取与写入能力。 */
-public interface ScheduleBookingService
-{
+public interface ScheduleBookingService {
     /**
      * 锁定排课行并返回快照，调用方必须处于事务中
      *

@@ -1,5 +1,8 @@
 package com.techplant.yoga.store.vo;
 
+import lombok.Getter;
+import lombok.Setter;
+
 import java.time.LocalDateTime;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.annotations.ApiModel;
@@ -13,8 +16,9 @@ import io.swagger.annotations.ApiModelProperty;
  * 列表不裁剪，字段与 {@link StoreDetailVO} 一致。</p>
  */
 @ApiModel("门店列表项")
-public class StoreListItemVO
-{
+@Getter
+@Setter
+public class StoreListItemVO {
     @ApiModelProperty(value = "门店ID（雪花ID，字符串）", example = "1856739201475235901")
     private Long id;
 
@@ -55,31 +59,4 @@ public class StoreListItemVO
     @ApiModelProperty("更新时间")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime updateTime;
-
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
-    public String getStoreNo() { return storeNo; }
-    public void setStoreNo(String storeNo) { this.storeNo = storeNo; }
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
-    public Integer getStoreType() { return storeType; }
-    public void setStoreType(Integer storeType) { this.storeType = storeType; }
-    public String getStoreTypeName() { return storeTypeName; }
-    public void setStoreTypeName(String storeTypeName) { this.storeTypeName = storeTypeName; }
-    public String getRegionCode() { return regionCode; }
-    public void setRegionCode(String regionCode) { this.regionCode = regionCode; }
-    public String getRegionName() { return regionName; }
-    public void setRegionName(String regionName) { this.regionName = regionName; }
-    public String getPhone() { return phone; }
-    public void setPhone(String phone) { this.phone = phone; }
-    public String getBusinessHours() { return businessHours; }
-    public void setBusinessHours(String businessHours) { this.businessHours = businessHours; }
-    public String getAddress() { return address; }
-    public void setAddress(String address) { this.address = address; }
-    public String getImageUrl() { return imageUrl; }
-    public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
-    public LocalDateTime getCreateTime() { return createTime; }
-    public void setCreateTime(LocalDateTime createTime) { this.createTime = createTime; }
-    public LocalDateTime getUpdateTime() { return updateTime; }
-    public void setUpdateTime(LocalDateTime updateTime) { this.updateTime = updateTime; }
 }

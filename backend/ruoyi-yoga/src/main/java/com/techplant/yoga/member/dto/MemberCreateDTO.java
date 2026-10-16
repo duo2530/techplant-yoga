@@ -1,5 +1,8 @@
 package com.techplant.yoga.member.dto;
 
+import lombok.Getter;
+import lombok.Setter;
+
 import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotBlank;
@@ -16,8 +19,9 @@ import io.swagger.annotations.ApiModelProperty;
  * 会员等级取值由字典 {@code member_level} 校验，缺省取 0。</p>
  */
 @ApiModel("新增会员请求")
-public class MemberCreateDTO
-{
+@Getter
+@Setter
+public class MemberCreateDTO {
     @ApiModelProperty(value = "手机号", required = true, example = "13800138000")
     @NotBlank(message = "手机号不能为空")
     @Size(max = 32, message = "手机号长度不能超过 32")
@@ -31,34 +35,4 @@ public class MemberCreateDTO
 
     @ApiModelProperty(value = "会员等级，取值见字典 member_level；缺省为 0", example = "0")
     private Integer level;
-
-    public String getPhone()
-    {
-        return phone;
-    }
-
-    public void setPhone(String phone)
-    {
-        this.phone = phone;
-    }
-
-    public Integer getGender()
-    {
-        return gender;
-    }
-
-    public void setGender(Integer gender)
-    {
-        this.gender = gender;
-    }
-
-    public Integer getLevel()
-    {
-        return level;
-    }
-
-    public void setLevel(Integer level)
-    {
-        this.level = level;
-    }
 }

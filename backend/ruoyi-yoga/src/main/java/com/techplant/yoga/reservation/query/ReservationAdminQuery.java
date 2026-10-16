@@ -1,5 +1,8 @@
 package com.techplant.yoga.reservation.query;
 
+import lombok.Getter;
+import lombok.Setter;
+
 import java.time.LocalDate;
 import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
@@ -14,8 +17,9 @@ import io.swagger.annotations.ApiModelProperty;
  * <p>不限制当前门店；排序由 DAO 固定为 {@code reservation_time DESC, id DESC}。</p>
  */
 @ApiModel("预约列表查询条件")
-public class ReservationAdminQuery
-{
+@Getter
+@Setter
+public class ReservationAdminQuery {
     /** 每页条数上限 */
     public static final int MAX_PAGE_SIZE = 100;
 
@@ -59,25 +63,4 @@ public class ReservationAdminQuery
     @Min(value = 1, message = "每页条数不能小于 1")
     @Max(value = MAX_PAGE_SIZE, message = "每页条数不能超过 100")
     private Integer pageSize;
-
-    public Long getStoreId() { return storeId; }
-    public void setStoreId(Long storeId) { this.storeId = storeId; }
-    public Long getCourseId() { return courseId; }
-    public void setCourseId(Long courseId) { this.courseId = courseId; }
-    public Long getScheduleId() { return scheduleId; }
-    public void setScheduleId(Long scheduleId) { this.scheduleId = scheduleId; }
-    public Long getMemberId() { return memberId; }
-    public void setMemberId(Long memberId) { this.memberId = memberId; }
-    public Integer getStatus() { return status; }
-    public void setStatus(Integer status) { this.status = status; }
-    public Integer getCardType() { return cardType; }
-    public void setCardType(Integer cardType) { this.cardType = cardType; }
-    public LocalDate getStartDate() { return startDate; }
-    public void setStartDate(LocalDate startDate) { this.startDate = startDate; }
-    public LocalDate getEndDate() { return endDate; }
-    public void setEndDate(LocalDate endDate) { this.endDate = endDate; }
-    public Integer getPageNum() { return pageNum; }
-    public void setPageNum(Integer pageNum) { this.pageNum = pageNum; }
-    public Integer getPageSize() { return pageSize; }
-    public void setPageSize(Integer pageSize) { this.pageSize = pageSize; }
 }

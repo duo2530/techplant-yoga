@@ -12,8 +12,7 @@ import com.techplant.yoga.member.vo.LoginVO;
  * <p>覆盖发验证码、注册、登录、忘记密码；退出登录不需要业务规则，
  * 由接口层直接调 {@link MemberTokenService#revokeSession} 完成会话清理。</p>
  */
-public interface AccountService
-{
+public interface AccountService {
     /** 发送短信验证码：按场景检查已注册／未注册条件与 60 秒发送间隔 */
     void sendSmsCode(SmsCodeSendDTO dto);
 

@@ -1,5 +1,7 @@
 package com.techplant.yoga.membercard.dao;
 
+import lombok.RequiredArgsConstructor;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -10,26 +12,18 @@ import com.techplant.yoga.membercard.mapper.MemberCardTransactionMapper;
 
 /** 会员卡次数流水数据访问实现。 */
 @Repository
-public class MemberCardTransactionDaoImpl implements MemberCardTransactionDao
-{
+@RequiredArgsConstructor
+public class MemberCardTransactionDaoImpl implements MemberCardTransactionDao {
     private final MemberCardTransactionMapper memberCardTransactionMapper;
 
-    public MemberCardTransactionDaoImpl(MemberCardTransactionMapper memberCardTransactionMapper)
-    {
-        this.memberCardTransactionMapper = memberCardTransactionMapper;
-    }
-
     @Override
-    public int insert(MemberCardTransactionDO transaction)
-    {
+    public int insert(MemberCardTransactionDO transaction) {
         return memberCardTransactionMapper.insert(transaction);
     }
 
     @Override
-    public MemberCardTransactionDO selectByReservationAndType(Long reservationId, Integer changeType)
-    {
-        if (reservationId == null || changeType == null)
-        {
+    public MemberCardTransactionDO selectByReservationAndType(Long reservationId, Integer changeType) {
+        if (reservationId == null || changeType == null) {
             return null;
         }
         return memberCardTransactionMapper.selectOne(Wrappers.<MemberCardTransactionDO>lambdaQuery()
@@ -39,10 +33,8 @@ public class MemberCardTransactionDaoImpl implements MemberCardTransactionDao
 
     @Override
     public List<MemberCardTransactionDO> selectByReservationIdsAndType(Collection<Long> reservationIds,
-            Integer changeType)
-    {
-        if (reservationIds == null || reservationIds.isEmpty() || changeType == null)
-        {
+            Integer changeType) {
+        if (reservationIds == null || reservationIds.isEmpty() || changeType == null) {
             return new ArrayList<MemberCardTransactionDO>();
         }
         return memberCardTransactionMapper.selectList(Wrappers.<MemberCardTransactionDO>lambdaQuery()

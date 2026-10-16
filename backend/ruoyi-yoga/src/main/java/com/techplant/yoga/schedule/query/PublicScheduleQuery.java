@@ -1,5 +1,8 @@
 package com.techplant.yoga.schedule.query;
 
+import lombok.Getter;
+import lombok.Setter;
+
 import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotBlank;
@@ -9,8 +12,9 @@ import io.swagger.annotations.ApiModelProperty;
 
 /** 用户端排课列表查询条件。 */
 @ApiModel("用户端排课列表查询条件")
-public class PublicScheduleQuery
-{
+@Getter
+@Setter
+public class PublicScheduleQuery {
     /** 默认页码 */
     public static final int DEFAULT_PAGE_NUM = 1;
 
@@ -44,64 +48,12 @@ public class PublicScheduleQuery
     private Integer pageSize;
 
     /** 页码，未传时取默认值 */
-    public int pageNumOrDefault()
-    {
+    public int pageNumOrDefault() {
         return pageNum == null ? DEFAULT_PAGE_NUM : pageNum;
     }
 
     /** 每页条数，未传时取默认值 */
-    public int pageSizeOrDefault()
-    {
+    public int pageSizeOrDefault() {
         return pageSize == null ? DEFAULT_PAGE_SIZE : pageSize;
-    }
-
-    public Long getStoreId()
-    {
-        return storeId;
-    }
-
-    public void setStoreId(Long storeId)
-    {
-        this.storeId = storeId;
-    }
-
-    public Integer getCourseType()
-    {
-        return courseType;
-    }
-
-    public void setCourseType(Integer courseType)
-    {
-        this.courseType = courseType;
-    }
-
-    public String getDate()
-    {
-        return date;
-    }
-
-    public void setDate(String date)
-    {
-        this.date = date;
-    }
-
-    public Integer getPageNum()
-    {
-        return pageNum;
-    }
-
-    public void setPageNum(Integer pageNum)
-    {
-        this.pageNum = pageNum;
-    }
-
-    public Integer getPageSize()
-    {
-        return pageSize;
-    }
-
-    public void setPageSize(Integer pageSize)
-    {
-        this.pageSize = pageSize;
     }
 }

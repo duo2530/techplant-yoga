@@ -1,5 +1,7 @@
 package com.techplant.yoga.schedule.service.impl;
 
+import lombok.RequiredArgsConstructor;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -47,8 +49,8 @@ import com.techplant.yoga.store.vo.StoreSummaryVO;
 
 /** 排课业务实现。 */
 @Service
-public class ScheduleServiceImpl implements ScheduleService
-{
+@RequiredArgsConstructor
+public class ScheduleServiceImpl implements ScheduleService {
     /** 资源不存在 */
     private static final int NOT_FOUND = 404;
 
@@ -66,30 +68,20 @@ public class ScheduleServiceImpl implements ScheduleService
 
     private final ScheduleDao scheduleDao;
 
+    @Lazy
     private final StoreService storeService;
 
+    @Lazy
     private final ClassroomService classroomService;
 
+    @Lazy
     private final CoachService coachService;
 
+    @Lazy
     private final CourseService courseService;
 
+    @Lazy
     private final ReservationService reservationService;
-
-    public ScheduleServiceImpl(ScheduleDao scheduleDao,
-            @Lazy StoreService storeService,
-            @Lazy ClassroomService classroomService,
-            @Lazy CoachService coachService,
-            @Lazy CourseService courseService,
-            @Lazy ReservationService reservationService)
-    {
-        this.scheduleDao = scheduleDao;
-        this.storeService = storeService;
-        this.classroomService = classroomService;
-        this.coachService = coachService;
-        this.courseService = courseService;
-        this.reservationService = reservationService;
-    }
 
     // ------------------------------------------------------------------
     // 管理端：6 个接口
@@ -99,8 +91,7 @@ public class ScheduleServiceImpl implements ScheduleService
      * 查询排课列表：日期区间筛 {@code schedule_date}，名称按 ID 去重后批量补齐
      */
     @Override
-    public PageResult<ScheduleListItemVO> page(ScheduleQuery query)
-    {
+    public PageResult<ScheduleListItemVO> page(ScheduleQuery query) {
         IPage<ScheduleDO> page = scheduleDao.selectPage(query);
         List<ScheduleDO> records = page.getRecords();
         // 同一个请求只用同一个 now，保证同一页数据的派生状态口径一致
@@ -112,8 +103,7 @@ public class ScheduleServiceImpl implements ScheduleService
         Map<Long, String> classroomNames = classroomNameMap(distinctIds(records, ScheduleDO::getClassroomId));
 
         List<ScheduleListItemVO> list = new ArrayList<ScheduleListItemVO>(records.size());
-        for (ScheduleDO schedule : records)
-        {
+        for (ScheduleDO schedule : records) {
             ScheduleListItemVO vo = ScheduleConverter.toListItemVO(schedule, now);
             applyAdminNames(vo, schedule, storeNames, courseNames, coachNames, classroomNames);
             list.add(vo);
@@ -125,13 +115,11 @@ public class ScheduleServiceImpl implements ScheduleService
      * 查询排课详情：不存在或已被删除 → 404
      */
     @Override
-    public ScheduleDetailVO getById(Long scheduleId)
-    {
+    public ScheduleDetailVO getById(Long scheduleId) {
         ScheduleDO schedule = requireSchedule(scheduleId);
         LocalDateTime now = LocalDateTime.now();
         ScheduleDetailVO vo = ScheduleConverter.toDetailVO(schedule, now);
-        applyAdminNames(vo, schedule,
-                storeNameMap(Collections.singletonList(schedule.getStoreId())),
+        applyAdminNames(vo, schedule, storeNameMap(Collections.singletonList(schedule.getStoreId())),
                 courseNameMap(Collections.singletonList(schedule.getCourseId())),
                 coachNameMap(Collections.singletonList(schedule.getCoachId())),
                 classroomNameMap(Collections.singletonList(schedule.getClassroomId())));
@@ -143,8 +131,7 @@ public class ScheduleServiceImpl implements ScheduleService
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void create(ScheduleCreateDTO dto)
-    {
+    public void create(ScheduleCreateDTO dto) {
         // ① 四个对象存在（门店／课程／教练）＋ ② 教室存在且归属门店一致
         CourseSummaryVO course = validateRelations(dto.getStoreId(), dto.getCourseId(), dto.getCoachId(),
                 dto.getClassroomId());
@@ -162,8 +149,7 @@ public class ScheduleServiceImpl implements ScheduleService
 
         // 课种快照从课程复制、上课日期由开始时间推导、状态固定 1、已预约人数固定 0
         ScheduleDO schedule = ScheduleConverter.toDO(dto, course.getCourseType(), scheduleDate);
-        if (scheduleDao.insert(schedule) != 1)
-        {
+        if (scheduleDao.insert(schedule) != 1) {
             throw new ServiceException("新增排课失败", PARAM_ERROR);
         }
     }
@@ -173,12 +159,10 @@ public class ScheduleServiceImpl implements ScheduleService
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public ScheduleDetailVO update(Long scheduleId, ScheduleUpdateDTO dto)
-    {
+    public ScheduleDetailVO update(Long scheduleId, ScheduleUpdateDTO dto) {
         ScheduleDO existing = requireSchedule(scheduleId);
         // 编辑门禁：已上架须先下架；已取消与已结束是终态
-        if (!isPending(existing.getStatus()))
-        {
+        if (!isPending(existing.getStatus())) {
             throw new ServiceException("已上架／已取消／已结束的排课不可修改，请先下架", CONFLICT);
         }
 
@@ -209,10 +193,8 @@ public class ScheduleServiceImpl implements ScheduleService
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void changeStatus(Long scheduleId, Integer targetStatus)
-    {
-        if (!ScheduleStatusEnum.isValid(targetStatus))
-        {
+    public void changeStatus(Long scheduleId, Integer targetStatus) {
+        if (!ScheduleStatusEnum.isValid(targetStatus)) {
             throw new ServiceException("排课状态取值为 1~3", PARAM_ERROR);
         }
 
@@ -221,23 +203,19 @@ public class ScheduleServiceImpl implements ScheduleService
         LocalDateTime now = LocalDateTime.now();
 
         // 终态 1：已取消不可再变更状态
-        if (ScheduleStatusEnum.of(current) == ScheduleStatusEnum.CANCELLED)
-        {
+        if (ScheduleStatusEnum.of(current) == ScheduleStatusEnum.CANCELLED) {
             throw new ServiceException("已取消的排课不可再变更状态", CONFLICT);
         }
         // 终态 2：已上架且已结束（「已结束」不落库，这里用 service 层推导）
-        if (ScheduleStatusEnum.isFinished(current, schedule.getEndTime(), now))
-        {
+        if (ScheduleStatusEnum.isFinished(current, schedule.getEndTime(), now)) {
             throw new ServiceException("已结束的排课不可再变更状态", CONFLICT);
         }
         // 幂等：目标 = 当前，按成功处理
-        if (targetStatus.equals(current))
-        {
+        if (targetStatus.equals(current)) {
             return;
         }
         // 非法流转（如 1→3 待上架直接取消）
-        if (!isAllowedTransition(current, targetStatus))
-        {
+        if (!isAllowedTransition(current, targetStatus)) {
             throw new ServiceException("当前状态不允许该操作", CONFLICT);
         }
 
@@ -249,28 +227,23 @@ public class ScheduleServiceImpl implements ScheduleService
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void delete(Long scheduleId)
-    {
+    public void delete(Long scheduleId) {
         ScheduleDO schedule = requireSchedule(scheduleId);
         Integer status = schedule.getStatus();
         LocalDateTime now = LocalDateTime.now();
 
-        if (ScheduleStatusEnum.of(status) == ScheduleStatusEnum.PENDING)
-        {
+        if (ScheduleStatusEnum.of(status) == ScheduleStatusEnum.PENDING) {
             // 物理删除：本表没有 deleted 列、没有 @TableLogic
             scheduleDao.deleteById(scheduleId);
             return;
         }
-        if (ScheduleStatusEnum.isFinished(status, schedule.getEndTime(), now))
-        {
+        if (ScheduleStatusEnum.isFinished(status, schedule.getEndTime(), now)) {
             throw new ServiceException("已结束的排课不可删除", CONFLICT);
         }
-        if (ScheduleStatusEnum.of(status) == ScheduleStatusEnum.PUBLISHED)
-        {
+        if (ScheduleStatusEnum.of(status) == ScheduleStatusEnum.PUBLISHED) {
             throw new ServiceException("已上架的排课须先下架才能删除", CONFLICT);
         }
-        if (ScheduleStatusEnum.of(status) == ScheduleStatusEnum.CANCELLED)
-        {
+        if (ScheduleStatusEnum.of(status) == ScheduleStatusEnum.CANCELLED) {
             throw new ServiceException("已取消的排课不可删除", CONFLICT);
         }
         // 防御：状态码异常（理论不可达）
@@ -282,26 +255,22 @@ public class ScheduleServiceImpl implements ScheduleService
     // ------------------------------------------------------------------
 
     @Override
-    public long countActiveByStoreId(Long storeId)
-    {
+    public long countActiveByStoreId(Long storeId) {
         return scheduleDao.countActiveByStoreId(storeId);
     }
 
     @Override
-    public long countActiveByClassroomId(Long classroomId)
-    {
+    public long countActiveByClassroomId(Long classroomId) {
         return scheduleDao.countActiveByClassroomId(classroomId);
     }
 
     @Override
-    public long countActiveByCoachId(Long coachId)
-    {
+    public long countActiveByCoachId(Long coachId) {
         return scheduleDao.countActiveByCoachId(coachId);
     }
 
     @Override
-    public long countActiveByCourseId(Long courseId)
-    {
+    public long countActiveByCourseId(Long courseId) {
         return scheduleDao.countActiveByCourseId(courseId);
     }
 
@@ -314,8 +283,7 @@ public class ScheduleServiceImpl implements ScheduleService
      * 门店、课种<b>快照</b>、上课日期<b>派生列</b>
      */
     @Override
-    public PageResult<ScheduleCardVO> publicPage(PublicScheduleQuery query)
-    {
+    public PageResult<ScheduleCardVO> publicPage(PublicScheduleQuery query) {
         // 课种取值校验（码 → 名与取值校验都收在 CourseTypeEnum 一处）
         CourseTypeEnum.validate(query.getCourseType());
         // date 格式非法 / 超出今天起 14 天 → 拒绝
@@ -336,12 +304,10 @@ public class ScheduleServiceImpl implements ScheduleService
         Map<Long, String> storeNames = storeNameMap(storeIds);
 
         List<ScheduleCardVO> list = new ArrayList<ScheduleCardVO>(records.size());
-        for (ScheduleDO schedule : records)
-        {
+        for (ScheduleDO schedule : records) {
             ScheduleCardVO vo = ScheduleConverter.toCardVO(schedule, now);
             CourseSummaryVO course = courses.get(schedule.getCourseId());
-            if (course != null)
-            {
+            if (course != null) {
                 // 名称／封面／难度实时取课程（不做快照）
                 vo.setCourseName(text(course.getName()));
                 vo.setCourseCoverUrl(text(course.getCoverUrl()));
@@ -358,11 +324,9 @@ public class ScheduleServiceImpl implements ScheduleService
 
     /** 用户端排课详情：未删除且 {@code status <> 1} 才可见， 否则**一律按不存在返回 404**（不区分「不存在」与「不可见」） */
     @Override
-    public PublicScheduleDetailVO publicDetail(Long scheduleId)
-    {
+    public PublicScheduleDetailVO publicDetail(Long scheduleId) {
         ScheduleDO schedule = scheduleDao.selectVisibleById(scheduleId);
-        if (schedule == null)
-        {
+        if (schedule == null) {
             throw notFoundSchedule();
         }
 
@@ -371,8 +335,7 @@ public class ScheduleServiceImpl implements ScheduleService
 
         // 封面／介绍／难度实时取课程；课程已删除时全部按空处理
         CourseSummaryVO course = courseService.getSummary(schedule.getCourseId());
-        if (course != null)
-        {
+        if (course != null) {
             vo.setCourseName(text(course.getName()));
             vo.setCourseCoverUrl(text(course.getCoverUrl()));
             vo.setCourseIntro(text(course.getIntro()));
@@ -380,11 +343,9 @@ public class ScheduleServiceImpl implements ScheduleService
         }
 
         // 教练头像与简介只在详情页给；教练已删除时名称空字符串
-        if (schedule.getCoachId() != null)
-        {
+        if (schedule.getCoachId() != null) {
             List<CoachSummaryVO> coaches = coachService.summaries(Collections.singletonList(schedule.getCoachId()));
-            if (coaches != null && !coaches.isEmpty() && coaches.get(0) != null)
-            {
+            if (coaches != null && !coaches.isEmpty() && coaches.get(0) != null) {
                 CoachSummaryVO coach = coaches.get(0);
                 vo.setCoachName(text(coach.getName()));
                 vo.setCoachAvatarUrl(text(coach.getAvatarUrl()));
@@ -392,8 +353,7 @@ public class ScheduleServiceImpl implements ScheduleService
             }
         }
 
-        vo.setStoreName(nameOf(storeNameMap(Collections.singletonList(schedule.getStoreId())),
-                schedule.getStoreId()));
+        vo.setStoreName(nameOf(storeNameMap(Collections.singletonList(schedule.getStoreId())), schedule.getStoreId()));
         vo.setClassroomName(nameOf(classroomNameMap(Collections.singletonList(schedule.getClassroomId())),
                 schedule.getClassroomId()));
         vo.setStoreAddress(storeAddressOf(schedule.getStoreId()));
@@ -411,15 +371,13 @@ public class ScheduleServiceImpl implements ScheduleService
      *
      * @return 课程摘要（调用方要用它的 {@code courseType} 写课种快照）
      */
-    private CourseSummaryVO validateRelations(Long storeId, Long courseId, Long coachId, Long classroomId)
-    {
+    private CourseSummaryVO validateRelations(Long storeId, Long courseId, Long coachId, Long classroomId) {
         // 门店不存在 → 404「门店不存在或已被删除」（由 StoreService 抛）
         storeService.getById(storeId);
 
         // 课程不存在（含物理删除）→ getSummary 返回 null，这里补 404
         CourseSummaryVO course = courseService.getSummary(courseId);
-        if (course == null)
-        {
+        if (course == null) {
             throw new ServiceException("课程不存在或已被删除", NOT_FOUND);
         }
 
@@ -432,93 +390,73 @@ public class ScheduleServiceImpl implements ScheduleService
     }
 
     /** ③ 开始时间必须早于结束时间，且两者在同一自然日 */
-    private void validateTimeRange(LocalDateTime startTime, LocalDateTime endTime)
-    {
+    private void validateTimeRange(LocalDateTime startTime, LocalDateTime endTime) {
         if (startTime == null || endTime == null || !startTime.isBefore(endTime)
-                || !startTime.toLocalDate().equals(endTime.toLocalDate()))
-        {
+                || !startTime.toLocalDate().equals(endTime.toLocalDate())) {
             throw new ServiceException("开始时间必须早于结束时间且不能跨天", CONFLICT);
         }
     }
 
     /** ④ 最大人数 > 0；⑤ 1 <= 最低开课人数 <= 最大人数 */
-    private void validatePersons(Integer maxPersons, Integer minPersons)
-    {
-        if (maxPersons == null || maxPersons <= 0)
-        {
+    private void validatePersons(Integer maxPersons, Integer minPersons) {
+        if (maxPersons == null || maxPersons <= 0) {
             throw new ServiceException("最大人数必须大于 0", CONFLICT);
         }
-        if (minPersons == null || minPersons < 1 || minPersons > maxPersons)
-        {
+        if (minPersons == null || minPersons < 1 || minPersons > maxPersons) {
             throw new ServiceException("最低开课人数必须在 1 与最大人数之间", CONFLICT);
         }
     }
 
     /** ⑥ 上课日期必须落在今天起 14 天内（含今天） */
-    private void validateScheduleWindow(LocalDate scheduleDate)
-    {
+    private void validateScheduleWindow(LocalDate scheduleDate) {
         LocalDate today = LocalDate.now();
         LocalDate lastDay = today.plusDays(SCHEDULE_WINDOW_DAYS - 1L);
-        if (scheduleDate == null || scheduleDate.isBefore(today) || scheduleDate.isAfter(lastDay))
-        {
+        if (scheduleDate == null || scheduleDate.isBefore(today) || scheduleDate.isAfter(lastDay)) {
             throw new ServiceException("只能排今天起 14 天内的课", CONFLICT);
         }
     }
 
     /** ⑦ 同一门店＋同一课程＋完全相同的起止时间（status <> 3）不重复 */
     private void validateSameSlot(Long storeId, Long courseId, LocalDateTime startTime, LocalDateTime endTime,
-            Long excludeId)
-    {
-        if (scheduleDao.existsSameSlot(storeId, courseId, startTime, endTime, excludeId))
-        {
+            Long excludeId) {
+        if (scheduleDao.existsSameSlot(storeId, courseId, startTime, endTime, excludeId)) {
             throw new ServiceException("该门店该课程在此时间已有排课", CONFLICT);
         }
     }
 
     /** ⑧ 同一教练时间区间不相交（status <> 3） */
-    private void validateCoachOverlap(Long coachId, LocalDateTime startTime, LocalDateTime endTime, Long excludeId)
-    {
-        if (scheduleDao.existsCoachOverlap(coachId, startTime, endTime, excludeId))
-        {
+    private void validateCoachOverlap(Long coachId, LocalDateTime startTime, LocalDateTime endTime, Long excludeId) {
+        if (scheduleDao.existsCoachOverlap(coachId, startTime, endTime, excludeId)) {
             throw new ServiceException("该教练在此时间段已有排课", CONFLICT);
         }
     }
 
     /** 用户端查询窗口：date 必须落在今天起 14 天内（含今天） */
-    private void validatePublicDateWindow(LocalDate date)
-    {
+    private void validatePublicDateWindow(LocalDate date) {
         LocalDate today = LocalDate.now();
         LocalDate lastDay = today.plusDays(SCHEDULE_WINDOW_DAYS - 1L);
-        if (date.isBefore(today) || date.isAfter(lastDay))
-        {
+        if (date.isBefore(today) || date.isAfter(lastDay)) {
             throw new ServiceException("只能查今天起 14 天内的课", PARAM_ERROR);
         }
     }
 
     /** 用户端 date 解析：不是 yyyy-MM-dd → 500（提示格式非法） */
-    private LocalDate parseDate(String date)
-    {
-        if (date == null || date.trim().isEmpty())
-        {
+    private LocalDate parseDate(String date) {
+        if (date == null || date.trim().isEmpty()) {
             throw new ServiceException("日期不能为空", PARAM_ERROR);
         }
-        try
-        {
+        try {
             return LocalDate.parse(date.trim(), DATE_FORMAT);
-        }
-        catch (DateTimeParseException e)
-        {
+        } catch (DateTimeParseException e) {
             throw new ServiceException("日期格式非法，应为 yyyy-MM-dd", PARAM_ERROR);
         }
     }
 
     /** 状态流转白名单：1→2 上架、2→1 下架、2→3 取消 */
-    private boolean isAllowedTransition(Integer current, Integer target)
-    {
+    private boolean isAllowedTransition(Integer current, Integer target) {
         ScheduleStatusEnum from = ScheduleStatusEnum.of(current);
         ScheduleStatusEnum to = ScheduleStatusEnum.of(target);
-        if (from == null || to == null)
-        {
+        if (from == null || to == null) {
             return false;
         }
         return (from == ScheduleStatusEnum.PENDING && to == ScheduleStatusEnum.PUBLISHED)
@@ -526,8 +464,7 @@ public class ScheduleServiceImpl implements ScheduleService
                 || (from == ScheduleStatusEnum.PUBLISHED && to == ScheduleStatusEnum.CANCELLED);
     }
 
-    private boolean isPending(Integer status)
-    {
+    private boolean isPending(Integer status) {
         return ScheduleStatusEnum.of(status) == ScheduleStatusEnum.PENDING;
     }
 
@@ -536,19 +473,17 @@ public class ScheduleServiceImpl implements ScheduleService
      *
      * <p>只表示排课本身可约，不代表当前会员已满足卡资格。</p>
      */
-    private boolean isBookable(ScheduleDO schedule, LocalDateTime now)
-    {
+    private boolean isBookable(ScheduleDO schedule, LocalDateTime now) {
         int bookedPersons = schedule.getBookedPersons() == null ? 0 : schedule.getBookedPersons();
         int remainingPlaces = ScheduleConverter.remainingPlaces(schedule.getMaxPersons(), bookedPersons);
         if (!ScheduleStatusEnum.isBookable(schedule.getStatus(), schedule.getStartTime(), schedule.getEndTime(),
-                remainingPlaces, now))
-        {
+                remainingPlaces, now)) {
             return false;
         }
-        LocalDate scheduleDate = schedule.getScheduleDate() != null ? schedule.getScheduleDate()
+        LocalDate scheduleDate = schedule.getScheduleDate() != null
+                ? schedule.getScheduleDate()
                 : (schedule.getStartTime() == null ? null : schedule.getStartTime().toLocalDate());
-        if (scheduleDate == null)
-        {
+        if (scheduleDate == null) {
             return false;
         }
         LocalDate today = now.toLocalDate();
@@ -556,142 +491,112 @@ public class ScheduleServiceImpl implements ScheduleService
     }
 
     /** 门店地址：门店资料已删除时返回空字符串（契约允许为空，但不返回 null） */
-    private String storeAddressOf(Long storeId)
-    {
-        if (storeId == null)
-        {
+    private String storeAddressOf(Long storeId) {
+        if (storeId == null) {
             return "";
         }
         List<StoreSummaryVO> summaries = storeService.summaries(Collections.singletonList(storeId));
-        if (summaries == null || summaries.isEmpty() || summaries.get(0) == null)
-        {
+        if (summaries == null || summaries.isEmpty() || summaries.get(0) == null) {
             return "";
         }
         return text(summaries.get(0).getAddress());
     }
 
-    private ScheduleDO requireSchedule(Long scheduleId)
-    {
+    private ScheduleDO requireSchedule(Long scheduleId) {
         ScheduleDO schedule = scheduleDao.selectById(scheduleId);
-        if (schedule == null)
-        {
+        if (schedule == null) {
             throw notFoundSchedule();
         }
         return schedule;
     }
 
-    private ServiceException notFoundSchedule()
-    {
+    private ServiceException notFoundSchedule() {
         return new ServiceException("排课不存在或已被删除", NOT_FOUND);
     }
 
-
     private void applyAdminNames(ScheduleListItemVO vo, ScheduleDO schedule, Map<Long, String> storeNames,
-            Map<Long, String> courseNames, Map<Long, String> coachNames, Map<Long, String> classroomNames)
-    {
+            Map<Long, String> courseNames, Map<Long, String> coachNames, Map<Long, String> classroomNames) {
         vo.setStoreName(nameOf(storeNames, schedule.getStoreId()));
         vo.setCourseName(nameOf(courseNames, schedule.getCourseId()));
         vo.setCoachName(nameOf(coachNames, schedule.getCoachId()));
         vo.setClassroomName(nameOf(classroomNames, schedule.getClassroomId()));
     }
 
-    private Map<Long, String> storeNameMap(Collection<Long> ids)
-    {
+    private Map<Long, String> storeNameMap(Collection<Long> ids) {
         Map<Long, String> names = new HashMap<Long, String>();
         Collection<Long> effectiveIds = effectiveIds(ids);
-        if (effectiveIds.isEmpty())
-        {
+        if (effectiveIds.isEmpty()) {
             return names;
         }
         List<StoreSummaryVO> summaries = storeService.summaries(effectiveIds);
-        if (summaries == null)
-        {
+        if (summaries == null) {
             return names;
         }
-        for (StoreSummaryVO item : summaries)
-        {
-            if (item != null && item.getId() != null)
-            {
+        for (StoreSummaryVO item : summaries) {
+            if (item != null && item.getId() != null) {
                 names.put(item.getId(), text(item.getName()));
             }
         }
         return names;
     }
 
-    private Map<Long, String> courseNameMap(Collection<Long> ids)
-    {
+    private Map<Long, String> courseNameMap(Collection<Long> ids) {
         Map<Long, String> names = new HashMap<Long, String>();
         Map<Long, CourseSummaryVO> courses = courseSummaryMap(ids);
-        for (Map.Entry<Long, CourseSummaryVO> entry : courses.entrySet())
-        {
+        for (Map.Entry<Long, CourseSummaryVO> entry : courses.entrySet()) {
             names.put(entry.getKey(), text(entry.getValue().getName()));
         }
         return names;
     }
 
-    private Map<Long, CourseSummaryVO> courseSummaryMap(Collection<Long> ids)
-    {
+    private Map<Long, CourseSummaryVO> courseSummaryMap(Collection<Long> ids) {
         Map<Long, CourseSummaryVO> courses = new HashMap<Long, CourseSummaryVO>();
         Collection<Long> effectiveIds = effectiveIds(ids);
-        if (effectiveIds.isEmpty())
-        {
+        if (effectiveIds.isEmpty()) {
             return courses;
         }
         List<CourseSummaryVO> summaries = courseService.summaries(effectiveIds);
-        if (summaries == null)
-        {
+        if (summaries == null) {
             return courses;
         }
-        for (CourseSummaryVO item : summaries)
-        {
-            if (item != null && item.getId() != null)
-            {
+        for (CourseSummaryVO item : summaries) {
+            if (item != null && item.getId() != null) {
                 courses.put(item.getId(), item);
             }
         }
         return courses;
     }
 
-    private Map<Long, String> coachNameMap(Collection<Long> ids)
-    {
+    private Map<Long, String> coachNameMap(Collection<Long> ids) {
         Map<Long, String> names = new HashMap<Long, String>();
         Collection<Long> effectiveIds = effectiveIds(ids);
-        if (effectiveIds.isEmpty())
-        {
+        if (effectiveIds.isEmpty()) {
             return names;
         }
         List<CoachSummaryVO> summaries = coachService.summaries(effectiveIds);
-        if (summaries == null)
-        {
+        if (summaries == null) {
             return names;
         }
-        for (CoachSummaryVO item : summaries)
-        {
-            if (item != null && item.getId() != null)
-            {
+        for (CoachSummaryVO item : summaries) {
+            if (item != null && item.getId() != null) {
                 names.put(item.getId(), text(item.getName()));
             }
         }
         return names;
     }
 
-    private Map<Long, String> classroomNameMap(Collection<Long> ids)
-    {
+    private Map<Long, String> classroomNameMap(Collection<Long> ids) {
         Map<Long, String> names = new HashMap<Long, String>();
         Collection<Long> effectiveIds = effectiveIds(ids);
-        if (effectiveIds.isEmpty())
-        {
+        if (effectiveIds.isEmpty()) {
             return names;
         }
         List<ClassroomSummaryVO> summaries = classroomService.summaries(effectiveIds);
-        if (summaries == null)
-        {
+        if (summaries == null) {
             return names;
         }
-        for (ClassroomSummaryVO item : summaries)
-        {
-            if (item != null && item.getId() != null)
-            {
+        for (ClassroomSummaryVO item : summaries) {
+            if (item != null && item.getId() != null) {
                 names.put(item.getId(), text(item.getName()));
             }
         }
@@ -699,14 +604,11 @@ public class ScheduleServiceImpl implements ScheduleService
     }
 
     /** 按 ID 去重（批量补齐时先集合去重，避免同一对象查多次） */
-    private Set<Long> distinctIds(List<ScheduleDO> records, Function<ScheduleDO, Long> extractor)
-    {
+    private Set<Long> distinctIds(List<ScheduleDO> records, Function<ScheduleDO, Long> extractor) {
         Set<Long> ids = new HashSet<Long>();
-        for (ScheduleDO record : records)
-        {
+        for (ScheduleDO record : records) {
             Long id = extractor.apply(record);
-            if (id != null)
-            {
+            if (id != null) {
                 ids.add(id);
             }
         }
@@ -714,17 +616,13 @@ public class ScheduleServiceImpl implements ScheduleService
     }
 
     /** 去掉 null 并把唯一元素集合（含 null 的集合）过滤掉，避免用 null 当查询参数 */
-    private Collection<Long> effectiveIds(Collection<Long> ids)
-    {
-        if (ids == null || ids.isEmpty())
-        {
+    private Collection<Long> effectiveIds(Collection<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
             return Collections.emptyList();
         }
         Set<Long> effective = new HashSet<Long>();
-        for (Long id : ids)
-        {
-            if (id != null)
-            {
+        for (Long id : ids) {
+            if (id != null) {
                 effective.add(id);
             }
         }
@@ -732,18 +630,15 @@ public class ScheduleServiceImpl implements ScheduleService
     }
 
     /** 名称兜底：查不到（对象已被物理删除）返回空字符串，不是 null */
-    private String nameOf(Map<Long, String> names, Long id)
-    {
-        if (id == null)
-        {
+    private String nameOf(Map<Long, String> names, Long id) {
+        if (id == null) {
             return "";
         }
         String name = names.get(id);
         return name == null ? "" : name;
     }
 
-    private String text(String value)
-    {
+    private String text(String value) {
         return value == null ? "" : value;
     }
 }

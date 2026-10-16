@@ -1,5 +1,8 @@
 package com.techplant.yoga.coach.dto;
 
+import lombok.Getter;
+import lombok.Setter;
+
 import java.util.List;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.Size;
@@ -14,8 +17,9 @@ import io.swagger.annotations.ApiModelProperty;
  * {@code @Size(max = 5)}（{@code @Valid} 失败会走框架的 500 分支，与设计口径不符）。</p>
  */
 @ApiModel("新增教练请求")
-public class CoachCreateDTO
-{
+@Getter
+@Setter
+public class CoachCreateDTO {
     @ApiModelProperty(value = "姓名", required = true, example = "林教练")
     @NotBlank(message = "教练姓名不能为空")
     @Size(max = 32, message = "教练姓名长度不能超过 32")
@@ -36,15 +40,4 @@ public class CoachCreateDTO
     /** 相册：URL 数组，元素个数由 service 校验（> 5 → 409「相册最多 5 张」） */
     @ApiModelProperty(value = "相册，最多 5 张")
     private List<String> gallery;
-
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
-    public String getAvatarUrl() { return avatarUrl; }
-    public void setAvatarUrl(String avatarUrl) { this.avatarUrl = avatarUrl; }
-    public String getIntro() { return intro; }
-    public void setIntro(String intro) { this.intro = intro; }
-    public String getPhone() { return phone; }
-    public void setPhone(String phone) { this.phone = phone; }
-    public List<String> getGallery() { return gallery; }
-    public void setGallery(List<String> gallery) { this.gallery = gallery; }
 }

@@ -1,5 +1,8 @@
 package com.techplant.yoga.member.dto;
 
+import lombok.Getter;
+import lombok.Setter;
+
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.Pattern;
 import javax.validation.constraints.Size;
@@ -13,8 +16,9 @@ import io.swagger.annotations.ApiModelProperty;
  * 明文只经 HTTPS 提交，服务端只保存 BCrypt 哈希、永不回显。</p>
  */
 @ApiModel("注册请求")
-public class RegisterDTO
-{
+@Getter
+@Setter
+public class RegisterDTO {
     @ApiModelProperty(value = "手机号", required = true, example = "13800138000")
     @NotBlank(message = "手机号不能为空")
     @Size(max = 32, message = "手机号长度不能超过 32")
@@ -31,11 +35,4 @@ public class RegisterDTO
     @Size(min = 8, max = 20, message = "密码长度需为 8～20 位")
     @Pattern(regexp = "^(?=.*[A-Za-z])(?=.*\\d).{8,20}$", message = "密码需同时包含字母与数字")
     private String password;
-
-    public String getPhone() { return phone; }
-    public void setPhone(String phone) { this.phone = phone; }
-    public String getSmsCode() { return smsCode; }
-    public void setSmsCode(String smsCode) { this.smsCode = smsCode; }
-    public String getPassword() { return password; }
-    public void setPassword(String password) { this.password = password; }
 }

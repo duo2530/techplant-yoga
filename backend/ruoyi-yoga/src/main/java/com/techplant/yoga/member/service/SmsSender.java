@@ -1,8 +1,7 @@
 package com.techplant.yoga.member.service;
 
 /** 短信发送出口。 */
-public interface SmsSender
-{
+public interface SmsSender {
     /**
      * 发送一条验证码短信
      *

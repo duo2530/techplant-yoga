@@ -1,5 +1,7 @@
 package com.techplant.yoga.schedule.controller;
 
+import lombok.RequiredArgsConstructor;
+
 import javax.validation.Valid;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -24,20 +26,14 @@ import io.swagger.annotations.ApiOperation;
 @Validated
 @RestController
 @RequestMapping("/api/schedules")
-public class SchedulePublicController extends BaseController
-{
+@RequiredArgsConstructor
+public class SchedulePublicController extends BaseController {
     private final ScheduleService scheduleService;
-
-    public SchedulePublicController(ScheduleService scheduleService)
-    {
-        this.scheduleService = scheduleService;
-    }
 
     /** 排课列表（约课页）：按当前门店 ＋ 课种快照 ＋ 上课日期分页查询 */
     @ApiOperation("查询排课列表（约课页）")
     @GetMapping
-    public TableDataInfo list(@Valid PublicScheduleQuery query)
-    {
+    public TableDataInfo list(@Valid PublicScheduleQuery query) {
         PageResult<ScheduleCardVO> page = scheduleService.publicPage(query);
         TableDataInfo dataTable = new TableDataInfo();
         dataTable.setCode(HttpStatus.SUCCESS);
@@ -51,8 +47,7 @@ public class SchedulePublicController extends BaseController
     /** 排课详情（课程详情页）：未删除且 status<>1 才可见，否则一律 404 */
     @ApiOperation("查询排课详情（课程详情页）")
     @GetMapping("/{scheduleId}")
-    public AjaxResult detail(@PathVariable("scheduleId") Long scheduleId)
-    {
+    public AjaxResult detail(@PathVariable("scheduleId") Long scheduleId) {
         return AjaxResult.success(scheduleService.publicDetail(scheduleId));
     }
 }

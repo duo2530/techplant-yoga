@@ -8,8 +8,7 @@ import java.util.Map;
  * <p>数据来源是若依字典表 {@code sys_dict_data} 中 {@code dict_type = 'store_region'} 且
  * {@code status = '0'}（正常）的记录；本 DAO <b>只有查询</b>。</p>
  */
-public interface StoreRegionDictDao
-{
+public interface StoreRegionDictDao {
     /**
      * 查询区域字典的「code → 区名」映射
      *

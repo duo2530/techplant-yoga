@@ -24,8 +24,7 @@ import com.ruoyi.common.utils.StringUtils;
  */
 @Order(Ordered.HIGHEST_PRECEDENCE)
 @Component
-public class TraceIdFilter extends OncePerRequestFilter
-{
+public class TraceIdFilter extends OncePerRequestFilter {
     /** MDC 中的链路标识键 */
     public static final String TRACE_ID_KEY = "traceId";
 
@@ -34,21 +33,16 @@ public class TraceIdFilter extends OncePerRequestFilter
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
-            throws ServletException, IOException
-    {
+            throws ServletException, IOException {
         String traceId = request.getHeader(TRACE_ID_HEADER);
-        if (StringUtils.isEmpty(traceId))
-        {
+        if (StringUtils.isEmpty(traceId)) {
             traceId = UUID.randomUUID().toString().replace("-", "").substring(0, 8);
         }
         MDC.put(TRACE_ID_KEY, traceId);
         response.setHeader(TRACE_ID_HEADER, traceId);
-        try
-        {
+        try {
             filterChain.doFilter(request, response);
-        }
-        finally
-        {
+        } finally {
             MDC.remove(TRACE_ID_KEY);
         }
     }

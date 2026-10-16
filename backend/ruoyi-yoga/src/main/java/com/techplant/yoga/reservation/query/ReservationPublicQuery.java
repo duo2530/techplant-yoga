@@ -1,5 +1,8 @@
 package com.techplant.yoga.reservation.query;
 
+import lombok.Getter;
+import lombok.Setter;
+
 import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
@@ -13,8 +16,9 @@ import io.swagger.annotations.ApiModelProperty;
  * {@code reservation_time DESC, id DESC}。</p>
  */
 @ApiModel("我的预约查询条件")
-public class ReservationPublicQuery
-{
+@Getter
+@Setter
+public class ReservationPublicQuery {
     /** 每页条数上限 */
     public static final int MAX_PAGE_SIZE = 100;
 
@@ -38,13 +42,4 @@ public class ReservationPublicQuery
     @Min(value = 1, message = "每页条数不能小于 1")
     @Max(value = MAX_PAGE_SIZE, message = "每页条数不能超过 100")
     private Integer pageSize;
-
-    public Integer getStatus() { return status; }
-    public void setStatus(Integer status) { this.status = status; }
-    public Integer getCardType() { return cardType; }
-    public void setCardType(Integer cardType) { this.cardType = cardType; }
-    public Integer getPageNum() { return pageNum; }
-    public void setPageNum(Integer pageNum) { this.pageNum = pageNum; }
-    public Integer getPageSize() { return pageSize; }
-    public void setPageSize(Integer pageSize) { this.pageSize = pageSize; }
 }

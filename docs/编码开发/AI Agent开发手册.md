@@ -9,11 +9,49 @@
 
 ## 2、编码约定
 
-- 使用 Lombok 的 `@Data`，避免重复编写 getter/setter。
+- 使用 Lombok 的 `@Getter`、`@Setter` 替代直接读写字段的 getter/setter；包含默认值、校验或转换逻辑的访问器保留显式实现。
 - 使用 `@RequiredArgsConstructor` 与 `final` 字段完成 Bean 注入。
+- `ruoyi-yoga/lombok.config` 将字段上的 `@Lazy`、`@Value` 复制到生成的构造器参数，保留延迟依赖和配置值注入。
 - 使用 MapStruct 完成 DTO、DO、VO 转换。
 - 基础设施位置见[项目基础设施](项目基础设施.md)，技术版本见本手册 §5。
 - 业务规则、接口和数据模型以[各模块详细设计](../详细设计/)为准。
+
+### Java 格式与提交检查
+
+Java 源码统一使用 UTF-8、LF、4 空格缩进、左大括号同行，续行缩进 8 空格，目标行宽 120。
+检查规则见根目录 [checkStyle.xml](../../checkStyle.xml)，自动格式化规则见
+[eclipse-formatter.xml](../../tools/java-style/eclipse-formatter.xml)。包名、import 和包含 URL 的行不检查行宽；
+不可自动换行的长字符串或注释需要手动拆分。
+
+在仓库根目录启用提交钩子（每个克隆执行一次）：
+
+```powershell
+git config core.hooksPath .githooks
+```
+
+macOS / Linux 还需确保钩子可执行：
+
+```bash
+chmod +x .githooks/pre-commit
+```
+
+提交时自动格式化暂存的后端 Java 源码（包含测试源码），检查通过后重新暂存格式化结果。
+部分暂存的 Java 文件会阻止提交，请先完整暂存该文件或取消暂存。格式化和检查先在临时目录执行，
+失败时不回写源码。仅修改前端或文档时不会启动 Maven。首次运行需要联网下载插件，环境需提供 Maven、JDK 8 或更高版本。
+钩子通过 Bash 执行，兼容 macOS 自带的 Bash 3.2、Linux Bash 和 Windows 的 Git Bash，无需安装 PowerShell。
+
+手动格式化整个后端，或只检查格式：
+
+```powershell
+mvn -f tools/java-style/pom.xml formatter:format checkstyle:check
+mvn -f tools/java-style/pom.xml formatter:validate checkstyle:check
+```
+
+手动命令覆盖所有后端模块的 `src/main/java` 和 `src/test/java`，可能产生大范围格式差异。
+提交钩子只处理本次暂存文件，因此未迁移的历史源码不会阻止无关提交。该独立工具 POM 不改变后端业务构建。
+
+IntelliJ IDEA 可通过 Eclipse Code Formatter 插件导入格式化规则，通过 CheckStyle-IDEA 插件导入
+`checkStyle.xml`（Checkstyle 9.3）。提交钩子使用相同的仓库配置，IDE 内提交也会执行。
 
 ## 3、后端分层
 

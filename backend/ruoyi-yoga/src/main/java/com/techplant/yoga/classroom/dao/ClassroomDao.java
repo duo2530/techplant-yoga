@@ -7,8 +7,7 @@ import com.techplant.yoga.classroom.domain.ClassroomDO;
 import com.techplant.yoga.classroom.query.ClassroomQuery;
 
 /** 教室数据访问。 */
-public interface ClassroomDao
-{
+public interface ClassroomDao {
     /**
      * 分页查询教室列表，按 {@code store_id ASC, name ASC, id DESC} 稳定排序
      */

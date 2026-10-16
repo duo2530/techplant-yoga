@@ -8,11 +8,9 @@ import com.techplant.yoga.common.util.CurrentUserUtils;
 
 /** 审计字段自动填充。 */
 @Component
-public class AuditMetaObjectHandler implements MetaObjectHandler
-{
+public class AuditMetaObjectHandler implements MetaObjectHandler {
     @Override
-    public void insertFill(MetaObject metaObject)
-    {
+    public void insertFill(MetaObject metaObject) {
         LocalDateTime now = LocalDateTime.now();
         Long operator = CurrentUserUtils.getUserIdOrNull();
         strictInsertFill(metaObject, "createTime", LocalDateTime.class, now);
@@ -22,8 +20,7 @@ public class AuditMetaObjectHandler implements MetaObjectHandler
     }
 
     @Override
-    public void updateFill(MetaObject metaObject)
-    {
+    public void updateFill(MetaObject metaObject) {
         LocalDateTime now = LocalDateTime.now();
         Long operator = CurrentUserUtils.getUserIdOrNull();
         strictUpdateFill(metaObject, "updateTime", LocalDateTime.class, now);

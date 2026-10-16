@@ -1,5 +1,8 @@
 package com.techplant.yoga.schedule.query;
 
+import lombok.Getter;
+import lombok.Setter;
+
 import java.time.LocalDate;
 import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
@@ -9,8 +12,9 @@ import io.swagger.annotations.ApiModelProperty;
 
 /** 管理端排课列表查询条件。 */
 @ApiModel("排课列表查询条件")
-public class ScheduleQuery
-{
+@Getter
+@Setter
+public class ScheduleQuery {
     /** 默认页码 */
     public static final int DEFAULT_PAGE_NUM = 1;
 
@@ -60,104 +64,12 @@ public class ScheduleQuery
     private Integer pageSize;
 
     /** 页码，未传时取默认值 */
-    public int pageNumOrDefault()
-    {
+    public int pageNumOrDefault() {
         return pageNum == null ? DEFAULT_PAGE_NUM : pageNum;
     }
 
     /** 每页条数，未传时取默认值 */
-    public int pageSizeOrDefault()
-    {
+    public int pageSizeOrDefault() {
         return pageSize == null ? DEFAULT_PAGE_SIZE : pageSize;
-    }
-
-    public Long getStoreId()
-    {
-        return storeId;
-    }
-
-    public void setStoreId(Long storeId)
-    {
-        this.storeId = storeId;
-    }
-
-    public Long getCourseId()
-    {
-        return courseId;
-    }
-
-    public void setCourseId(Long courseId)
-    {
-        this.courseId = courseId;
-    }
-
-    public Integer getCourseType()
-    {
-        return courseType;
-    }
-
-    public void setCourseType(Integer courseType)
-    {
-        this.courseType = courseType;
-    }
-
-    public Long getCoachId()
-    {
-        return coachId;
-    }
-
-    public void setCoachId(Long coachId)
-    {
-        this.coachId = coachId;
-    }
-
-    public LocalDate getStartDate()
-    {
-        return startDate;
-    }
-
-    public void setStartDate(LocalDate startDate)
-    {
-        this.startDate = startDate;
-    }
-
-    public LocalDate getEndDate()
-    {
-        return endDate;
-    }
-
-    public void setEndDate(LocalDate endDate)
-    {
-        this.endDate = endDate;
-    }
-
-    public Integer getStatus()
-    {
-        return status;
-    }
-
-    public void setStatus(Integer status)
-    {
-        this.status = status;
-    }
-
-    public Integer getPageNum()
-    {
-        return pageNum;
-    }
-
-    public void setPageNum(Integer pageNum)
-    {
-        this.pageNum = pageNum;
-    }
-
-    public Integer getPageSize()
-    {
-        return pageSize;
-    }
-
-    public void setPageSize(Integer pageSize)
-    {
-        this.pageSize = pageSize;
     }
 }

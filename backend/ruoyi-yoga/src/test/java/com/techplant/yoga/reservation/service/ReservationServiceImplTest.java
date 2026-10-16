@@ -72,16 +72,15 @@ import com.techplant.yoga.store.service.impl.StoreServiceImpl;
  * <p>会员、会员卡、排课、课程、教练与门店都走真实 Service 与真实 SQL，不模拟内部调用；
  * 预约、扣返次、占位与流水的联动在同一事务里验证。</p>
  */
-@ContextConfiguration(classes = { YogaMyBatisTestConfig.class, StoreDaoImpl.class, StoreRegionDictDaoImpl.class,
-        StoreServiceImpl.class, ClassroomDaoImpl.class, ClassroomServiceImpl.class, CoachDaoImpl.class,
-        CoachServiceImpl.class, CourseDaoImpl.class, CourseServiceImpl.class, MemberDaoImpl.class,
-        MemberLevelDictDaoImpl.class, MemberServiceImpl.class, MemberCardDaoImpl.class,
-        MemberCardTransactionDaoImpl.class, MemberCardTransactionServiceImpl.class, CardNoGenerator.class,
-        MemberCardServiceImpl.class, ScheduleDaoImpl.class, ScheduleBookingServiceImpl.class, ScheduleServiceImpl.class,
-        ReservationDaoImpl.class, ReservationServiceImpl.class })
+@ContextConfiguration(classes = {YogaMyBatisTestConfig.class, StoreDaoImpl.class, StoreRegionDictDaoImpl.class,
+    StoreServiceImpl.class, ClassroomDaoImpl.class, ClassroomServiceImpl.class, CoachDaoImpl.class,
+    CoachServiceImpl.class, CourseDaoImpl.class, CourseServiceImpl.class, MemberDaoImpl.class,
+    MemberLevelDictDaoImpl.class, MemberServiceImpl.class, MemberCardDaoImpl.class, MemberCardTransactionDaoImpl.class,
+    MemberCardTransactionServiceImpl.class, CardNoGenerator.class, MemberCardServiceImpl.class, ScheduleDaoImpl.class,
+    ScheduleBookingServiceImpl.class, ScheduleServiceImpl.class, ReservationDaoImpl.class,
+    ReservationServiceImpl.class})
 @DisplayName("ReservationService 集成测试（Testcontainers MySQL：预约 / 取消 / 签到 / 扣返次 / 占位 / 我的预约）")
-class ReservationServiceImplTest extends AbstractYogaIntegrationTest
-{
+class ReservationServiceImplTest extends AbstractYogaIntegrationTest {
     private static final ZoneId BUSINESS_ZONE = ZoneId.of("Asia/Shanghai");
 
     private static final Long STORE_ID = 1000L;
@@ -166,8 +165,7 @@ class ReservationServiceImplTest extends AbstractYogaIntegrationTest
     private JdbcTemplate jdbcTemplate;
 
     @BeforeEach
-    void resetTables()
-    {
+    void resetTables() {
         YogaSchema.reset(dataSource, "t_reservation", "t_member_card_transaction", "t_member_card", "t_schedule",
                 "t_course", "t_coach", "t_classroom", "t_store", "t_member");
         jdbcTemplate = new JdbcTemplate(dataSource);
@@ -182,27 +180,27 @@ class ReservationServiceImplTest extends AbstractYogaIntegrationTest
 
     @Test
     @DisplayName("预约课程：次数卡按人数扣次、排课占位、预约与扣次流水同事务落库")
-    void create_withTimesCard_shouldOccupyAndDeduct()
-    {
+    void create_withTimesCard_shouldOccupyAndDeduct() {
         create(REQUEST_ID, SCHEDULE_ID, TIMES_CARD_ID, 2);
 
         assertEquals(1, countReservations(), "预约只写入一条");
         assertEquals(Integer.valueOf(2), intOf("SELECT booked_persons FROM t_schedule WHERE id = ?", SCHEDULE_ID),
                 "排课占位按人数累加");
-        assertEquals(Integer.valueOf(10), intOf("SELECT remaining_times FROM t_member_card WHERE id = ?",
-                TIMES_CARD_ID), "次数卡扣 2 次");
-        assertEquals(Integer.valueOf(10), intOf("SELECT after_times FROM t_member_card_transaction"
-                + " WHERE reservation_id = ? AND change_type = 1", reservationId()), "扣次流水记录扣后余额");
-        assertEquals(Integer.valueOf(-2), intOf("SELECT change_times FROM t_member_card_transaction"
-                + " WHERE reservation_id = ? AND change_type = 1", reservationId()));
+        assertEquals(Integer.valueOf(10),
+                intOf("SELECT remaining_times FROM t_member_card WHERE id = ?", TIMES_CARD_ID), "次数卡扣 2 次");
+        assertEquals(Integer.valueOf(10), intOf(
+                "SELECT after_times FROM t_member_card_transaction" + " WHERE reservation_id = ? AND change_type = 1",
+                reservationId()), "扣次流水记录扣后余额");
+        assertEquals(Integer.valueOf(-2), intOf(
+                "SELECT change_times FROM t_member_card_transaction" + " WHERE reservation_id = ? AND change_type = 1",
+                reservationId()));
         assertEquals(Integer.valueOf(1), intOf("SELECT status FROM t_reservation WHERE id = ?", reservationId()),
                 "初始状态为已预约");
     }
 
     @Test
     @DisplayName("预约课程：同一个 requestId 且参数一致视为成功，不重复创建、占位或扣次")
-    void create_withSameRequestId_shouldBeIdempotent()
-    {
+    void create_withSameRequestId_shouldBeIdempotent() {
         create(REQUEST_ID, SCHEDULE_ID, TIMES_CARD_ID, 1);
         Long firstId = reservationId();
         create(REQUEST_ID, SCHEDULE_ID, TIMES_CARD_ID, 1);
@@ -210,15 +208,14 @@ class ReservationServiceImplTest extends AbstractYogaIntegrationTest
         assertEquals(1, countReservations());
         assertEquals(firstId, reservationId(), "幂等重试返回原预约");
         assertEquals(Integer.valueOf(1), intOf("SELECT booked_persons FROM t_schedule WHERE id = ?", SCHEDULE_ID));
-        assertEquals(Integer.valueOf(11), intOf("SELECT remaining_times FROM t_member_card WHERE id = ?",
-                TIMES_CARD_ID));
+        assertEquals(Integer.valueOf(11),
+                intOf("SELECT remaining_times FROM t_member_card WHERE id = ?", TIMES_CARD_ID));
         assertEquals(1, countOf("SELECT COUNT(*) FROM t_member_card_transaction"));
     }
 
     @Test
     @DisplayName("预约课程：同一个 requestId 换排课或换人数按冲突返回")
-    void create_withSameRequestIdButDifferentParams_shouldConflict()
-    {
+    void create_withSameRequestIdButDifferentParams_shouldConflict() {
         create(REQUEST_ID, SCHEDULE_ID, TIMES_CARD_ID, 1);
 
         ServiceException changedPersons = assertThrows(ServiceException.class,
@@ -235,66 +232,47 @@ class ReservationServiceImplTest extends AbstractYogaIntegrationTest
 
     @Test
     @DisplayName("预约课程：年卡不扣次，人数只能为 1")
-    void create_withYearCard_shouldSkipDeductAndRejectMultiplePersons()
-    {
+    void create_withYearCard_shouldSkipDeductAndRejectMultiplePersons() {
         create(REQUEST_ID, SCHEDULE_ID, YEAR_CARD_ID, 1);
 
         assertEquals(0, countOf("SELECT COUNT(*) FROM t_member_card_transaction"), "年卡不产生次数流水");
         assertEquals(Integer.valueOf(1), intOf("SELECT booked_persons FROM t_schedule WHERE id = ?", SCHEDULE_ID));
 
-        assertMessage(409, "年卡预约人数只能为 1",
-                () -> create(OTHER_REQUEST_ID, SCHEDULE_SECOND_ID, YEAR_CARD_ID, 2));
+        assertMessage(409, "年卡预约人数只能为 1", () -> create(OTHER_REQUEST_ID, SCHEDULE_SECOND_ID, YEAR_CARD_ID, 2));
     }
 
     @Test
     @DisplayName("预约课程：待上架排课按不存在处理，已取消与已开始返回冲突")
-    void create_withUnusableSchedule_shouldReject()
-    {
-        assertMessage(404, "排课不存在或已被删除",
-                () -> create(REQUEST_ID, SCHEDULE_PENDING_ID, TIMES_CARD_ID, 1));
-        assertMessage(409, "排课已取消，不能预约",
-                () -> create(REQUEST_ID, SCHEDULE_CANCELLED_ID, TIMES_CARD_ID, 1));
-        assertMessage(409, "排课已开始或已结束，不能预约",
-                () -> create(REQUEST_ID, SCHEDULE_STARTED_ID, TIMES_CARD_ID, 1));
-        assertMessage(404, "排课不存在或已被删除",
-                () -> create(REQUEST_ID, 999999L, TIMES_CARD_ID, 1));
+    void create_withUnusableSchedule_shouldReject() {
+        assertMessage(404, "排课不存在或已被删除", () -> create(REQUEST_ID, SCHEDULE_PENDING_ID, TIMES_CARD_ID, 1));
+        assertMessage(409, "排课已取消，不能预约", () -> create(REQUEST_ID, SCHEDULE_CANCELLED_ID, TIMES_CARD_ID, 1));
+        assertMessage(409, "排课已开始或已结束，不能预约", () -> create(REQUEST_ID, SCHEDULE_STARTED_ID, TIMES_CARD_ID, 1));
+        assertMessage(404, "排课不存在或已被删除", () -> create(REQUEST_ID, 999999L, TIMES_CARD_ID, 1));
         assertEquals(0, countReservations());
     }
 
     @Test
     @DisplayName("预约课程：未开卡、已停卡、已过期、门店或课种不适用与不属于本人的卡都拒绝")
-    void create_withUnusableCard_shouldReject()
-    {
-        assertMessage(409, "会员卡未开卡，不能预约",
-                () -> create(REQUEST_ID, SCHEDULE_ID, PENDING_CARD_ID, 1));
-        assertMessage(409, "会员卡已停卡，不能预约",
-                () -> create(REQUEST_ID, SCHEDULE_ID, STOPPED_CARD_ID, 1));
-        assertMessage(409, "会员卡已过期，不能预约",
-                () -> create(REQUEST_ID, SCHEDULE_ID, EXPIRED_CARD_ID, 1));
-        assertMessage(409, "会员卡不适用于该门店",
-                () -> create(REQUEST_ID, SCHEDULE_ID, OTHER_STORE_CARD_ID, 1));
-        assertMessage(409, "会员卡不适用于该课程",
-                () -> create(REQUEST_ID, SCHEDULE_PERSONAL_ID, TIMES_CARD_ID, 1));
-        assertMessage(409, "会员卡不适用于该课程",
-                () -> create(REQUEST_ID, SCHEDULE_ID, PERSONAL_CARD_ID, 1));
-        assertMessage(404, "会员卡不存在或不属于本人",
-                () -> create(REQUEST_ID, SCHEDULE_ID, OTHER_MEMBER_CARD_ID, 1));
-        assertMessage(404, "会员卡不存在或不属于本人",
-                () -> create(REQUEST_ID, SCHEDULE_ID, 999999L, 1));
+    void create_withUnusableCard_shouldReject() {
+        assertMessage(409, "会员卡未开卡，不能预约", () -> create(REQUEST_ID, SCHEDULE_ID, PENDING_CARD_ID, 1));
+        assertMessage(409, "会员卡已停卡，不能预约", () -> create(REQUEST_ID, SCHEDULE_ID, STOPPED_CARD_ID, 1));
+        assertMessage(409, "会员卡已过期，不能预约", () -> create(REQUEST_ID, SCHEDULE_ID, EXPIRED_CARD_ID, 1));
+        assertMessage(409, "会员卡不适用于该门店", () -> create(REQUEST_ID, SCHEDULE_ID, OTHER_STORE_CARD_ID, 1));
+        assertMessage(409, "会员卡不适用于该课程", () -> create(REQUEST_ID, SCHEDULE_PERSONAL_ID, TIMES_CARD_ID, 1));
+        assertMessage(409, "会员卡不适用于该课程", () -> create(REQUEST_ID, SCHEDULE_ID, PERSONAL_CARD_ID, 1));
+        assertMessage(404, "会员卡不存在或不属于本人", () -> create(REQUEST_ID, SCHEDULE_ID, OTHER_MEMBER_CARD_ID, 1));
+        assertMessage(404, "会员卡不存在或不属于本人", () -> create(REQUEST_ID, SCHEDULE_ID, 999999L, 1));
         assertEquals(0, countReservations());
         assertEquals(Integer.valueOf(0), intOf("SELECT booked_persons FROM t_schedule WHERE id = ?", SCHEDULE_ID));
     }
 
     @Test
     @DisplayName("预约课程：同排课重复预约与同会员时间冲突都返回冲突")
-    void create_withDuplicateOrOverlapping_shouldConflict()
-    {
+    void create_withDuplicateOrOverlapping_shouldConflict() {
         create(REQUEST_ID, SCHEDULE_ID, TIMES_CARD_ID, 1);
 
-        assertMessage(409, "您已预约该课程",
-                () -> create(OTHER_REQUEST_ID, SCHEDULE_ID, TIMES_CARD_ID, 1));
-        assertMessage(409, "该时间段已有其他预约",
-                () -> create(OTHER_REQUEST_ID, SCHEDULE_OVERLAP_ID, TIMES_CARD_ID, 1));
+        assertMessage(409, "您已预约该课程", () -> create(OTHER_REQUEST_ID, SCHEDULE_ID, TIMES_CARD_ID, 1));
+        assertMessage(409, "该时间段已有其他预约", () -> create(OTHER_REQUEST_ID, SCHEDULE_OVERLAP_ID, TIMES_CARD_ID, 1));
         assertEquals(1, countReservations());
 
         // 已取消后可以重新预约同一排课
@@ -305,35 +283,27 @@ class ReservationServiceImplTest extends AbstractYogaIntegrationTest
 
     @Test
     @DisplayName("预约课程：人数超过剩余名额返回冲突，且不写名额与余额")
-    void create_withInsufficientPlaces_shouldConflict()
-    {
-        assertMessage(409, "剩余名额不足，不能预约",
-                () -> create(REQUEST_ID, SCHEDULE_FULL_ID, TIMES_CARD_ID, 2));
+    void create_withInsufficientPlaces_shouldConflict() {
+        assertMessage(409, "剩余名额不足，不能预约", () -> create(REQUEST_ID, SCHEDULE_FULL_ID, TIMES_CARD_ID, 2));
 
         assertEquals(0, countReservations());
-        assertEquals(Integer.valueOf(0), intOf("SELECT booked_persons FROM t_schedule WHERE id = ?",
-                SCHEDULE_FULL_ID));
-        assertEquals(Integer.valueOf(12), intOf("SELECT remaining_times FROM t_member_card WHERE id = ?",
-                TIMES_CARD_ID));
+        assertEquals(Integer.valueOf(0), intOf("SELECT booked_persons FROM t_schedule WHERE id = ?", SCHEDULE_FULL_ID));
+        assertEquals(Integer.valueOf(12),
+                intOf("SELECT remaining_times FROM t_member_card WHERE id = ?", TIMES_CARD_ID));
     }
 
     @Test
     @DisplayName("预约课程：参数格式非法返回参数错误")
-    void create_withIllegalParams_shouldFail()
-    {
-        assertMessage(500, "请求幂等标识格式非法，应为 UUID",
-                () -> create("not-a-uuid", SCHEDULE_ID, TIMES_CARD_ID, 1));
-        assertMessage(500, "预约人数必须大于 0",
-                () -> create(REQUEST_ID, SCHEDULE_ID, TIMES_CARD_ID, 0));
-        assertMessage(500, "排课ID格式非法",
-                () -> create(REQUEST_ID, 0L, TIMES_CARD_ID, 1));
+    void create_withIllegalParams_shouldFail() {
+        assertMessage(500, "请求幂等标识格式非法，应为 UUID", () -> create("not-a-uuid", SCHEDULE_ID, TIMES_CARD_ID, 1));
+        assertMessage(500, "预约人数必须大于 0", () -> create(REQUEST_ID, SCHEDULE_ID, TIMES_CARD_ID, 0));
+        assertMessage(500, "排课ID格式非法", () -> create(REQUEST_ID, 0L, TIMES_CARD_ID, 1));
         assertEquals(0, countReservations());
     }
 
     @Test
     @DisplayName("取消预约：释放名额、按原扣次返次并写返次流水；重复取消幂等")
-    void cancel_shouldReleaseAndRefund()
-    {
+    void cancel_shouldReleaseAndRefund() {
         create(REQUEST_ID, SCHEDULE_ID, TIMES_CARD_ID, 2);
         Long id = reservationId();
 
@@ -344,31 +314,31 @@ class ReservationServiceImplTest extends AbstractYogaIntegrationTest
         assertNotNull(jdbcTemplate.queryForObject("SELECT cancel_time FROM t_reservation WHERE id = ?",
                 LocalDateTime.class, id));
         assertEquals(Integer.valueOf(0), intOf("SELECT booked_persons FROM t_schedule WHERE id = ?", SCHEDULE_ID));
-        assertEquals(Integer.valueOf(12), intOf("SELECT remaining_times FROM t_member_card WHERE id = ?",
-                TIMES_CARD_ID), "返次按原扣次流水次数返还");
-        assertEquals(Integer.valueOf(2), intOf("SELECT change_times FROM t_member_card_transaction"
-                + " WHERE reservation_id = ? AND change_type = 2", id));
-        assertEquals(Integer.valueOf(12), intOf("SELECT after_times FROM t_member_card_transaction"
-                + " WHERE reservation_id = ? AND change_type = 2", id));
+        assertEquals(Integer.valueOf(12),
+                intOf("SELECT remaining_times FROM t_member_card WHERE id = ?", TIMES_CARD_ID), "返次按原扣次流水次数返还");
+        assertEquals(Integer.valueOf(2), intOf(
+                "SELECT change_times FROM t_member_card_transaction" + " WHERE reservation_id = ? AND change_type = 2",
+                id));
+        assertEquals(Integer.valueOf(12), intOf(
+                "SELECT after_times FROM t_member_card_transaction" + " WHERE reservation_id = ? AND change_type = 2",
+                id));
 
         reservationService.cancel(MEMBER_ID, id);
-        assertEquals(Integer.valueOf(12), intOf("SELECT remaining_times FROM t_member_card WHERE id = ?",
-                TIMES_CARD_ID), "重复取消不重复返次");
+        assertEquals(Integer.valueOf(12),
+                intOf("SELECT remaining_times FROM t_member_card WHERE id = ?", TIMES_CARD_ID), "重复取消不重复返次");
         assertEquals(1, countOf("SELECT COUNT(*) FROM t_member_card_transaction WHERE change_type = 2"));
     }
 
     @Test
     @DisplayName("取消预约：已签到、超过截止时间与不属于本人都拒绝")
-    void cancel_shouldRejectIllegalState()
-    {
+    void cancel_shouldRejectIllegalState() {
         create(REQUEST_ID, SCHEDULE_SOON_ID, TIMES_CARD_ID, 1);
         Long id = reservationId();
         reservationService.checkIn(MEMBER_ID, id);
         assertMessage(409, "已签到的预约不能取消", () -> reservationService.cancel(MEMBER_ID, id));
 
         create(SECOND_REQUEST_ID, SCHEDULE_CANCEL_WINDOW_ID, TIMES_CARD_ID, 1);
-        assertMessage(409, "已超过取消截止时间，不能取消预约",
-                () -> reservationService.cancel(MEMBER_ID, reservationId()));
+        assertMessage(409, "已超过取消截止时间，不能取消预约", () -> reservationService.cancel(MEMBER_ID, reservationId()));
 
         assertMessage(404, "预约不存在或已被删除", () -> reservationService.cancel(OTHER_MEMBER_ID, id));
         assertMessage(404, "预约不存在或已被删除", () -> reservationService.cancel(MEMBER_ID, 999999L));
@@ -376,8 +346,7 @@ class ReservationServiceImplTest extends AbstractYogaIntegrationTest
 
     @Test
     @DisplayName("预约签到：窗口内写状态与签到时间，重复签到幂等；未到窗口与课程已结束都拒绝")
-    void checkIn_shouldWriteStatusAndRejectOutOfWindow()
-    {
+    void checkIn_shouldWriteStatusAndRejectOutOfWindow() {
         create(REQUEST_ID, SCHEDULE_SOON_ID, TIMES_CARD_ID, 1);
         Long id = reservationId();
 
@@ -385,10 +354,11 @@ class ReservationServiceImplTest extends AbstractYogaIntegrationTest
         assertEquals(Integer.valueOf(3), intOf("SELECT status FROM t_reservation WHERE id = ?", id));
         assertNotNull(jdbcTemplate.queryForObject("SELECT check_in_time FROM t_reservation WHERE id = ?",
                 LocalDateTime.class, id));
-        assertEquals(1, countOf("SELECT COUNT(*) FROM t_member_card_transaction WHERE change_type = 1"
-                + " AND reservation_id = " + id), "签到不再产生扣次流水");
-        assertEquals(Integer.valueOf(11), intOf("SELECT remaining_times FROM t_member_card WHERE id = ?",
-                TIMES_CARD_ID), "签到不重复扣次");
+        assertEquals(1, countOf(
+                "SELECT COUNT(*) FROM t_member_card_transaction WHERE change_type = 1" + " AND reservation_id = " + id),
+                "签到不再产生扣次流水");
+        assertEquals(Integer.valueOf(11),
+                intOf("SELECT remaining_times FROM t_member_card WHERE id = ?", TIMES_CARD_ID), "签到不重复扣次");
 
         reservationService.checkIn(MEMBER_ID, id);
         assertEquals(Integer.valueOf(3), intOf("SELECT status FROM t_reservation WHERE id = ?", id), "重复签到幂等");
@@ -404,11 +374,11 @@ class ReservationServiceImplTest extends AbstractYogaIntegrationTest
 
     @Test
     @DisplayName("我的预约：按状态与卡类型筛选，倒序稳定排序，关联资料缺失时字段为空")
-    void pageForMember_shouldFilterAndAssemble()
-    {
+    void pageForMember_shouldFilterAndAssemble() {
         LocalDateTime base = LocalDateTime.now(BUSINESS_ZONE).withNano(0);
         insertReservation(9101L, REQUEST_ID, MEMBER_ID, SCHEDULE_ID, TIMES_CARD_ID, 1, 1, base.minusDays(2));
-        insertReservation(9102L, OTHER_REQUEST_ID, MEMBER_ID, SCHEDULE_SECOND_ID, YEAR_CARD_ID, 1, 3, base.minusDays(1));
+        insertReservation(9102L, OTHER_REQUEST_ID, MEMBER_ID, SCHEDULE_SECOND_ID, YEAR_CARD_ID, 1, 3,
+                base.minusDays(1));
         insertReservation(9103L, SECOND_REQUEST_ID, MEMBER_ID, SCHEDULE_OVERLAP_ID, TIMES_CARD_ID, 1, 2, base);
         insertReservation(9104L, THIRD_REQUEST_ID, OTHER_MEMBER_ID, SCHEDULE_ID, OTHER_MEMBER_CARD_ID, 1, 1, base);
 
@@ -443,16 +413,13 @@ class ReservationServiceImplTest extends AbstractYogaIntegrationTest
         assertTrue(empty.getList().isEmpty());
         assertEquals(Long.valueOf(3), empty.getTotal());
 
-        assertMessage(500, "预约状态取值为 1、2 或 3",
-                () -> reservationService.pageForMember(MEMBER_ID, query(9, null)));
-        assertMessage(500, "卡类型取值为 1 或 2",
-                () -> reservationService.pageForMember(MEMBER_ID, query(null, 9)));
+        assertMessage(500, "预约状态取值为 1、2 或 3", () -> reservationService.pageForMember(MEMBER_ID, query(9, null)));
+        assertMessage(500, "卡类型取值为 1 或 2", () -> reservationService.pageForMember(MEMBER_ID, query(null, 9)));
     }
 
     @Test
     @DisplayName("我的预约：课程已删除时名称与封面为空，关联门店已删除时地址为空")
-    void pageForMember_withDeletedRelations_shouldReturnNullFields()
-    {
+    void pageForMember_withDeletedRelations_shouldReturnNullFields() {
         insertReservation(9201L, REQUEST_ID, MEMBER_ID, SCHEDULE_ID, TIMES_CARD_ID, 1, 1);
         jdbcTemplate.update("DELETE FROM t_course WHERE id = ?", COURSE_ID);
         jdbcTemplate.update("DELETE FROM t_coach WHERE id = ?", COACH_ID);
@@ -468,13 +435,11 @@ class ReservationServiceImplTest extends AbstractYogaIntegrationTest
 
     @Test
     @DisplayName("排课详情：预约人员按会员去重、姓名脱敏、排除已取消")
-    void bookerDisplayNames_shouldDedupAndMask()
-    {
+    void bookerDisplayNames_shouldDedupAndMask() {
         LocalDateTime base = LocalDateTime.now(BUSINESS_ZONE).withNano(0);
         insertReservation(9301L, REQUEST_ID, OTHER_MEMBER_ID, SCHEDULE_ID, OTHER_MEMBER_CARD_ID, 1, 1,
                 base.minusMinutes(4));
-        insertReservation(9302L, OTHER_REQUEST_ID, MEMBER_ID, SCHEDULE_ID, TIMES_CARD_ID, 1, 1,
-                base.minusMinutes(3));
+        insertReservation(9302L, OTHER_REQUEST_ID, MEMBER_ID, SCHEDULE_ID, TIMES_CARD_ID, 1, 1, base.minusMinutes(3));
         insertReservation(9303L, SECOND_REQUEST_ID, OTHER_MEMBER_ID, SCHEDULE_ID, OTHER_MEMBER_CARD_ID, 1, 1,
                 base.minusMinutes(2));
         insertReservation(9304L, THIRD_REQUEST_ID, THIRD_MEMBER_ID, SCHEDULE_ID, OTHER_MEMBER_CARD_ID, 1, 1,
@@ -492,8 +457,7 @@ class ReservationServiceImplTest extends AbstractYogaIntegrationTest
 
     @Test
     @DisplayName("排课可约口径：占用名额后剩余名额与 bookable 同步，占满后不可约")
-    void scheduleDetail_shouldReflectBookingCount()
-    {
+    void scheduleDetail_shouldReflectBookingCount() {
         PublicScheduleDetailVO before = scheduleService.publicDetail(SCHEDULE_ID);
         assertTrue(before.getBookable(), "已上架、未开始、14 天内且有名额 → 可约");
         assertEquals(Integer.valueOf(2), before.getRemainingPlaces());
@@ -508,14 +472,11 @@ class ReservationServiceImplTest extends AbstractYogaIntegrationTest
 
     @Test
     @DisplayName("占位条件更新：写入值超过最大人数时不更新")
-    void updateBookingCount_shouldRejectOverCapacity()
-    {
+    void updateBookingCount_shouldRejectOverCapacity() {
         assertEquals(0, scheduleBookingService.updateBookingCount(SCHEDULE_FULL_ID, 2));
-        assertEquals(Integer.valueOf(0), intOf("SELECT booked_persons FROM t_schedule WHERE id = ?",
-                SCHEDULE_FULL_ID));
+        assertEquals(Integer.valueOf(0), intOf("SELECT booked_persons FROM t_schedule WHERE id = ?", SCHEDULE_FULL_ID));
         assertEquals(1, scheduleBookingService.updateBookingCount(SCHEDULE_FULL_ID, 1));
-        assertEquals(Integer.valueOf(1), intOf("SELECT booked_persons FROM t_schedule WHERE id = ?",
-                SCHEDULE_FULL_ID));
+        assertEquals(Integer.valueOf(1), intOf("SELECT booked_persons FROM t_schedule WHERE id = ?", SCHEDULE_FULL_ID));
     }
 
     // ------------------------------------------------------------------
@@ -524,29 +485,23 @@ class ReservationServiceImplTest extends AbstractYogaIntegrationTest
 
     @Test
     @DisplayName("并发防护：取锁后的重复预约与时间冲突检查是当前读，能看到本事务快照之后提交的预约")
-    void conflictChecks_shouldReadLatestCommittedAfterSnapshot()
-    {
+    void conflictChecks_shouldReadLatestCommittedAfterSnapshot() {
         LocalDateTime startTime = scheduleStartTime(SCHEDULE_ID);
         LocalDateTime endTime = scheduleEndTime(SCHEDULE_ID);
 
-        new TransactionTemplate(transactionManager).execute(status ->
-        {
+        new TransactionTemplate(transactionManager).execute(status -> {
             // 普通读建立事务快照：此后并发提交的预约不会出现在快照里
             assertNull(reservationDao.selectByMemberAndRequestId(MEMBER_ID, REQUEST_ID));
 
             // 另一个连接提交一条与该场次重叠的预约（模拟并发事务，不受本事务快照影响）
-            try
-            {
+            try {
                 insertReservationWithNewConnection(9401L, OTHER_REQUEST_ID, MEMBER_ID, SCHEDULE_OVERLAP_ID,
                         TIMES_CARD_ID, 1, 1, LocalDateTime.now(BUSINESS_ZONE).withNano(0));
-            }
-            catch (SQLException e)
-            {
+            } catch (SQLException e) {
                 throw new IllegalStateException("独立连接写入预约失败", e);
             }
 
-            assertTrue(reservationDao.existsTimeConflict(MEMBER_ID, startTime, endTime),
-                    "时间冲突检查必须看到并发提交的预约");
+            assertTrue(reservationDao.existsTimeConflict(MEMBER_ID, startTime, endTime), "时间冲突检查必须看到并发提交的预约");
             assertTrue(reservationDao.existsActiveByMemberAndSchedule(MEMBER_ID, SCHEDULE_OVERLAP_ID),
                     "重复预约检查必须看到并发提交的预约");
             assertNotNull(reservationDao.selectByMemberAndRequestIdForUpdate(MEMBER_ID, OTHER_REQUEST_ID),
@@ -557,70 +512,57 @@ class ReservationServiceImplTest extends AbstractYogaIntegrationTest
 
     @Test
     @DisplayName("并发预约：同会员并发预约两节重叠课程，只有一次成功、另一次时间冲突")
-    void create_concurrentlyOverlapping_shouldAllowOnlyOne() throws Exception
-    {
-        List<String> results = runConcurrently(
-                () -> create(REQUEST_ID, SCHEDULE_ID, TIMES_CARD_ID, 1),
+    void create_concurrentlyOverlapping_shouldAllowOnlyOne() throws Exception {
+        List<String> results = runConcurrently(() -> create(REQUEST_ID, SCHEDULE_ID, TIMES_CARD_ID, 1),
                 () -> create(OTHER_REQUEST_ID, SCHEDULE_OVERLAP_ID, TIMES_CARD_ID, 1));
 
         assertEquals(1, results.stream().filter(RESULT_OK::equals).count(), "只允许一次预约成功：" + results);
         assertTrue(results.contains("409:该时间段已有其他预约"), "另一次必须是时间冲突：" + results);
         assertEquals(1, countReservations(), "重叠课程只落一条预约");
-        assertEquals(1, countOf("SELECT COUNT(*) FROM t_member_card_transaction WHERE change_type = 1"),
-                "只扣一次次数");
+        assertEquals(1, countOf("SELECT COUNT(*) FROM t_member_card_transaction WHERE change_type = 1"), "只扣一次次数");
         assertEquals(Integer.valueOf(1), intOf("SELECT SUM(booked_persons) FROM t_schedule WHERE id IN (?, ?)",
                 SCHEDULE_ID, SCHEDULE_OVERLAP_ID), "只有成功的场次占位");
     }
 
     @Test
     @DisplayName("并发预约：同 requestId 同时提交，两次都成功且只创建一条预约、只扣一次次数")
-    void create_concurrentlySameRequestId_shouldBeIdempotent() throws Exception
-    {
-        List<String> results = runConcurrently(
-                () -> create(REQUEST_ID, SCHEDULE_ID, TIMES_CARD_ID, 2),
+    void create_concurrentlySameRequestId_shouldBeIdempotent() throws Exception {
+        List<String> results = runConcurrently(() -> create(REQUEST_ID, SCHEDULE_ID, TIMES_CARD_ID, 2),
                 () -> create(REQUEST_ID, SCHEDULE_ID, TIMES_CARD_ID, 2));
 
         assertEquals(2, results.stream().filter(RESULT_OK::equals).count(), "幂等重试都按成功返回：" + results);
         assertEquals(1, countReservations(), "同一 requestId 只创建一条预约");
         assertEquals(Integer.valueOf(2), intOf("SELECT booked_persons FROM t_schedule WHERE id = ?", SCHEDULE_ID));
-        assertEquals(Integer.valueOf(10), intOf("SELECT remaining_times FROM t_member_card WHERE id = ?",
-                TIMES_CARD_ID), "只扣一次");
+        assertEquals(Integer.valueOf(10),
+                intOf("SELECT remaining_times FROM t_member_card WHERE id = ?", TIMES_CARD_ID), "只扣一次");
     }
 
     /**
      * 两个线程同时执行预约，返回每个线程的结果：成功为 {@link #RESULT_OK}，业务异常为「业务码:提示语」
      */
-    private List<String> runConcurrently(Runnable first, Runnable second) throws Exception
-    {
+    private List<String> runConcurrently(Runnable first, Runnable second) throws Exception {
         ExecutorService pool = Executors.newFixedThreadPool(2);
         CountDownLatch ready = new CountDownLatch(2);
         CountDownLatch start = new CountDownLatch(1);
-        try
-        {
+        try {
             Future<String> firstFuture = pool.submit(concurrentTask(first, ready, start));
             Future<String> secondFuture = pool.submit(concurrentTask(second, ready, start));
             assertTrue(ready.await(10, TimeUnit.SECONDS), "两个线程应都已就绪");
             start.countDown();
             return Arrays.asList(firstFuture.get(30, TimeUnit.SECONDS), secondFuture.get(30, TimeUnit.SECONDS));
-        }
-        finally
-        {
+        } finally {
             pool.shutdownNow();
         }
     }
 
-    private Callable<String> concurrentTask(Runnable action, CountDownLatch ready, CountDownLatch start)
-    {
+    private Callable<String> concurrentTask(Runnable action, CountDownLatch ready, CountDownLatch start) {
         return () -> {
             ready.countDown();
             start.await(10, TimeUnit.SECONDS);
-            try
-            {
+            try {
                 action.run();
                 return RESULT_OK;
-            }
-            catch (ServiceException e)
-            {
+            } catch (ServiceException e) {
                 return e.getCode() + ":" + e.getMessage();
             }
         };
@@ -632,8 +574,7 @@ class ReservationServiceImplTest extends AbstractYogaIntegrationTest
 
     @Test
     @DisplayName("管理端预约列表：门店／课程／排课／会员／状态／卡类型／上课日期筛选，倒序分页并装配关联资料")
-    void pageForAdmin_shouldFilterAndAssemble()
-    {
+    void pageForAdmin_shouldFilterAndAssemble() {
         LocalDateTime base = LocalDateTime.now(BUSINESS_ZONE).withNano(0);
         insertAdminReservation(9501L, REQUEST_ID, MEMBER_ID, SCHEDULE_ID, TIMES_CARD_ID, 2, 1, base.minusMinutes(3),
                 null, null, null);
@@ -747,8 +688,7 @@ class ReservationServiceImplTest extends AbstractYogaIntegrationTest
 
     @Test
     @DisplayName("管理端预约列表：排课与关联资料已删除时对应展示字段为空，预约自身字段照常返回")
-    void pageForAdmin_withDeletedRelations_shouldReturnNullFields()
-    {
+    void pageForAdmin_withDeletedRelations_shouldReturnNullFields() {
         insertAdminReservation(9601L, REQUEST_ID, MEMBER_ID, SCHEDULE_ID, TIMES_CARD_ID, 1, 1,
                 LocalDateTime.now(BUSINESS_ZONE).withNano(0), null, null, null);
         jdbcTemplate.update("DELETE FROM t_course WHERE id = ?", COURSE_ID);
@@ -778,8 +718,7 @@ class ReservationServiceImplTest extends AbstractYogaIntegrationTest
 
     @Test
     @DisplayName("管理端预约列表：状态、卡类型、日期范围与 ID 非法都返回参数错误")
-    void pageForAdmin_withIllegalQuery_shouldFail()
-    {
+    void pageForAdmin_withIllegalQuery_shouldFail() {
         ReservationAdminQuery badStatus = adminQuery();
         badStatus.setStatus(9);
         assertMessage(500, "预约状态取值为 1、2 或 3", () -> reservationService.pageForAdmin(badStatus));
@@ -802,8 +741,7 @@ class ReservationServiceImplTest extends AbstractYogaIntegrationTest
         assertMessage(500, "会员ID格式非法", () -> reservationService.pageForAdmin(badMember));
     }
 
-    private ReservationAdminQuery adminQuery()
-    {
+    private ReservationAdminQuery adminQuery() {
         ReservationAdminQuery query = new ReservationAdminQuery();
         query.setPageNum(1);
         query.setPageSize(10);
@@ -826,8 +764,7 @@ class ReservationServiceImplTest extends AbstractYogaIntegrationTest
 
     private static final String FOURTH_REQUEST_ID = "6f1a4c1e-6a2b-4c1d-9f0e-1a2b3c4d5e73";
 
-    private void create(String requestId, Long scheduleId, Long memberCardId, Integer persons)
-    {
+    private void create(String requestId, Long scheduleId, Long memberCardId, Integer persons) {
         ReservationCreateDTO dto = new ReservationCreateDTO();
         dto.setRequestId(requestId);
         dto.setScheduleId(scheduleId);
@@ -836,8 +773,7 @@ class ReservationServiceImplTest extends AbstractYogaIntegrationTest
         reservationService.create(MEMBER_ID, dto);
     }
 
-    private ReservationPublicQuery query(Integer status, Integer cardType)
-    {
+    private ReservationPublicQuery query(Integer status, Integer cardType) {
         ReservationPublicQuery query = new ReservationPublicQuery();
         query.setStatus(status);
         query.setCardType(cardType);
@@ -846,118 +782,106 @@ class ReservationServiceImplTest extends AbstractYogaIntegrationTest
         return query;
     }
 
-    private void assertMessage(int code, String message, Runnable action)
-    {
+    private void assertMessage(int code, String message, Runnable action) {
         ServiceException exception = assertThrows(ServiceException.class, action::run);
         assertEquals(Integer.valueOf(code), exception.getCode());
         assertEquals(message, exception.getMessage());
     }
 
-    private Long reservationId()
-    {
+    private Long reservationId() {
         return jdbcTemplate.queryForObject("SELECT MAX(id) FROM t_reservation", Long.class);
     }
 
-    private int countReservations()
-    {
+    private int countReservations() {
         return countOf("SELECT COUNT(*) FROM t_reservation");
     }
 
-    private int countOf(String sql, Object... args)
-    {
+    private int countOf(String sql, Object... args) {
         Integer value = jdbcTemplate.queryForObject(sql, Integer.class, args);
         return value == null ? 0 : value;
     }
 
-    private Integer intOf(String sql, Object... args)
-    {
+    private Integer intOf(String sql, Object... args) {
         return jdbcTemplate.queryForObject(sql, Integer.class, args);
     }
 
-    private String expectedScheduleDate(Long scheduleId)
-    {
+    private String expectedScheduleDate(Long scheduleId) {
         LocalDate date = jdbcTemplate.queryForObject("SELECT schedule_date FROM t_schedule WHERE id = ?",
                 LocalDate.class, scheduleId);
         return date == null ? null : date.toString();
     }
 
-    private LocalDateTime scheduleStartTime(Long scheduleId)
-    {
+    private LocalDateTime scheduleStartTime(Long scheduleId) {
         return jdbcTemplate.queryForObject("SELECT start_time FROM t_schedule WHERE id = ?", LocalDateTime.class,
                 scheduleId);
     }
 
-    private LocalDateTime scheduleEndTime(Long scheduleId)
-    {
+    private LocalDateTime scheduleEndTime(Long scheduleId) {
         return jdbcTemplate.queryForObject("SELECT end_time FROM t_schedule WHERE id = ?", LocalDateTime.class,
                 scheduleId);
     }
 
-    private void insertStores()
-    {
+    private void insertStores() {
         insertStore(STORE_ID, "0001", "徐汇店", "310104", "漕溪北路 88 号");
         insertStore(OTHER_STORE_ID, "0002", "浦东店", "310115", "世纪大道 1000 号");
     }
 
-    private void insertStore(Long id, String storeNo, String name, String regionCode, String address)
-    {
-        jdbcTemplate.update("INSERT INTO t_store (id, store_no, name, store_type, region_code, phone,"
-                + " business_hours, address, create_by, create_time, update_by, update_time)"
-                + " VALUES (?, ?, ?, 1, ?, '021-12345678', '周一至周日 09:00-22:00', ?, 1, NOW(), 1, NOW())",
+    private void insertStore(Long id, String storeNo, String name, String regionCode, String address) {
+        jdbcTemplate.update(
+                "INSERT INTO t_store (id, store_no, name, store_type, region_code, phone,"
+                        + " business_hours, address, create_by, create_time, update_by, update_time)"
+                        + " VALUES (?, ?, ?, 1, ?, '021-12345678', '周一至周日 09:00-22:00', ?, 1, NOW(), 1, NOW())",
                 id, storeNo, name, regionCode, address);
     }
 
-    private void insertClassroom()
-    {
+    private void insertClassroom() {
         jdbcTemplate.update("INSERT INTO t_classroom (id, store_id, name, create_by, create_time, update_by,"
                 + " update_time) VALUES (?, ?, '瑜伽团课大教室', 1, NOW(), 1, NOW())", CLASSROOM_ID, STORE_ID);
-        jdbcTemplate.update("INSERT INTO t_classroom (id, store_id, name, create_by, create_time, update_by,"
-                + " update_time) VALUES (?, ?, '团课大教室', 1, NOW(), 1, NOW())", OTHER_CLASSROOM_ID, OTHER_STORE_ID);
+        jdbcTemplate.update(
+                "INSERT INTO t_classroom (id, store_id, name, create_by, create_time, update_by,"
+                        + " update_time) VALUES (?, ?, '团课大教室', 1, NOW(), 1, NOW())",
+                OTHER_CLASSROOM_ID, OTHER_STORE_ID);
     }
 
-    private void insertCoach()
-    {
+    private void insertCoach() {
         jdbcTemplate.update("INSERT INTO t_coach (id, name, avatar_url, intro, phone, create_by, create_time,"
                 + " update_by, update_time) VALUES (?, '林教练', NULL, NULL, NULL, 1, NOW(), 1, NOW())", COACH_ID);
     }
 
-    private void insertCourses()
-    {
+    private void insertCourses() {
         insertCourse(COURSE_ID, "哈他瑜伽", 1);
         insertCourse(PERSONAL_COURSE_ID, "普拉提器械私教", 3);
     }
 
-    private void insertCourse(Long id, String name, int courseType)
-    {
-        jdbcTemplate.update("INSERT INTO t_course (id, name, course_type, cover_url, intro, difficulty, create_by,"
-                + " create_time, update_by, update_time) VALUES (?, ?, ?, NULL, NULL, 2, 1, NOW(), 1, NOW())",
+    private void insertCourse(Long id, String name, int courseType) {
+        jdbcTemplate.update(
+                "INSERT INTO t_course (id, name, course_type, cover_url, intro, difficulty, create_by,"
+                        + " create_time, update_by, update_time) VALUES (?, ?, ?, NULL, NULL, 2, 1, NOW(), 1, NOW())",
                 id, name, courseType);
     }
 
-    private void insertMembers()
-    {
+    private void insertMembers() {
         insertMember(MEMBER_ID, "13800138000", "张小明");
         insertMember(OTHER_MEMBER_ID, "13800138001", "李四");
         insertMember(THIRD_MEMBER_ID, "13800138002", "王");
         insertMember(FOURTH_MEMBER_ID, "13800138003", "赵六");
     }
 
-    private void insertMember(Long id, String phone, String name)
-    {
-        jdbcTemplate.update("INSERT INTO t_member (id, phone, password, phone_last4, name, gender, level, create_by,"
-                + " create_time, update_by, update_time) VALUES (?, ?, NULL, ?, ?, 0, 0, 1, NOW(), 1, NOW())",
+    private void insertMember(Long id, String phone, String name) {
+        jdbcTemplate.update(
+                "INSERT INTO t_member (id, phone, password, phone_last4, name, gender, level, create_by,"
+                        + " create_time, update_by, update_time) VALUES (?, ?, NULL, ?, ?, 0, 0, 1, NOW(), 1, NOW())",
                 id, phone, phone.substring(phone.length() - 4), name);
     }
 
-    private void insertCards()
-    {
+    private void insertCards() {
         LocalDateTime now = LocalDateTime.now(BUSINESS_ZONE);
         // 次数卡：团课类、本店、剩余 12 次、有效期未过
-        insertCard(TIMES_CARD_ID, MEMBER_ID, 1, 1, STORE_ID, 12, now.minusDays(1), now.plusDays(300),
-                now.minusDays(1), null);
+        insertCard(TIMES_CARD_ID, MEMBER_ID, 1, 1, STORE_ID, 12, now.minusDays(1), now.plusDays(300), now.minusDays(1),
+                null);
         // 年卡：团课类、全门店通用、无剩余次数
-        insertCard(YEAR_CARD_ID, MEMBER_ID, 2, 1, null, null, now.minusDays(1), now.plusDays(365),
-                now.minusDays(1), null);
+        insertCard(YEAR_CARD_ID, MEMBER_ID, 2, 1, null, null, now.minusDays(1), now.plusDays(365), now.minusDays(1),
+                null);
         // 未开卡
         insertCard(PENDING_CARD_ID, MEMBER_ID, 1, 1, STORE_ID, 12, null, null, null, null);
         // 已停卡
@@ -979,28 +903,26 @@ class ReservationServiceImplTest extends AbstractYogaIntegrationTest
 
     private void insertCard(Long id, Long memberId, int cardType, int courseScope, Long storeId, Integer remainingTimes,
             LocalDateTime validStartTime, LocalDateTime validEndTime, LocalDateTime activateTime,
-            LocalDateTime stopTime)
-    {
+            LocalDateTime stopTime) {
         jdbcTemplate.update("INSERT INTO t_member_card (id, member_id, open_store_id, card_no, card_name, card_type,"
                 + " course_scope, store_id, purchase_times, gift_times, remaining_times, valid_period_unit,"
                 + " valid_period_count, valid_start_time, valid_end_time, activate_time, stop_time, stop_reason,"
                 + " create_by, create_time, update_by, update_time)"
-                + " VALUES (?, ?, ?, ?, '测试会员卡', ?, ?, ?, ?, 0, ?, 1, 12, ?, ?, ?, ?, NULL, 1, NOW(), 1, NOW())",
-                id, memberId, STORE_ID, "20261015000" + id, cardType, courseScope, storeId,
+                + " VALUES (?, ?, ?, ?, '测试会员卡', ?, ?, ?, ?, 0, ?, 1, 12, ?, ?, ?, ?, NULL, 1, NOW(), 1, NOW())", id,
+                memberId, STORE_ID, "20261015000" + id, cardType, courseScope, storeId,
                 cardType == 1 ? remainingTimes : null, remainingTimes, validStartTime, validEndTime, activateTime,
                 stopTime);
     }
 
-    private void insertSchedules()
-    {
+    private void insertSchedules() {
         LocalDate today = LocalDate.now(BUSINESS_ZONE);
         LocalDate tomorrow = today.plusDays(1);
         LocalDateTime now = LocalDateTime.now(BUSINESS_ZONE).withNano(0);
         insertSchedule(SCHEDULE_ID, COURSE_ID, 1, tomorrow.atTime(10, 0), tomorrow.atTime(11, 0), 2, 0, 2);
         insertSchedule(SCHEDULE_SECOND_ID, COURSE_ID, 1, tomorrow.atTime(14, 0), tomorrow.atTime(15, 0), 5, 0, 2);
         insertSchedule(SCHEDULE_OVERLAP_ID, COURSE_ID, 1, tomorrow.atTime(10, 30), tomorrow.atTime(11, 30), 5, 0, 2);
-        insertSchedule(SCHEDULE_PERSONAL_ID, PERSONAL_COURSE_ID, 3, tomorrow.atTime(16, 0), tomorrow.atTime(17, 0),
-                5, 0, 2);
+        insertSchedule(SCHEDULE_PERSONAL_ID, PERSONAL_COURSE_ID, 3, tomorrow.atTime(16, 0), tomorrow.atTime(17, 0), 5,
+                0, 2);
         insertSchedule(SCHEDULE_PENDING_ID, COURSE_ID, 1, tomorrow.atTime(18, 0), tomorrow.atTime(19, 0), 5, 0, 1);
         insertSchedule(SCHEDULE_CANCELLED_ID, COURSE_ID, 1, tomorrow.atTime(19, 0), tomorrow.atTime(20, 0), 5, 0, 3);
         insertSchedule(SCHEDULE_STARTED_ID, COURSE_ID, 1, now.minusHours(1), now.plusMinutes(30), 5, 0, 2);
@@ -1014,27 +936,25 @@ class ReservationServiceImplTest extends AbstractYogaIntegrationTest
                 today.plusDays(2).atTime(10, 0), today.plusDays(2).atTime(11, 0), 5, 0, 2);
     }
 
-    private void insertSchedule(Long id, Long courseId, int courseType, LocalDateTime startTime,
-            LocalDateTime endTime, int maxPersons, int bookedPersons, int status)
-    {
+    private void insertSchedule(Long id, Long courseId, int courseType, LocalDateTime startTime, LocalDateTime endTime,
+            int maxPersons, int bookedPersons, int status) {
         insertSchedule(id, STORE_ID, CLASSROOM_ID, courseId, courseType, startTime, endTime, maxPersons, bookedPersons,
                 status);
     }
 
     private void insertSchedule(Long id, Long storeId, Long classroomId, Long courseId, int courseType,
-            LocalDateTime startTime, LocalDateTime endTime, int maxPersons, int bookedPersons, int status)
-    {
-        jdbcTemplate.update("INSERT INTO t_schedule (id, store_id, course_id, course_type, coach_id, classroom_id,"
-                + " schedule_date, start_time, end_time, max_persons, min_persons, booked_persons, status,"
-                + " create_by, create_time, update_by, update_time)"
-                + " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, 1, NOW(), 1, NOW())",
-                id, storeId, courseId, courseType, COACH_ID, classroomId, startTime.toLocalDate(), startTime,
-                endTime, maxPersons, bookedPersons, status);
+            LocalDateTime startTime, LocalDateTime endTime, int maxPersons, int bookedPersons, int status) {
+        jdbcTemplate.update(
+                "INSERT INTO t_schedule (id, store_id, course_id, course_type, coach_id, classroom_id,"
+                        + " schedule_date, start_time, end_time, max_persons, min_persons, booked_persons, status,"
+                        + " create_by, create_time, update_by, update_time)"
+                        + " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, 1, NOW(), 1, NOW())",
+                id, storeId, courseId, courseType, COACH_ID, classroomId, startTime.toLocalDate(), startTime, endTime,
+                maxPersons, bookedPersons, status);
     }
 
     private void insertReservation(Long id, String requestId, Long memberId, Long scheduleId, Long memberCardId,
-            int persons, int status)
-    {
+            int persons, int status) {
         LocalDateTime startTime = jdbcTemplate.queryForObject("SELECT start_time FROM t_schedule WHERE id = ?",
                 LocalDateTime.class, scheduleId);
         LocalDateTime endTime = jdbcTemplate.queryForObject("SELECT end_time FROM t_schedule WHERE id = ?",
@@ -1044,8 +964,7 @@ class ReservationServiceImplTest extends AbstractYogaIntegrationTest
     }
 
     private void insertReservation(Long id, String requestId, Long memberId, Long scheduleId, Long memberCardId,
-            int persons, int status, LocalDateTime reservationTime)
-    {
+            int persons, int status, LocalDateTime reservationTime) {
         LocalDateTime startTime = jdbcTemplate.queryForObject("SELECT start_time FROM t_schedule WHERE id = ?",
                 LocalDateTime.class, scheduleId);
         LocalDateTime endTime = jdbcTemplate.queryForObject("SELECT end_time FROM t_schedule WHERE id = ?",
@@ -1055,14 +974,12 @@ class ReservationServiceImplTest extends AbstractYogaIntegrationTest
     }
 
     private void insertReservation(Long id, String requestId, Long memberId, Long scheduleId, Long memberCardId,
-            int persons, int status, LocalDateTime reservationTime, LocalDateTime startTime, LocalDateTime endTime)
-    {
+            int persons, int status, LocalDateTime reservationTime, LocalDateTime startTime, LocalDateTime endTime) {
         jdbcTemplate.update("INSERT INTO t_reservation (id, request_id, member_id, schedule_id, start_time, end_time,"
                 + " persons, member_card_id, status, reservation_time, cancel_time, cancel_reason, check_in_time,"
                 + " create_by, create_time, update_by, update_time)"
-                + " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, NULL, 1, NOW(), 1, NOW())",
-                id, requestId, memberId, scheduleId, startTime, endTime, persons, memberCardId, status,
-                reservationTime);
+                + " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, NULL, 1, NOW(), 1, NOW())", id, requestId,
+                memberId, scheduleId, startTime, endTime, persons, memberCardId, status, reservationTime);
     }
 
     /**
@@ -1070,8 +987,7 @@ class ReservationServiceImplTest extends AbstractYogaIntegrationTest
      * 验证「快照之后提交的数据」时必须另开连接。
      */
     private void insertReservationWithNewConnection(Long id, String requestId, Long memberId, Long scheduleId,
-            Long memberCardId, int persons, int status, LocalDateTime reservationTime) throws SQLException
-    {
+            Long memberCardId, int persons, int status, LocalDateTime reservationTime) throws SQLException {
         LocalDateTime startTime = scheduleStartTime(scheduleId);
         LocalDateTime endTime = scheduleEndTime(scheduleId);
         String sql = "INSERT INTO t_reservation (id, request_id, member_id, schedule_id, start_time, end_time,"
@@ -1079,8 +995,7 @@ class ReservationServiceImplTest extends AbstractYogaIntegrationTest
                 + " create_by, create_time, update_by, update_time)"
                 + " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, NULL, 1, NOW(), 1, NOW())";
         try (Connection connection = dataSource.getConnection();
-                PreparedStatement statement = connection.prepareStatement(sql))
-        {
+                PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setLong(1, id);
             statement.setString(2, requestId);
             statement.setLong(3, memberId);
@@ -1098,22 +1013,21 @@ class ReservationServiceImplTest extends AbstractYogaIntegrationTest
     /** 管理端列表夹具：可显式指定取消与签到事件时间 */
     private void insertAdminReservation(Long id, String requestId, Long memberId, Long scheduleId, Long memberCardId,
             int persons, int status, LocalDateTime reservationTime, LocalDateTime cancelTime, Integer cancelReason,
-            LocalDateTime checkInTime)
-    {
+            LocalDateTime checkInTime) {
         jdbcTemplate.update("INSERT INTO t_reservation (id, request_id, member_id, schedule_id, start_time, end_time,"
                 + " persons, member_card_id, status, reservation_time, cancel_time, cancel_reason, check_in_time,"
                 + " create_by, create_time, update_by, update_time)"
-                + " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, NOW(), 1, NOW())",
-                id, requestId, memberId, scheduleId, scheduleStartTime(scheduleId), scheduleEndTime(scheduleId),
-                persons, memberCardId, status, reservationTime, cancelTime, cancelReason, checkInTime);
+                + " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, NOW(), 1, NOW())", id, requestId, memberId,
+                scheduleId, scheduleStartTime(scheduleId), scheduleEndTime(scheduleId), persons, memberCardId, status,
+                reservationTime, cancelTime, cancelReason, checkInTime);
     }
 
     /** 扣次流水夹具：change_times 为负、余额按 12 → 12 - persons */
-    private void insertDeductTransaction(Long reservationId, Long memberCardId, Long memberId, int persons)
-    {
-        jdbcTemplate.update("INSERT INTO t_member_card_transaction (id, member_card_id, member_id, reservation_id,"
-                + " change_type, persons, change_times, before_times, after_times, create_time)"
-                + " VALUES (?, ?, ?, ?, 1, ?, ?, 12, ?, NOW())",
+    private void insertDeductTransaction(Long reservationId, Long memberCardId, Long memberId, int persons) {
+        jdbcTemplate.update(
+                "INSERT INTO t_member_card_transaction (id, member_card_id, member_id, reservation_id,"
+                        + " change_type, persons, change_times, before_times, after_times, create_time)"
+                        + " VALUES (?, ?, ?, ?, 1, ?, ?, 12, ?, NOW())",
                 reservationId + 1000000L, memberCardId, memberId, reservationId, persons, -persons, 12 - persons);
     }
 }
