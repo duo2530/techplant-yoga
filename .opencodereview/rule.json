@@ -1,0 +1,42 @@
+{
+  "include": [
+    "backend/**/src/test/java/**/*.java",
+    "frontend/**/tests/**/*.spec.js"
+  ],
+  "exclude": [
+    ".tmp/**",
+    "**/artifacts/**"
+  ],
+  "rules": [
+    {
+      "path": "**/src/test/java/**/*.java",
+      "rule": "后端集成测试必须能真正证伪：期望值不得直接由被测实现的时间工具生成，窗口/时区类断言需固定时钟；安全链测试必须装配真实 FilterChain 与 @PreAuthorize，不得用宽松 mock；造数与清理必须成对且失败可回收；断言不得恒真、依赖用例执行顺序或把成功与失败路径混在同一条断言里。",
+      "merge_system_rule": true
+    },
+    {
+      "path": "frontend/**/tests/**/*.spec.js",
+      "rule": "e2e 用例必须走真实接口造数与清理，仅在网络异常、空结果、乱序等场景拦截响应；断言必须可证伪，避免同路由只改 query 不重建页面造成的空转、前后对比恒真、失败态也能满足的等待条件；禁止用固定延时猜测时序；清理失败应让套件失败；禁止按名称查不到就回退 rows[0] 清理无关数据。",
+      "merge_system_rule": true
+    },
+    {
+      "path": "**/*.java",
+      "rule": "按 RuoYi 分层与项目契约审查：管理端既有接口参数错误沿用业务码 500，用户端新增公开接口按详细设计返回 400；公开 VO 不得包含 phone、审计字段；雪花 ID 的 Long 字段必须序列化为字符串；业务表一律物理删除；资料全量更新不得覆盖独立维护字段（如教练 level）；跨模块名称批量装配避免 N+1；源码注释只写业务含义、外部约束与调用边界，禁止防御性、历史性或复述代码的注释。",
+      "merge_system_rule": true
+    },
+    {
+      "path": "frontend/uni-app/**/*.{js,vue}",
+      "rule": "用户端代码必须显式 import，页面数据只经 @/api（禁止直接 uni.request），不手改 uni_modules；尺寸用 rpx、颜色用 $ys-* 设计 token；列表请求用序号丢弃过期响应；切换门店/课种等筛选条件时先清空旧数据；404/400 与网络失败分开展示；禁止 mock 兜底真实接口；实现需同时兼容 H5 与微信小程序。",
+      "merge_system_rule": true
+    },
+    {
+      "path": "frontend/pc/**/*.{js,vue}",
+      "rule": "管理端按钮权限指令 v-hasPermi 必须与后端 @PreAuthorize 权限串及 SQL 菜单种子一致；等级、状态等独立维护字段不得混入资料全量提交；失败请求不得提示成功；重复点击需禁用或去重；列表操作成功后应就地更新或重新拉取以校准展示。",
+      "merge_system_rule": true
+    },
+    {
+      "path": "backend/sql/**/*.sql",
+      "rule": "新建库脚本 yoga.sql 与已有库增量脚本必须保持列定义、菜单种子一致；增量脚本需可重复执行（判存后 ALTER、菜单与角色绑定先清理再写入），存量数据只取默认值、不得回填业务数据；新增菜单/按钮权限需绑定内置管理员角色并写明回滚口径。",
+      "merge_system_rule": true
+    }
+  ]
+}

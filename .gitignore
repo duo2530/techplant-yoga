@@ -2,9 +2,6 @@
 .idea
 .tmp
 
-# 本地 Agent 工具（含 plantuml.jar 等大文件）
-.agents
-
 # 二进制包
 *.jar
 
@@ -14,3 +11,4 @@ docs/原型/_工具/渲染/
 docs/原型/_工具/对比/
 *.xmind
 /.env
+/.agents/skills/plantuml-salt-wireframe/
