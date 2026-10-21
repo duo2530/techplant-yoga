@@ -1,32 +1,11 @@
 import request from '@/utils/request'
-import config from '@/config'
+import { toId, toText, toImageUrl, toNum } from '@/utils/public-api'
 
 /** 用户端排课查询接口。 */
 
 const PUBLIC_REQUEST = { headers: { isToken: false } }
 
 const MAX_PAGE_SIZE = 100
-
-function toId(value) {
-  return value === null || value === undefined ? '' : String(value)
-}
-
-function toText(value) {
-  return value === null || value === undefined ? '' : String(value)
-}
-
-function toImageUrl(value) {
-  const url = toText(value).trim()
-  if (!url || /^(?:[a-z][a-z\d+.-]*:|\/\/|\/?static\/)/i.test(url)) {
-    return url
-  }
-  return config.baseUrl.replace(/\/+$/, '') + '/' + url.replace(/^\/+/, '')
-}
-
-function toNum(value) {
-  const n = Number(value)
-  return isNaN(n) ? 0 : n
-}
 
 function normalizeCard(row) {
   const item = row || {}

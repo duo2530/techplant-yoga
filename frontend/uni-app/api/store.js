@@ -1,4 +1,5 @@
 import request from '@/utils/request'
+import { toId, toText } from '@/utils/public-api'
 
 /** 用户端门店查询与当前门店缓存。 */
 
@@ -10,15 +11,6 @@ export const CURRENT_STORE_KEY = 'ys_current_store'
 
 /** 门店列表分页上限 */
 const MAX_PAGE_SIZE = 100
-
-/** 雪花 ID 一律当字符串：19 位数字转 Number 会塌缩 */
-function toId(value) {
-  return value === null || value === undefined ? '' : String(value)
-}
-
-function toText(value) {
-  return value === null || value === undefined ? '' : String(value)
-}
 
 /** 归一化 StorePublicItemVO（只做类型与空值兜底，不新增/推导任何后端没给的字段） */
 function normalizeStore(row) {

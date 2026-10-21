@@ -18,6 +18,51 @@ const { runSuite, timestamp } = require('./lib/runner')
 
 const SPEC_DIR = path.join(__dirname, 'specs')
 
+/** 参与 H5 构建的源文件与目录；用于提示构建产物是否已过期 */
+const SOURCE_ENTRIES = [
+  'pages', 'components', 'api', 'utils', 'store', 'static', 'uni_modules',
+  'main.js', 'App.vue', 'permission.js', 'pages.json', 'manifest.json', 'uni.scss', 'config.js'
+]
+
+function newestMtime(target, newest = 0)
+{
+  if (!fs.existsSync(target))
+  {
+    return newest
+  }
+  const stat = fs.statSync(target)
+  if (!stat.isDirectory())
+  {
+    return Math.max(newest, stat.mtimeMs)
+  }
+  for (const name of fs.readdirSync(target))
+  {
+    if (name === 'node_modules' || name === 'dist' || name === 'unpackage')
+    {
+      continue
+    }
+    newest = newestMtime(path.join(target, name), newest)
+  }
+  return newest
+}
+
+/** 产物早于源文件时打印警告，避免拿旧 H5 构建跑端到端用例 */
+function warnIfStaleBuild()
+{
+  const builtAt = fs.statSync(path.join(config.h5Dir, 'index.html')).mtimeMs
+  let sourceAt = 0
+  for (const entry of SOURCE_ENTRIES)
+  {
+    sourceAt = Math.max(sourceAt, newestMtime(path.join(config.uniAppRoot, entry)))
+  }
+  if (sourceAt - builtAt > 2000)
+  {
+    console.warn('\n⚠ H5 构建产物可能已过期：源文件修改时间晚于 dist/build/h5/index.html')
+    console.warn(`  产物：${new Date(builtAt).toLocaleString()}；源文件：${new Date(sourceAt).toLocaleString()}`)
+    console.warn('  如刚改过页面/接口，先执行 npm run build:h5，或改用 npm run test:build\n')
+  }
+}
+
 function loadSuites(only)
 {
   return fs.readdirSync(SPEC_DIR)
@@ -57,6 +102,8 @@ async function main()
       '先在 frontend/uni-app 执行 npm run build:h5，或改用 npm run test:build 自动构建'
     )
   }
+
+  warnIfStaleBuild()
 
   console.log(`H5 构建产物：${config.h5Dir}`)
   console.log(`后端地址：${config.apiBase}`)

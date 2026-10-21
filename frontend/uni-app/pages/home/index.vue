@@ -35,6 +35,49 @@
       <ys-empty title="暂无可选门店" subtitle="请稍后重新进入" padding-top="120" />
     </view>
 
+    <!-- ================= 金牌教练 =================
+         平台级数据来自 GET /api/coaches/featured：一次展示全部金牌，不截断、不设「更多教练」入口。
+         加载／空／失败状态与门店卡、换店互相独立；没有可选门店时列表照常展示。 -->
+    <view class="home-coaches">
+      <view class="home-coaches__head">
+        <ys-section-head title="金牌教练" />
+      </view>
+
+      <view v-if="coachLoading && !coaches.length" class="home-coaches__state">
+        <text class="home-coaches__state-text">加载中…</text>
+      </view>
+
+      <view v-else-if="coachError && !coaches.length" class="home-coaches__state">
+        <text class="home-coaches__state-text">金牌教练加载失败</text>
+        <view class="home-coaches__retry press" @tap="loadCoaches">
+          <text class="home-coaches__retry-text">重试</text>
+        </view>
+      </view>
+
+      <view v-else-if="!coaches.length" class="home-coaches__state">
+        <text class="home-coaches__state-text">暂无金牌教练</text>
+      </view>
+
+      <view v-else class="home-coaches__list">
+        <view v-for="coach in coaches" :key="coach.id" class="home-coach press" @tap="openCoach(coach)">
+          <image
+            v-if="coach.avatarUrl && !avatarFailed[coach.id]"
+            class="home-coach__avatar"
+            :src="coach.avatarUrl"
+            mode="aspectFill"
+            @error="onAvatarError(coach.id)"
+          />
+          <view v-else class="home-coach__avatar home-coach__avatar--empty">
+            <uni-icons type="person-filled" size="26" color="#ADBAC4" />
+          </view>
+          <view class="home-coach__main">
+            <text class="home-coach__name">{{ coach.name }}</text>
+            <text class="home-coach__intro">{{ coach.intro || '暂无介绍' }}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
     <!-- ================= 换店：底部弹层（门店列表 / 区域筛选 / 关键字搜索 / 分页加载） ============== -->
     <view v-if="pickerVisible" class="picker">
       <view class="picker__mask" @tap="closePicker" />
@@ -121,6 +164,7 @@
 import { ref, computed } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { listStores, getCurrentStoreId, getCachedStore, saveCurrentStore } from '@/api/store'
+import { getFeaturedCoaches } from '@/api/coach'
 
 /** 首页（W5） */
 
@@ -130,6 +174,15 @@ const PICKER_PAGE_SIZE = 10
 const store = ref({})
 /** 是否已完成首次加载（用它区分「加载中」与「真的没有门店」） */
 const loaded = ref(false)
+
+/* ---------------- 金牌教练状态 ---------------- */
+const coaches = ref([])
+const coachLoading = ref(true)
+const coachError = ref(false)
+/** 头像加载失败的教练 id；失败后换中性占位，避免反复请求坏图 */
+const avatarFailed = ref({})
+/** 请求序号：后发起的刷新覆盖先发起的结果，避免慢响应回写旧列表 */
+let coachRequestSeq = 0
 
 /* ---------------- 换店弹层状态 ---------------- */
 const pickerVisible = ref(false)
@@ -178,9 +231,34 @@ async function loadCurrentStore() {
   }
 }
 
+/** 加载金牌教练：门店为空也照常请求，失败只影响本栏目 */
+async function loadCoaches() {
+  const seq = ++coachRequestSeq
+  coachLoading.value = true
+  coachError.value = false
+  try {
+    const list = await getFeaturedCoaches()
+    if (seq !== coachRequestSeq) {
+      return
+    }
+    coaches.value = list
+  } catch (error) {
+    if (seq !== coachRequestSeq) {
+      return
+    }
+    coachError.value = true
+    coaches.value = []
+  } finally {
+    if (seq === coachRequestSeq) {
+      coachLoading.value = false
+    }
+  }
+}
+
 onShow(() => {
-  // 每次回到首页都校准一次：从「换店」或别处返回时保证门店卡是最新的
+  // 每次回到首页都校准一次：从「换店」或别处返回时保证门店卡与金牌列表是最新的
   loadCurrentStore()
+  loadCoaches()
 })
 
 /* ---------------- 换店 ---------------- */
@@ -289,6 +367,19 @@ function pickStore(item) {
   pickerVisible.value = false
   uni.showToast({ title: '已切换门店', icon: 'none' })
 }
+
+/* ---------------- 金牌教练 ---------------- */
+
+function openCoach(coach) {
+  if (!coach || !coach.id) {
+    return
+  }
+  uni.navigateTo({ url: '/pages/coaches/index?coachId=' + encodeURIComponent(coach.id) })
+}
+
+function onAvatarError(coachId) {
+  avatarFailed.value[coachId] = true
+}
 </script>
 
 <style lang="scss" scoped>
@@ -378,6 +469,100 @@ function pickStore(item) {
 
 .home__empty {
   padding-top: 40rpx;
+}
+
+/* ---------------- 金牌教练 ---------------- */
+.home-coaches {
+  margin-top: 42rpx;
+  padding: 0 $ys-gap;
+
+  &__head {
+    padding: 0 3rpx 22rpx;
+  }
+
+  &__state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40rpx 0 10rpx;
+  }
+
+  &__state-text {
+    font-size: 25rpx;
+    line-height: 1.4;
+    color: $ys-ink-3;
+  }
+
+  &__retry {
+    margin-top: 20rpx;
+    padding: 10rpx 34rpx;
+    border-radius: 999px;
+    background: $ys-brand-pale;
+  }
+
+  &__retry-text {
+    font-size: 25rpx;
+    line-height: 1.4;
+    color: $ys-brand;
+  }
+
+  &__list {
+    display: flex;
+    flex-direction: column;
+    gap: 20rpx;
+  }
+}
+
+.home-coach {
+  display: flex;
+  align-items: center;
+  padding: 22rpx 24rpx;
+  background: #fff;
+  border-radius: $ys-radius-lg;
+  box-shadow: $ys-card-shadow;
+
+  &__avatar {
+    flex: none;
+    width: 112rpx;
+    height: 112rpx;
+    border-radius: $ys-radius-md;
+    background: $ys-line;
+
+    &--empty {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #eef3f7;
+    }
+  }
+
+  &__main {
+    flex: 1;
+    min-width: 0;
+    margin-left: 24rpx;
+    display: flex;
+    flex-direction: column;
+  }
+
+  &__name {
+    overflow: hidden;
+    font-size: 31rpx;
+    font-weight: 600;
+    line-height: 1.3;
+    color: $ys-title;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__intro {
+    overflow: hidden;
+    margin-top: 10rpx;
+    font-size: 25rpx;
+    line-height: 1.4;
+    color: $ys-ink-3;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 }
 
 .home__bottom {
