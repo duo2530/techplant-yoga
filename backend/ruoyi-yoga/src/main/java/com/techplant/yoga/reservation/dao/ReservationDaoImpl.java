@@ -96,16 +96,6 @@ public class ReservationDaoImpl implements ReservationDao {
     }
 
     @Override
-    public boolean existsTimeConflict(Long memberId, LocalDateTime startTime, LocalDateTime endTime) {
-        // 区间相交：start_time < :end AND end_time > :start；当前读保证看到并发提交的最新预约
-        return reservationMapper
-                .selectOne(Wrappers.<ReservationDO>lambdaQuery().eq(ReservationDO::getMemberId, memberId)
-                        .ne(ReservationDO::getStatus, ReservationStatusEnum.CANCELLED.getCode())
-                        .lt(ReservationDO::getStartTime, endTime).gt(ReservationDO::getEndTime, startTime)
-                        .last("LIMIT 1 FOR UPDATE")) != null;
-    }
-
-    @Override
     public int cancel(Long reservationId, LocalDateTime cancelTime, Integer cancelReason) {
         return reservationMapper.update(null,
                 Wrappers.<ReservationDO>lambdaUpdate().eq(ReservationDO::getId, reservationId)

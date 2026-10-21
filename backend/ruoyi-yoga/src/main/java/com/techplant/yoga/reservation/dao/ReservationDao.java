@@ -58,13 +58,6 @@ public interface ReservationDao {
      */
     boolean existsActiveByMemberAndSchedule(Long memberId, Long scheduleId);
 
-    /**
-     * 该会员在给定时间区间内是否已有未取消预约（status &lt;&gt; 2 且区间相交）
-     *
-     * <p>当前读：取锁后的时间冲突校验必须看到并发提交的最新预约，不能被事务快照挡住。</p>
-     */
-    boolean existsTimeConflict(Long memberId, LocalDateTime startTime, LocalDateTime endTime);
-
     /** 取消：仅当仍为已预约时写入取消时间与原因 */
     int cancel(Long reservationId, LocalDateTime cancelTime, Integer cancelReason);
 

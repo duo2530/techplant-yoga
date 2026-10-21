@@ -140,9 +140,6 @@ public class ReservationServiceImpl implements ReservationService {
         if (reservationDao.existsActiveByMemberAndSchedule(memberId, scheduleId)) {
             throw new ServiceException("您已预约该课程", CONFLICT);
         }
-        if (reservationDao.existsTimeConflict(memberId, schedule.getStartTime(), schedule.getEndTime())) {
-            throw new ServiceException("该时间段已有其他预约", CONFLICT);
-        }
 
         LocalDateTime reservationTime = LocalDateTime.now(BUSINESS_ZONE);
         ReservationDO reservation = ReservationConverter.toDO(dto, memberId, schedule, reservationTime);

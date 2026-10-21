@@ -26,6 +26,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.dao.DataAccessException;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -46,6 +47,8 @@ import com.techplant.yoga.member.service.impl.MemberServiceImpl;
 import com.techplant.yoga.membercard.dao.MemberCardDaoImpl;
 import com.techplant.yoga.membercard.dao.MemberCardTransactionDaoImpl;
 import com.techplant.yoga.membercard.service.CardNoGenerator;
+import com.techplant.yoga.membercard.service.MemberCardService;
+import com.techplant.yoga.membercard.dto.MemberCardStopDTO;
 import com.techplant.yoga.membercard.service.impl.MemberCardServiceImpl;
 import com.techplant.yoga.membercard.service.impl.MemberCardTransactionServiceImpl;
 import com.techplant.yoga.reservation.dao.ReservationDao;
@@ -160,6 +163,9 @@ class ReservationServiceImplTest extends AbstractYogaIntegrationTest {
     private ReservationDao reservationDao;
 
     @Autowired
+    private MemberCardService memberCardService;
+
+    @Autowired
     private PlatformTransactionManager transactionManager;
 
     private JdbcTemplate jdbcTemplate;
@@ -267,12 +273,11 @@ class ReservationServiceImplTest extends AbstractYogaIntegrationTest {
     }
 
     @Test
-    @DisplayName("预约课程：同排课重复预约与同会员时间冲突都返回冲突")
-    void create_withDuplicateOrOverlapping_shouldConflict() {
+    @DisplayName("预约课程：同排课重复预约拒绝，取消后允许重新预约")
+    void create_withDuplicateSchedule_shouldConflict() {
         create(REQUEST_ID, SCHEDULE_ID, TIMES_CARD_ID, 1);
 
         assertMessage(409, "您已预约该课程", () -> create(OTHER_REQUEST_ID, SCHEDULE_ID, TIMES_CARD_ID, 1));
-        assertMessage(409, "该时间段已有其他预约", () -> create(OTHER_REQUEST_ID, SCHEDULE_OVERLAP_ID, TIMES_CARD_ID, 1));
         assertEquals(1, countReservations());
 
         // 已取消后可以重新预约同一排课
@@ -484,11 +489,8 @@ class ReservationServiceImplTest extends AbstractYogaIntegrationTest {
     // ------------------------------------------------------------------
 
     @Test
-    @DisplayName("并发防护：取锁后的重复预约与时间冲突检查是当前读，能看到本事务快照之后提交的预约")
+    @DisplayName("并发防护：重复预约与幂等复查能看到本事务快照之后提交的预约")
     void conflictChecks_shouldReadLatestCommittedAfterSnapshot() {
-        LocalDateTime startTime = scheduleStartTime(SCHEDULE_ID);
-        LocalDateTime endTime = scheduleEndTime(SCHEDULE_ID);
-
         new TransactionTemplate(transactionManager).execute(status -> {
             // 普通读建立事务快照：此后并发提交的预约不会出现在快照里
             assertNull(reservationDao.selectByMemberAndRequestId(MEMBER_ID, REQUEST_ID));
@@ -501,7 +503,6 @@ class ReservationServiceImplTest extends AbstractYogaIntegrationTest {
                 throw new IllegalStateException("独立连接写入预约失败", e);
             }
 
-            assertTrue(reservationDao.existsTimeConflict(MEMBER_ID, startTime, endTime), "时间冲突检查必须看到并发提交的预约");
             assertTrue(reservationDao.existsActiveByMemberAndSchedule(MEMBER_ID, SCHEDULE_OVERLAP_ID),
                     "重复预约检查必须看到并发提交的预约");
             assertNotNull(reservationDao.selectByMemberAndRequestIdForUpdate(MEMBER_ID, OTHER_REQUEST_ID),
@@ -511,17 +512,19 @@ class ReservationServiceImplTest extends AbstractYogaIntegrationTest {
     }
 
     @Test
-    @DisplayName("并发预约：同会员并发预约两节重叠课程，只有一次成功、另一次时间冲突")
-    void create_concurrentlyOverlapping_shouldAllowOnlyOne() throws Exception {
+    @DisplayName("并发预约：同会员允许预约两节重叠课程，各自占位扣次")
+    void create_concurrentlyOverlapping_shouldAllowBoth() throws Exception {
         List<String> results = runConcurrently(() -> create(REQUEST_ID, SCHEDULE_ID, TIMES_CARD_ID, 1),
                 () -> create(OTHER_REQUEST_ID, SCHEDULE_OVERLAP_ID, TIMES_CARD_ID, 1));
 
-        assertEquals(1, results.stream().filter(RESULT_OK::equals).count(), "只允许一次预约成功：" + results);
-        assertTrue(results.contains("409:该时间段已有其他预约"), "另一次必须是时间冲突：" + results);
-        assertEquals(1, countReservations(), "重叠课程只落一条预约");
-        assertEquals(1, countOf("SELECT COUNT(*) FROM t_member_card_transaction WHERE change_type = 1"), "只扣一次次数");
-        assertEquals(Integer.valueOf(1), intOf("SELECT SUM(booked_persons) FROM t_schedule WHERE id IN (?, ?)",
-                SCHEDULE_ID, SCHEDULE_OVERLAP_ID), "只有成功的场次占位");
+        assertEquals(Arrays.asList(RESULT_OK, RESULT_OK), results);
+        assertEquals(2, countReservations());
+        assertEquals(2, countOf("SELECT COUNT(*) FROM t_member_card_transaction WHERE change_type = 1"));
+        assertEquals(Integer.valueOf(10),
+                intOf("SELECT remaining_times FROM t_member_card WHERE id = ?", TIMES_CARD_ID));
+        assertEquals(Integer.valueOf(1), intOf("SELECT booked_persons FROM t_schedule WHERE id = ?", SCHEDULE_ID));
+        assertEquals(Integer.valueOf(1),
+                intOf("SELECT booked_persons FROM t_schedule WHERE id = ?", SCHEDULE_OVERLAP_ID));
     }
 
     @Test
@@ -537,9 +540,251 @@ class ReservationServiceImplTest extends AbstractYogaIntegrationTest {
                 intOf("SELECT remaining_times FROM t_member_card WHERE id = ?", TIMES_CARD_ID), "只扣一次");
     }
 
-    /**
-     * 两个线程同时执行预约，返回每个线程的结果：成功为 {@link #RESULT_OK}，业务异常为「业务码:提示语」
-     */
+    @Test
+    @DisplayName("并发预约：不同会员抢最后一个名额，仅成功者占位、扣次、写流水")
+    void create_concurrentlyLastSeat_shouldNotOversell() throws Exception {
+        List<String> results = runConcurrently(() -> create(REQUEST_ID, SCHEDULE_FULL_ID, TIMES_CARD_ID, 1),
+                () -> createForMember(OTHER_MEMBER_ID, OTHER_REQUEST_ID, SCHEDULE_FULL_ID, OTHER_MEMBER_CARD_ID, 1));
+
+        assertEquals(1, results.stream().filter(RESULT_OK::equals).count(), results.toString());
+        assertTrue(results.contains("409:剩余名额不足，不能预约"), results.toString());
+        assertEquals(1, countReservations());
+        assertEquals(Integer.valueOf(1), intOf("SELECT booked_persons FROM t_schedule WHERE id = ?", SCHEDULE_FULL_ID));
+        assertEquals(Integer.valueOf(23), intOf("SELECT SUM(remaining_times) FROM t_member_card WHERE id IN (?, ?)",
+                TIMES_CARD_ID, OTHER_MEMBER_CARD_ID));
+        assertEquals(1, countOf("SELECT COUNT(*) FROM t_member_card_transaction"));
+        assertAccountingConsistent();
+    }
+
+    @Test
+    @DisplayName("并发预约：不同请求标识预约同一排课，拒绝重复预约")
+    void create_concurrentlyDuplicateSchedule_shouldAllowOnlyOne() throws Exception {
+        List<String> results = runConcurrently(() -> create(REQUEST_ID, SCHEDULE_ID, TIMES_CARD_ID, 1),
+                () -> create(OTHER_REQUEST_ID, SCHEDULE_ID, TIMES_CARD_ID, 1));
+
+        assertEquals(1, results.stream().filter(RESULT_OK::equals).count(), results.toString());
+        assertTrue(results.contains("409:您已预约该课程"), results.toString());
+        assertEquals(1, countReservations());
+        assertEquals(Integer.valueOf(11),
+                intOf("SELECT remaining_times FROM t_member_card WHERE id = ?", TIMES_CARD_ID));
+        assertAccountingConsistent();
+    }
+
+    @Test
+    @DisplayName("并发预约：同一请求标识提交不同排课，只有一笔生效，另一笔参数冲突")
+    void create_concurrentlySameRequestDifferentSchedule_shouldConflict() throws Exception {
+        List<String> results = runConcurrently(() -> create(REQUEST_ID, SCHEDULE_ID, TIMES_CARD_ID, 1),
+                () -> create(REQUEST_ID, SCHEDULE_SECOND_ID, TIMES_CARD_ID, 1));
+
+        assertEquals(1, results.stream().filter(RESULT_OK::equals).count(), results.toString());
+        assertTrue(results.contains("409:请求幂等标识已被其他预约使用"), results.toString());
+        assertEquals(1, countReservations());
+        assertEquals(Integer.valueOf(11),
+                intOf("SELECT remaining_times FROM t_member_card WHERE id = ?", TIMES_CARD_ID));
+        assertAccountingConsistent();
+    }
+
+    @Test
+    @DisplayName("并发预约：卡剩两次，两笔预约各扣两次，只允许一笔成功")
+    void create_concurrentlyInsufficientBalance_shouldNotOverdraw() throws Exception {
+        jdbcTemplate.update("UPDATE t_member_card SET remaining_times = 2 WHERE id = ?", TIMES_CARD_ID);
+        List<String> results = runConcurrently(() -> create(REQUEST_ID, SCHEDULE_ID, TIMES_CARD_ID, 2),
+                () -> create(OTHER_REQUEST_ID, SCHEDULE_SECOND_ID, TIMES_CARD_ID, 2));
+
+        assertEquals(1, results.stream().filter(RESULT_OK::equals).count(), results.toString());
+        assertTrue(results.contains("409:会员卡剩余次数不足"), results.toString());
+        assertEquals(1, countReservations());
+        assertEquals(Integer.valueOf(0),
+                intOf("SELECT remaining_times FROM t_member_card WHERE id = ?", TIMES_CARD_ID));
+        assertEquals(Integer.valueOf(2), intOf("SELECT before_times FROM t_member_card_transaction"));
+        assertEquals(Integer.valueOf(0), intOf("SELECT after_times FROM t_member_card_transaction"));
+        assertAccountingConsistent();
+    }
+
+    @Test
+    @DisplayName("幂等复查：首笔预约未提交时重试建立旧快照，首笔提交后仍按成功返回")
+    void create_retryWithOldSnapshot_shouldReturnSuccessEvenWhenFull() throws Exception {
+        List<String> results = runWithFirstTransactionHeld(() -> create(REQUEST_ID, SCHEDULE_ID, TIMES_CARD_ID, 2),
+                () -> create(REQUEST_ID, SCHEDULE_ID, TIMES_CARD_ID, 2));
+
+        assertEquals(Arrays.asList(RESULT_OK, RESULT_OK), results);
+        assertEquals(1, countReservations());
+        assertEquals(Integer.valueOf(10),
+                intOf("SELECT remaining_times FROM t_member_card WHERE id = ?", TIMES_CARD_ID));
+        assertEquals(1, countOf("SELECT COUNT(*) FROM t_member_card_transaction"));
+        assertAccountingConsistent();
+    }
+
+    @Test
+    @DisplayName("预约回滚：扣次流水写入失败，预约、占位与扣次全部回滚")
+    void create_whenLedgerInsertFails_shouldRollbackEverything() {
+        rejectLedgerInserts(1);
+        try {
+            assertThrows(DataAccessException.class, () -> create(REQUEST_ID, SCHEDULE_ID, TIMES_CARD_ID, 2));
+        } finally {
+            jdbcTemplate.execute("ALTER TABLE t_member_card_transaction DROP CHECK reject_reservation_ledger");
+        }
+        assertEquals(0, countReservations());
+        assertEquals(Integer.valueOf(0), intOf("SELECT booked_persons FROM t_schedule WHERE id = ?", SCHEDULE_ID));
+        assertEquals(Integer.valueOf(12),
+                intOf("SELECT remaining_times FROM t_member_card WHERE id = ?", TIMES_CARD_ID));
+        assertEquals(0, countOf("SELECT COUNT(*) FROM t_member_card_transaction"));
+        create(REQUEST_ID, SCHEDULE_ID, TIMES_CARD_ID, 2);
+        assertEquals(1, countReservations(), "失败后相同请求可以重试");
+        assertAccountingConsistent();
+    }
+
+    @Test
+    @DisplayName("取消回滚：返次流水写入失败，预约状态、名额与余额全部还原")
+    void cancel_whenLedgerInsertFails_shouldRollbackEverything() {
+        create(REQUEST_ID, SCHEDULE_ID, TIMES_CARD_ID, 2);
+        Long id = reservationId();
+        rejectLedgerInserts(2);
+        try {
+            assertThrows(DataAccessException.class, () -> reservationService.cancel(MEMBER_ID, id));
+        } finally {
+            jdbcTemplate.execute("ALTER TABLE t_member_card_transaction DROP CHECK reject_reservation_ledger");
+        }
+        assertEquals(Integer.valueOf(1), intOf("SELECT status FROM t_reservation WHERE id = ?", id));
+        assertNull(jdbcTemplate.queryForObject("SELECT cancel_time FROM t_reservation WHERE id = ?",
+                LocalDateTime.class, id));
+        assertEquals(Integer.valueOf(2), intOf("SELECT booked_persons FROM t_schedule WHERE id = ?", SCHEDULE_ID));
+        assertEquals(Integer.valueOf(10),
+                intOf("SELECT remaining_times FROM t_member_card WHERE id = ?", TIMES_CARD_ID));
+        assertEquals(1, countOf("SELECT COUNT(*) FROM t_member_card_transaction"));
+        reservationService.cancel(MEMBER_ID, id);
+        assertEquals(Integer.valueOf(12),
+                intOf("SELECT remaining_times FROM t_member_card WHERE id = ?", TIMES_CARD_ID));
+        assertAccountingConsistent();
+    }
+
+    @Test
+    @DisplayName("并发取消：同一预约取消两次，只释放和返还一次")
+    void cancel_concurrently_shouldRefundOnlyOnce() throws Exception {
+        create(REQUEST_ID, SCHEDULE_ID, TIMES_CARD_ID, 2);
+        Long id = reservationId();
+        List<String> results = runConcurrently(() -> reservationService.cancel(MEMBER_ID, id),
+                () -> reservationService.cancel(MEMBER_ID, id));
+        assertEquals(Arrays.asList(RESULT_OK, RESULT_OK), results);
+        assertEquals(Integer.valueOf(12),
+                intOf("SELECT remaining_times FROM t_member_card WHERE id = ?", TIMES_CARD_ID));
+        assertEquals(1, countOf("SELECT COUNT(*) FROM t_member_card_transaction WHERE change_type = 2"));
+        assertAccountingConsistent();
+    }
+
+    @Test
+    @DisplayName("停卡先持锁：预约使用旧快照等待，停卡提交后必须拒绝")
+    void create_whenStopCommitsFirst_shouldReject() throws Exception {
+        List<String> results = runWithFirstTransactionHeld(this::stopTimesCard,
+                () -> create(REQUEST_ID, SCHEDULE_ID, TIMES_CARD_ID, 1));
+        assertEquals(Arrays.asList(RESULT_OK, "409:会员卡已停卡，不能预约"), results);
+        assertEquals(0, countReservations());
+        assertEquals(Integer.valueOf(12),
+                intOf("SELECT remaining_times FROM t_member_card WHERE id = ?", TIMES_CARD_ID));
+        assertEquals(0, countOf("SELECT COUNT(*) FROM t_member_card_transaction"));
+        assertAccountingConsistent();
+    }
+
+    @Test
+    @DisplayName("预约先持锁：预约提交后才停卡，已成功预约与扣次保留")
+    void stop_whenBookingCommitsFirst_shouldPreserveBooking() throws Exception {
+        List<String> results = runWithFirstTransactionHeld(() -> create(REQUEST_ID, SCHEDULE_ID, TIMES_CARD_ID, 1),
+                this::stopTimesCard);
+        assertEquals(Arrays.asList(RESULT_OK, RESULT_OK), results);
+        assertEquals(1, countReservations());
+        assertNotNull(jdbcTemplate.queryForObject("SELECT stop_time FROM t_member_card WHERE id = ?",
+                LocalDateTime.class, TIMES_CARD_ID));
+        assertEquals(Integer.valueOf(11),
+                intOf("SELECT remaining_times FROM t_member_card WHERE id = ?", TIMES_CARD_ID));
+        assertAccountingConsistent();
+    }
+
+    @Test
+    @DisplayName("取消排课先持锁：预约使用旧快照等待，取消提交后必须拒绝")
+    void create_whenScheduleCancellationCommitsFirst_shouldReject() throws Exception {
+        List<String> results = runWithFirstTransactionHeld(() -> scheduleService.changeStatus(SCHEDULE_ID, 3),
+                () -> create(REQUEST_ID, SCHEDULE_ID, TIMES_CARD_ID, 1));
+        assertEquals(Arrays.asList(RESULT_OK, "409:排课已取消，不能预约"), results);
+        assertEquals(0, countReservations());
+        assertEquals(Integer.valueOf(12),
+                intOf("SELECT remaining_times FROM t_member_card WHERE id = ?", TIMES_CARD_ID));
+        assertEquals(0, countOf("SELECT COUNT(*) FROM t_member_card_transaction"));
+        assertAccountingConsistent();
+    }
+
+    private void stopTimesCard() {
+        MemberCardStopDTO dto = new MemberCardStopDTO();
+        dto.setStopReason("测试停卡");
+        memberCardService.stop(TIMES_CARD_ID, dto);
+    }
+
+    private void rejectLedgerInserts(int changeType) {
+        jdbcTemplate.execute("ALTER TABLE t_member_card_transaction ADD CONSTRAINT reject_reservation_ledger"
+                + " CHECK (change_type <> " + changeType + ")");
+    }
+
+    private void assertAccountingConsistent() {
+        assertEquals(0,
+                countOf("SELECT COUNT(*) FROM t_schedule s WHERE s.booked_persons <>"
+                        + " (SELECT COALESCE(SUM(r.persons), 0) FROM t_reservation r"
+                        + " WHERE r.schedule_id = s.id AND r.status <> 2)"),
+                "排课占位应等于有效预约人数");
+        assertEquals(0, countOf("SELECT COUNT(*) FROM t_member_card WHERE remaining_times < 0"));
+        assertEquals(0, countOf(
+                "SELECT COUNT(*) FROM t_member_card_transaction" + " WHERE after_times <> before_times + change_times"),
+                "流水余额应守恒");
+        assertEquals(0,
+                countOf("SELECT COUNT(*) FROM t_reservation r WHERE NOT EXISTS"
+                        + " (SELECT 1 FROM t_member_card_transaction t WHERE t.reservation_id = r.id"
+                        + " AND t.change_type = 1 AND t.change_times = -r.persons)"),
+                "次数卡预约应有对应扣次流水");
+    }
+
+    /** 首个操作完成但尚未提交时，让第二个事务建立快照，再释放首个事务。 */
+    private List<String> runWithFirstTransactionHeld(Runnable first, Runnable second) throws Exception {
+        ExecutorService pool = Executors.newFixedThreadPool(2);
+        CountDownLatch firstApplied = new CountDownLatch(1);
+        CountDownLatch secondSnapshot = new CountDownLatch(1);
+        CountDownLatch releaseFirst = new CountDownLatch(1);
+        try {
+            Future<String> firstFuture = pool.submit(() -> new TransactionTemplate(transactionManager).execute(s -> {
+                first.run();
+                firstApplied.countDown();
+                awaitLatch(releaseFirst);
+                return RESULT_OK;
+            }));
+            Future<String> secondFuture = pool.submit(() -> {
+                awaitLatch(firstApplied);
+                try {
+                    return new TransactionTemplate(transactionManager).execute(s -> {
+                        assertNull(reservationDao.selectByMemberAndRequestId(MEMBER_ID, REQUEST_ID));
+                        secondSnapshot.countDown();
+                        second.run();
+                        return RESULT_OK;
+                    });
+                } catch (ServiceException e) {
+                    return e.getCode() + ":" + e.getMessage();
+                }
+            });
+            assertTrue(secondSnapshot.await(10, TimeUnit.SECONDS), "第二个事务应在首个提交之前建立快照");
+            releaseFirst.countDown();
+            return Arrays.asList(firstFuture.get(30, TimeUnit.SECONDS), secondFuture.get(30, TimeUnit.SECONDS));
+        } finally {
+            releaseFirst.countDown();
+            pool.shutdownNow();
+            assertTrue(pool.awaitTermination(10, TimeUnit.SECONDS), "测试线程应结束，避免影响后续数据清理");
+        }
+    }
+
+    private void awaitLatch(CountDownLatch latch) {
+        try {
+            assertTrue(latch.await(10, TimeUnit.SECONDS), "等待并发测试阶段超时");
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException(e);
+        }
+    }
+
     private List<String> runConcurrently(Runnable first, Runnable second) throws Exception {
         ExecutorService pool = Executors.newFixedThreadPool(2);
         CountDownLatch ready = new CountDownLatch(2);
@@ -551,14 +796,16 @@ class ReservationServiceImplTest extends AbstractYogaIntegrationTest {
             start.countDown();
             return Arrays.asList(firstFuture.get(30, TimeUnit.SECONDS), secondFuture.get(30, TimeUnit.SECONDS));
         } finally {
+            start.countDown();
             pool.shutdownNow();
+            assertTrue(pool.awaitTermination(10, TimeUnit.SECONDS), "测试线程应结束，避免影响后续数据清理");
         }
     }
 
     private Callable<String> concurrentTask(Runnable action, CountDownLatch ready, CountDownLatch start) {
         return () -> {
             ready.countDown();
-            start.await(10, TimeUnit.SECONDS);
+            awaitLatch(start);
             try {
                 action.run();
                 return RESULT_OK;
@@ -765,12 +1012,16 @@ class ReservationServiceImplTest extends AbstractYogaIntegrationTest {
     private static final String FOURTH_REQUEST_ID = "6f1a4c1e-6a2b-4c1d-9f0e-1a2b3c4d5e73";
 
     private void create(String requestId, Long scheduleId, Long memberCardId, Integer persons) {
+        createForMember(MEMBER_ID, requestId, scheduleId, memberCardId, persons);
+    }
+
+    private void createForMember(Long memberId, String requestId, Long scheduleId, Long memberCardId, Integer persons) {
         ReservationCreateDTO dto = new ReservationCreateDTO();
         dto.setRequestId(requestId);
         dto.setScheduleId(scheduleId);
         dto.setMemberCardId(memberCardId);
         dto.setPersons(persons);
-        reservationService.create(MEMBER_ID, dto);
+        reservationService.create(memberId, dto);
     }
 
     private ReservationPublicQuery query(Integer status, Integer cardType) {
