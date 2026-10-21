@@ -39,14 +39,28 @@
       </el-table-column>
       <el-table-column label="姓名" prop="name" min-width="140" show-overflow-tooltip />
       <el-table-column label="联系电话" prop="phone" min-width="140" show-overflow-tooltip />
+      <el-table-column label="等级" align="center" width="100">
+        <template #default="scope">
+          <el-tag :type="isGold(scope.row) ? 'warning' : 'info'">{{ levelText(scope.row) }}</el-tag>
+        </template>
+      </el-table-column>
       <el-table-column label="更新时间" align="center" prop="updateTime" width="180">
         <template #default="scope">
           <span>{{ parseTime(scope.row.updateTime) }}</span>
         </template>
       </el-table-column>
-      <el-table-column label="操作" align="center" width="180" fixed="right" class-name="small-padding fixed-width">
+      <el-table-column label="操作" align="center" width="300" fixed="right" class-name="small-padding fixed-width">
         <template #default="scope">
           <el-button link type="primary" icon="Edit" @click="handleUpdate(scope.row)">修改</el-button>
+          <el-button
+            v-hasPermi="['yoga:coach:level']"
+            link
+            :type="isGold(scope.row) ? 'warning' : 'success'"
+            :icon="isGold(scope.row) ? 'Star' : 'StarFilled'"
+            :loading="levelLoadingId === scope.row.id"
+            :disabled="!!levelLoadingId"
+            @click="handleToggleLevel(scope.row)"
+          >{{ isGold(scope.row) ? '取消金牌' : '设为金牌' }}</el-button>
           <el-button link type="primary" icon="Delete" @click="handleDelete(scope.row)">删除</el-button>
         </template>
       </el-table-column>
@@ -96,9 +110,13 @@
 </template>
 
 <script setup name="Coach">
-import { listCoach, getCoach, addCoach, updateCoach, delCoach } from "@/api/coach/coach"
+import { listCoach, getCoach, addCoach, updateCoach, delCoach, updateCoachLevel } from "@/api/coach/coach"
 
 const { proxy } = getCurrentInstance()
+
+/** 等级取值：1 普通教练，2 金牌教练 */
+const LEVEL_NORMAL = 1
+const LEVEL_GOLD = 2
 
 const coachList = ref([])
 const open = ref(false)
@@ -106,6 +124,8 @@ const loading = ref(true)
 const showSearch = ref(true)
 const total = ref(0)
 const title = ref("")
+/** 行内等级操作进行中的教练 ID，同一时间只允许一个等级操作 */
+const levelLoadingId = ref(null)
 
 const data = reactive({
   form: {},
@@ -126,15 +146,17 @@ const data = reactive({
 
 const { form, queryParams, rules } = toRefs(data)
 
-/** 查询教练列表 */
+/** 查询教练列表；返回是否刷新成功，供操作成功提示等待刷新结果 */
 function getList() {
   loading.value = true
-  listCoach(queryParams.value).then(response => {
+  return listCoach(queryParams.value).then(response => {
     coachList.value = response.rows
     total.value = response.total
     loading.value = false
+    return true
   }).catch(() => {
     loading.value = false
+    return false
   })
 }
 
@@ -222,6 +244,35 @@ function normalizeGallery(value) {
     return value.split(",").map(item => item.trim()).filter(item => item)
   }
   return []
+}
+
+function isGold(row) {
+  return Number(row.level) === LEVEL_GOLD
+}
+
+function levelText(row) {
+  return isGold(row) ? "金牌" : "普通"
+}
+
+/** 等级由独立接口维护，资料新增与编辑不提交该字段 */
+function handleToggleLevel(row) {
+  if (levelLoadingId.value) {
+    return
+  }
+  const nextLevel = isGold(row) ? LEVEL_NORMAL : LEVEL_GOLD
+  const actionText = nextLevel === LEVEL_GOLD ? "设为金牌" : "取消金牌"
+  levelLoadingId.value = row.id
+  proxy.$modal.confirm('是否确认将教练"' + row.name + '"' + actionText + "？").then(() => {
+    return updateCoachLevel(row.id, nextLevel)
+  }).then(() => {
+    return getList()
+  }).then(refreshed => {
+    if (refreshed) {
+      proxy.$modal.msgSuccess(actionText + "成功")
+    }
+  }).catch(() => {}).finally(() => {
+    levelLoadingId.value = null
+  })
 }
 
 /** 删除按钮操作（删除被拒时由响应拦截器统一提示服务端 msg，如「该教练仍有 N 节未结束的排课，无法删除」） */

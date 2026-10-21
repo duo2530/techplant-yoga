@@ -1,0 +1,16 @@
+{
+  "name": "techplant-yoga-admin-e2e",
+  "version": "1.0.0",
+  "private": true,
+  "description": "管理端 Web 端到端测试（Playwright，直连真实后端）",
+  "scripts": {
+    "test": "node run.js",
+    "test:build": "node run.js --build"
+  },
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "devDependencies": {
+    "playwright-core": "1.64.0"
+  }
+}

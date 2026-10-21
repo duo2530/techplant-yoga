@@ -42,3 +42,12 @@ export function delCoach(coachId) {
     method: 'delete'
   })
 }
+
+// 设置教练等级（1 普通 / 2 金牌），等级维护与资料编辑相互独立
+export function updateCoachLevel(coachId, level) {
+  return request({
+    url: '/admin/coaches/' + coachId + '/level',
+    method: 'put',
+    params: { level }
+  })
+}
