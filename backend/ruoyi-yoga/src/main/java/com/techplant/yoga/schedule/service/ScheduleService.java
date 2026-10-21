@@ -3,6 +3,7 @@ package com.techplant.yoga.schedule.service;
 import com.techplant.yoga.common.response.PageResult;
 import com.techplant.yoga.schedule.dto.ScheduleCreateDTO;
 import com.techplant.yoga.schedule.dto.ScheduleUpdateDTO;
+import com.techplant.yoga.schedule.query.CoachScheduleQuery;
 import com.techplant.yoga.schedule.query.PublicScheduleQuery;
 import com.techplant.yoga.schedule.query.ScheduleQuery;
 import com.techplant.yoga.schedule.vo.PublicScheduleDetailVO;
@@ -79,4 +80,14 @@ public interface ScheduleService {
 
     /** 用户端排课详情（课程详情页）：未删除且 status &lt;&gt; 1，否则一律按不存在返回 404 */
     PublicScheduleDetailVO publicDetail(Long scheduleId);
+
+    /**
+     * 教练页排课列表：窗口固定为业务时区今天起 14 天（含今天），
+     * 复用公开可见性、卡片装配与 {@code bookable} 推导，按 {@code start_time ASC, id ASC} 分页
+     *
+     * @param coachId 教练ID
+     * @param query   门店、课种与分页条件
+     * @return 当前门店该教练所选课种的排课卡片
+     */
+    PageResult<ScheduleCardVO> publicPageByCoach(Long coachId, CoachScheduleQuery query);
 }

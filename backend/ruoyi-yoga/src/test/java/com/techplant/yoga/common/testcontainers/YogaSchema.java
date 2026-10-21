@@ -75,7 +75,7 @@ public final class YogaSchema {
      * 从工作目录逐级向上找 {@code backend/sql/<脚本名>}，兼容在仓库根目录、backend 目录或模块目录下运行测试；
      * 候选位置必须与同级 pom.xml 同时存在，避免命中其它目录的同名脚本。
      */
-    private static Path locateScript(String scriptName) {
+    public static Path locateScript(String scriptName) {
         Path directory = Paths.get("").toAbsolutePath();
         while (directory != null) {
             Path moduleCandidate = directory.resolve("backend/sql/" + scriptName);

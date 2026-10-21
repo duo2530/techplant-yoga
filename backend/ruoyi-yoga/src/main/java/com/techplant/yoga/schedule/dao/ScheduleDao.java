@@ -22,6 +22,15 @@ public interface ScheduleDao {
      */
     IPage<ScheduleDO> selectPublicPage(PublicScheduleQuery query, LocalDate scheduleDate);
 
+    /**
+     * 教练页分页：固定 {@code status <> 1} ＋ 教练 ＋ 门店 ＋ 课种快照 ＋ 上课日期窗口（含首尾日）
+     *
+     * @param startDate 窗口首日（含）
+     * @param endDate   窗口末日（含）
+     */
+    IPage<ScheduleDO> selectPublicCoachPage(Long coachId, Long storeId, Integer courseType, LocalDate startDate,
+            LocalDate endDate, int pageNum, int pageSize);
+
     /** 按主键查（管理端，物理删除后查不到） */
     ScheduleDO selectById(Long id);
 

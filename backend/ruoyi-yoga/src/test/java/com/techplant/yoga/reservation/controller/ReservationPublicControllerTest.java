@@ -34,6 +34,7 @@ import com.techplant.yoga.classroom.dao.ClassroomDaoImpl;
 import com.techplant.yoga.classroom.service.impl.ClassroomServiceImpl;
 import com.techplant.yoga.coach.dao.CoachDaoImpl;
 import com.techplant.yoga.coach.service.impl.CoachServiceImpl;
+import com.techplant.yoga.common.config.BusinessTimeConfig;
 import com.techplant.yoga.common.config.JacksonConfig;
 import com.techplant.yoga.common.testcontainers.AbstractYogaIntegrationTest;
 import com.techplant.yoga.common.testcontainers.YogaMyBatisTestConfig;
@@ -66,9 +67,9 @@ import com.techplant.yoga.store.service.impl.StoreServiceImpl;
  * <p>覆盖统一响应、参数校验、ID 字符串化与时间格式；会员鉴权链与 Redis 不在本测试范围内，
  * 测试直接往登录上下文写会员主体。</p>
  */
-@ContextConfiguration(classes = {YogaMyBatisTestConfig.class, StoreDaoImpl.class, StoreRegionDictDaoImpl.class,
-    StoreServiceImpl.class, ClassroomDaoImpl.class, ClassroomServiceImpl.class, CoachDaoImpl.class,
-    CoachServiceImpl.class, CourseDaoImpl.class, CourseServiceImpl.class, MemberDaoImpl.class,
+@ContextConfiguration(classes = {YogaMyBatisTestConfig.class, BusinessTimeConfig.class, StoreDaoImpl.class,
+    StoreRegionDictDaoImpl.class, StoreServiceImpl.class, ClassroomDaoImpl.class, ClassroomServiceImpl.class,
+    CoachDaoImpl.class, CoachServiceImpl.class, CourseDaoImpl.class, CourseServiceImpl.class, MemberDaoImpl.class,
     MemberLevelDictDaoImpl.class, MemberServiceImpl.class, MemberCardDaoImpl.class, MemberCardTransactionDaoImpl.class,
     MemberCardTransactionServiceImpl.class, CardNoGenerator.class, MemberCardServiceImpl.class, ScheduleDaoImpl.class,
     ScheduleBookingServiceImpl.class, ScheduleServiceImpl.class, ReservationDaoImpl.class,

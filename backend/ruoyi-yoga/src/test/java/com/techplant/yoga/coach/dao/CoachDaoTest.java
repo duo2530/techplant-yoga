@@ -198,13 +198,79 @@ class CoachDaoTest extends AbstractYogaIntegrationTest {
     }
 
     // ------------------------------------------------------------------
+    // 等级：独立更新列，资料更新不覆盖
+    // ------------------------------------------------------------------
+
+    @Test
+    @DisplayName("列表查询带出 level；等级独立更新只写 level 与更新审计字段")
+    void updateLevel_shouldOnlyWriteLevelAndAudit() throws Exception {
+        insertCoach(LIN_COACH_ID, LIN_NAME, "旧简介", null, 1);
+
+        CoachQuery query = new CoachQuery();
+        query.setName(LIN_NAME);
+        assertEquals(Integer.valueOf(1), coachDao.selectAdminPage(query).getRecords().get(0).getLevel(), "列表要带出等级");
+
+        assertEquals(1, coachDao.updateLevel(LIN_COACH_ID, 2, 9L));
+
+        CoachDO latest = coachDao.selectById(LIN_COACH_ID);
+        assertEquals(Integer.valueOf(2), latest.getLevel());
+        assertEquals(Long.valueOf(9L), latest.getUpdateBy());
+        assertEquals("旧简介", latest.getIntro(), "等级更新只写 level 列");
+        assertEquals(Long.valueOf(7L), latest.getCreateBy(), "创建审计列不得被等级更新触碰");
+    }
+
+    @Test
+    @DisplayName("资料全量更新（updateById）不写 level 列")
+    void updateById_shouldNotTouchLevel() throws Exception {
+        insertCoach(LIN_COACH_ID, LIN_NAME, "旧简介", null, 2);
+
+        CoachDO update = new CoachDO();
+        update.setId(LIN_COACH_ID);
+        update.setName("周教练");
+        update.setIntro("新简介");
+        update.setLevel(1);
+        update.setUpdateBy(9L);
+
+        coachDao.updateById(update);
+
+        CoachDO latest = coachDao.selectById(LIN_COACH_ID);
+        assertEquals("周教练", latest.getName());
+        assertEquals(Integer.valueOf(2), latest.getLevel(), "资料编辑不得覆盖等级");
+    }
+
+    @Test
+    @DisplayName("公开金牌查询：只返回 level=2 的教练，按 id DESC")
+    void selectFeatured_shouldReturnOnlyGoldCoaches() throws Exception {
+        insertCoach(LIN_COACH_ID, "普通教练", null, null, 1);
+        insertCoach(ZHOU_COACH_ID, "金牌教练甲", null, null, 2);
+        insertCoach(SECOND_LIN_COACH_ID, "金牌教练乙", null, null, 2);
+
+        List<CoachDO> featured = coachDao.selectFeatured();
+
+        assertEquals(2, featured.size());
+        assertEquals(Long.valueOf(SECOND_LIN_COACH_ID), featured.get(0).getId(), "id DESC");
+        assertEquals(Long.valueOf(ZHOU_COACH_ID), featured.get(1).getId());
+
+        CoachDO publicCoach = coachDao.selectPublicById(ZHOU_COACH_ID);
+        assertNotNull(publicCoach);
+        assertEquals("金牌教练甲", publicCoach.getName());
+        assertNull(publicCoach.getPhone(), "公开详情不查联系电话");
+        assertNull(coachDao.selectPublicById(9999L), "不存在的教练返回 null");
+    }
+
+    // ------------------------------------------------------------------
     // 夹具
     // ------------------------------------------------------------------
 
     /** 直插测试数据（避开审计填充与雪花 ID，断言才稳定） */
     private void insertCoach(Long id, String name, String intro, String gallery) throws Exception {
-        String sql = "INSERT INTO t_coach (id, name, avatar_url, intro, phone, gallery,"
-                + " create_by, create_time, update_by, update_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        insertCoach(id, name, intro, gallery, 1);
+    }
+
+    /** 直插测试数据，可指定等级 */
+    private void insertCoach(Long id, String name, String intro, String gallery, int level) throws Exception {
+        String sql = "INSERT INTO t_coach (id, name, avatar_url, intro, phone, gallery, level,"
+                + " create_by, create_time, update_by, update_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         try (Connection connection = dataSource.getConnection();
                 PreparedStatement statement = connection.prepareStatement(sql)) {
             Timestamp now = Timestamp.valueOf(LocalDateTime.of(2026, 9, 28, 10, 0, 0));
@@ -214,10 +280,11 @@ class CoachDaoTest extends AbstractYogaIntegrationTest {
             statement.setString(4, intro);
             statement.setString(5, "13800000001");
             statement.setString(6, gallery);
-            statement.setLong(7, 7L);
-            statement.setTimestamp(8, now);
-            statement.setLong(9, 7L);
-            statement.setTimestamp(10, now);
+            statement.setInt(7, level);
+            statement.setLong(8, 7L);
+            statement.setTimestamp(9, now);
+            statement.setLong(10, 7L);
+            statement.setTimestamp(11, now);
             statement.executeUpdate();
         }
     }

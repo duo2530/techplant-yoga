@@ -15,6 +15,12 @@ import com.baomidou.mybatisplus.annotation.TableName;
 @Getter
 @Setter
 public class CoachDO {
+    /** 等级：普通教练 */
+    public static final int LEVEL_NORMAL = 1;
+
+    /** 等级：金牌教练 */
+    public static final int LEVEL_GOLD = 2;
+
     /** 教练ID（雪花ID） */
     @TableId(value = "id", type = IdType.ASSIGN_ID)
     private Long id;
@@ -33,6 +39,9 @@ public class CoachDO {
 
     /** 相册：JSON 数组字符串，最多 5 个图片 URL；空相册为 {@code null} */
     private String gallery;
+
+    /** 等级：1 普通、2 金牌（新增固定普通，由独立等级接口维护） */
+    private Integer level;
 
     /** 创建人ID */
     @TableField(fill = FieldFill.INSERT)

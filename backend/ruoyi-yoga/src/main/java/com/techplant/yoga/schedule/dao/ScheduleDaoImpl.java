@@ -61,6 +61,21 @@ public class ScheduleDaoImpl implements ScheduleDao {
     }
 
     @Override
+    public IPage<ScheduleDO> selectPublicCoachPage(Long coachId, Long storeId, Integer courseType, LocalDate startDate,
+            LocalDate endDate, int pageNum, int pageSize) {
+        LambdaQueryWrapper<ScheduleDO> wrapper = buildVisibleCondition();
+        wrapper.eq(ScheduleDO::getCoachId, coachId);
+        wrapper.eq(ScheduleDO::getStoreId, storeId);
+        // 课种筛快照列，不回读课程
+        wrapper.eq(ScheduleDO::getCourseType, courseType);
+        // 日期窗口筛派生列 schedule_date
+        wrapper.between(ScheduleDO::getScheduleDate, startDate, endDate);
+        wrapper.orderByAsc(ScheduleDO::getStartTime);
+        wrapper.orderByAsc(ScheduleDO::getId);
+        return scheduleMapper.selectPage(new Page<ScheduleDO>(pageNum, pageSize), wrapper);
+    }
+
+    @Override
     public ScheduleDO selectById(Long id) {
         return scheduleMapper.selectById(id);
     }

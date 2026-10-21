@@ -2,6 +2,7 @@ package com.techplant.yoga.schedule.service.impl;
 
 import lombok.RequiredArgsConstructor;
 
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -37,6 +38,7 @@ import com.techplant.yoga.schedule.domain.ScheduleDO;
 import com.techplant.yoga.schedule.dto.ScheduleCreateDTO;
 import com.techplant.yoga.schedule.dto.ScheduleUpdateDTO;
 import com.techplant.yoga.schedule.enums.ScheduleStatusEnum;
+import com.techplant.yoga.schedule.query.CoachScheduleQuery;
 import com.techplant.yoga.schedule.query.PublicScheduleQuery;
 import com.techplant.yoga.schedule.query.ScheduleQuery;
 import com.techplant.yoga.schedule.service.ScheduleService;
@@ -60,6 +62,9 @@ public class ScheduleServiceImpl implements ScheduleService {
     /** 参数校验失败／系统异常 */
     private static final int PARAM_ERROR = 500;
 
+    /** 新增公开接口的参数错误业务码 */
+    private static final int BAD_REQUEST = 400;
+
     /** 排课窗口：今天起 14 天内（含今天） */
     private static final int SCHEDULE_WINDOW_DAYS = 14;
 
@@ -67,6 +72,9 @@ public class ScheduleServiceImpl implements ScheduleService {
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ISO_LOCAL_DATE;
 
     private final ScheduleDao scheduleDao;
+
+    /** 业务时钟：排课窗口、状态文案与可约判定统一按业务时区取时间 */
+    private final Clock clock;
 
     @Lazy
     private final StoreService storeService;
@@ -95,7 +103,7 @@ public class ScheduleServiceImpl implements ScheduleService {
         IPage<ScheduleDO> page = scheduleDao.selectPage(query);
         List<ScheduleDO> records = page.getRecords();
         // 同一个请求只用同一个 now，保证同一页数据的派生状态口径一致
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(clock);
 
         Map<Long, String> storeNames = storeNameMap(distinctIds(records, ScheduleDO::getStoreId));
         Map<Long, String> courseNames = courseNameMap(distinctIds(records, ScheduleDO::getCourseId));
@@ -117,7 +125,7 @@ public class ScheduleServiceImpl implements ScheduleService {
     @Override
     public ScheduleDetailVO getById(Long scheduleId) {
         ScheduleDO schedule = requireSchedule(scheduleId);
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(clock);
         ScheduleDetailVO vo = ScheduleConverter.toDetailVO(schedule, now);
         applyAdminNames(vo, schedule, storeNameMap(Collections.singletonList(schedule.getStoreId())),
                 courseNameMap(Collections.singletonList(schedule.getCourseId())),
@@ -200,7 +208,7 @@ public class ScheduleServiceImpl implements ScheduleService {
 
         ScheduleDO schedule = requireSchedule(scheduleId);
         Integer current = schedule.getStatus();
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(clock);
 
         // 终态 1：已取消不可再变更状态
         if (ScheduleStatusEnum.of(current) == ScheduleStatusEnum.CANCELLED) {
@@ -230,7 +238,7 @@ public class ScheduleServiceImpl implements ScheduleService {
     public void delete(Long scheduleId) {
         ScheduleDO schedule = requireSchedule(scheduleId);
         Integer status = schedule.getStatus();
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(clock);
 
         if (ScheduleStatusEnum.of(status) == ScheduleStatusEnum.PENDING) {
             // 物理删除：本表没有 deleted 列、没有 @TableLogic
@@ -293,32 +301,27 @@ public class ScheduleServiceImpl implements ScheduleService {
         storeService.getById(query.getStoreId());
 
         IPage<ScheduleDO> page = scheduleDao.selectPublicPage(query, date);
-        List<ScheduleDO> records = page.getRecords();
-        LocalDateTime now = LocalDateTime.now();
+        List<ScheduleCardVO> list = assembleCards(page.getRecords(), Collections.singletonList(query.getStoreId()),
+                LocalDateTime.now(clock));
+        return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), list);
+    }
 
-        Set<Long> storeIds = distinctIds(records, ScheduleDO::getStoreId);
-        storeIds.add(query.getStoreId());
-        Map<Long, CourseSummaryVO> courses = courseSummaryMap(distinctIds(records, ScheduleDO::getCourseId));
-        Map<Long, String> coachNames = coachNameMap(distinctIds(records, ScheduleDO::getCoachId));
-        Map<Long, String> classroomNames = classroomNameMap(distinctIds(records, ScheduleDO::getClassroomId));
-        Map<Long, String> storeNames = storeNameMap(storeIds);
+    /**
+     * 教练页排课列表：教练与门店都必须存在；窗口固定为业务时区今天起 14 天（含今天）
+     */
+    @Override
+    public PageResult<ScheduleCardVO> publicPageByCoach(Long coachId, CoachScheduleQuery query) {
+        // 教练不存在或已删除 → 404（由 CoachService 抛）
+        coachService.getSummary(coachId);
+        validateCoachScheduleQuery(query);
+        // 门店不存在或已删除 → 404「门店不存在或已被删除」
+        storeService.getById(query.getStoreId());
 
-        List<ScheduleCardVO> list = new ArrayList<ScheduleCardVO>(records.size());
-        for (ScheduleDO schedule : records) {
-            ScheduleCardVO vo = ScheduleConverter.toCardVO(schedule, now);
-            CourseSummaryVO course = courses.get(schedule.getCourseId());
-            if (course != null) {
-                // 名称／封面／难度实时取课程（不做快照）
-                vo.setCourseName(text(course.getName()));
-                vo.setCourseCoverUrl(text(course.getCoverUrl()));
-                vo.setDifficulty(course.getDifficulty());
-            }
-            vo.setCoachName(nameOf(coachNames, schedule.getCoachId()));
-            vo.setClassroomName(nameOf(classroomNames, schedule.getClassroomId()));
-            vo.setStoreName(nameOf(storeNames, schedule.getStoreId()));
-            vo.setBookable(isBookable(schedule, now));
-            list.add(vo);
-        }
+        LocalDate today = LocalDate.now(clock);
+        IPage<ScheduleDO> page = scheduleDao.selectPublicCoachPage(coachId, query.getStoreId(), query.getCourseType(),
+                today, today.plusDays(SCHEDULE_WINDOW_DAYS - 1L), query.pageNumOrDefault(), query.pageSizeOrDefault());
+        List<ScheduleCardVO> list = assembleCards(page.getRecords(), Collections.singletonList(query.getStoreId()),
+                LocalDateTime.now(clock));
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), list);
     }
 
@@ -330,7 +333,7 @@ public class ScheduleServiceImpl implements ScheduleService {
             throw notFoundSchedule();
         }
 
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(clock);
         PublicScheduleDetailVO vo = ScheduleConverter.toPublicDetailVO(schedule, now);
 
         // 封面／介绍／难度实时取课程；课程已删除时全部按空处理
@@ -365,6 +368,63 @@ public class ScheduleServiceImpl implements ScheduleService {
     // ------------------------------------------------------------------
     // 内部：业务校验
     // ------------------------------------------------------------------
+
+    /**
+     * 用户端排课卡片装配：批量补齐课程、教练、教室、门店名称并推导 {@code bookable}
+     *
+     * @param records       当前页排课
+     * @param extraStoreIds 除结果集外还要补齐的门店ID（如查询条件里的当前门店）
+     * @param now           判定基准时间（同一请求只用一个）
+     */
+    private List<ScheduleCardVO> assembleCards(List<ScheduleDO> records, Collection<Long> extraStoreIds,
+            LocalDateTime now) {
+        Set<Long> storeIds = distinctIds(records, ScheduleDO::getStoreId);
+        if (extraStoreIds != null) {
+            storeIds.addAll(extraStoreIds);
+        }
+        Map<Long, CourseSummaryVO> courses = courseSummaryMap(distinctIds(records, ScheduleDO::getCourseId));
+        Map<Long, String> coachNames = coachNameMap(distinctIds(records, ScheduleDO::getCoachId));
+        Map<Long, String> classroomNames = classroomNameMap(distinctIds(records, ScheduleDO::getClassroomId));
+        Map<Long, String> storeNames = storeNameMap(storeIds);
+
+        List<ScheduleCardVO> list = new ArrayList<ScheduleCardVO>(records.size());
+        for (ScheduleDO schedule : records) {
+            ScheduleCardVO vo = ScheduleConverter.toCardVO(schedule, now);
+            CourseSummaryVO course = courses.get(schedule.getCourseId());
+            if (course != null) {
+                // 名称／封面／难度实时取课程（不做快照）
+                vo.setCourseName(text(course.getName()));
+                vo.setCourseCoverUrl(text(course.getCoverUrl()));
+                vo.setDifficulty(course.getDifficulty());
+            }
+            vo.setCoachName(nameOf(coachNames, schedule.getCoachId()));
+            vo.setClassroomName(nameOf(classroomNames, schedule.getClassroomId()));
+            vo.setStoreName(nameOf(storeNames, schedule.getStoreId()));
+            vo.setBookable(isBookable(schedule, now));
+            list.add(vo);
+        }
+        return list;
+    }
+
+    /** 教练页查询参数：缺失或越界一律 400（新增公开接口的契约口径） */
+    private void validateCoachScheduleQuery(CoachScheduleQuery query) {
+        if (query == null || query.getStoreId() == null) {
+            throw new ServiceException("门店ID不能为空", BAD_REQUEST);
+        }
+        if (query.getCourseType() == null) {
+            throw new ServiceException("课程类型不能为空", BAD_REQUEST);
+        }
+        if (!CourseTypeEnum.isValid(query.getCourseType())) {
+            throw new ServiceException(CourseTypeEnum.INVALID_MESSAGE, BAD_REQUEST);
+        }
+        if (query.pageNumOrDefault() < 1) {
+            throw new ServiceException("页码不能小于 1", BAD_REQUEST);
+        }
+        int pageSize = query.pageSizeOrDefault();
+        if (pageSize < 1 || pageSize > CoachScheduleQuery.MAX_PAGE_SIZE) {
+            throw new ServiceException("每页条数必须在 1~100 之间", BAD_REQUEST);
+        }
+    }
 
     /**
      * 校验 ① 四个对象存在 ＋ ② 教室归属门店一致
@@ -409,7 +469,7 @@ public class ScheduleServiceImpl implements ScheduleService {
 
     /** ⑥ 上课日期必须落在今天起 14 天内（含今天） */
     private void validateScheduleWindow(LocalDate scheduleDate) {
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(clock);
         LocalDate lastDay = today.plusDays(SCHEDULE_WINDOW_DAYS - 1L);
         if (scheduleDate == null || scheduleDate.isBefore(today) || scheduleDate.isAfter(lastDay)) {
             throw new ServiceException("只能排今天起 14 天内的课", CONFLICT);
@@ -433,7 +493,7 @@ public class ScheduleServiceImpl implements ScheduleService {
 
     /** 用户端查询窗口：date 必须落在今天起 14 天内（含今天） */
     private void validatePublicDateWindow(LocalDate date) {
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(clock);
         LocalDate lastDay = today.plusDays(SCHEDULE_WINDOW_DAYS - 1L);
         if (date.isBefore(today) || date.isAfter(lastDay)) {
             throw new ServiceException("只能查今天起 14 天内的课", PARAM_ERROR);

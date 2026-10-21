@@ -6,7 +6,9 @@ import com.techplant.yoga.coach.domain.CoachDO;
 import com.techplant.yoga.coach.dto.CoachCreateDTO;
 import com.techplant.yoga.coach.dto.CoachUpdateDTO;
 import com.techplant.yoga.coach.vo.CoachDetailVO;
+import com.techplant.yoga.coach.vo.CoachFeaturedVO;
 import com.techplant.yoga.coach.vo.CoachListItemVO;
+import com.techplant.yoga.coach.vo.CoachPublicDetailVO;
 import com.techplant.yoga.coach.vo.CoachSummaryVO;
 
 /**
@@ -20,7 +22,7 @@ public final class CoachConverter {
     private CoachConverter() {
     }
 
-    /** DTO → DO；{@code galleryJson} 由 service 序列化后传入 */
+    /** DTO → DO；{@code galleryJson} 由 service 序列化后传入；新增教练固定普通等级 */
     public static CoachDO toDO(CoachCreateDTO dto, String galleryJson) {
         CoachDO coach = new CoachDO();
         coach.setName(trimToNull(dto.getName()));
@@ -28,6 +30,7 @@ public final class CoachConverter {
         coach.setIntro(trimToNull(dto.getIntro()));
         coach.setPhone(trimToNull(dto.getPhone()));
         coach.setGallery(galleryJson);
+        coach.setLevel(CoachDO.LEVEL_NORMAL);
         return coach;
     }
 
@@ -46,6 +49,7 @@ public final class CoachConverter {
         vo.setName(coach.getName());
         vo.setAvatarUrl(coach.getAvatarUrl());
         vo.setPhone(coach.getPhone());
+        vo.setLevel(coach.getLevel());
         vo.setCreateTime(coach.getCreateTime());
         vo.setUpdateTime(coach.getUpdateTime());
         return vo;
@@ -70,8 +74,40 @@ public final class CoachConverter {
         vo.setPhone(coach.getPhone());
         vo.setIntro(coach.getIntro());
         vo.setGallery(gallery == null ? new ArrayList<String>() : gallery);
+        vo.setLevel(coach.getLevel());
         vo.setCreateTime(coach.getCreateTime());
         vo.setUpdateTime(coach.getUpdateTime());
+        return vo;
+    }
+
+    /** DO → 用户端金牌教练卡片（只搬公开字段） */
+    public static CoachFeaturedVO toFeaturedVO(CoachDO coach) {
+        CoachFeaturedVO vo = new CoachFeaturedVO();
+        vo.setId(coach.getId());
+        vo.setName(coach.getName());
+        vo.setAvatarUrl(coach.getAvatarUrl());
+        vo.setIntro(coach.getIntro());
+        return vo;
+    }
+
+    public static List<CoachFeaturedVO> toFeaturedVOList(List<CoachDO> coaches) {
+        List<CoachFeaturedVO> result = new ArrayList<CoachFeaturedVO>();
+        if (coaches != null) {
+            for (CoachDO coach : coaches) {
+                result.add(toFeaturedVO(coach));
+            }
+        }
+        return result;
+    }
+
+    /** DO → 用户端公开详情；{@code gallery} 由 service 反序列化后传入 */
+    public static CoachPublicDetailVO toPublicDetailVO(CoachDO coach, List<String> gallery) {
+        CoachPublicDetailVO vo = new CoachPublicDetailVO();
+        vo.setId(coach.getId());
+        vo.setName(coach.getName());
+        vo.setAvatarUrl(coach.getAvatarUrl());
+        vo.setIntro(coach.getIntro());
+        vo.setGallery(gallery == null ? new ArrayList<String>() : gallery);
         return vo;
     }
 

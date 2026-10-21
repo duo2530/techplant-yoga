@@ -35,6 +35,7 @@ import com.techplant.yoga.classroom.dao.ClassroomDaoImpl;
 import com.techplant.yoga.classroom.service.impl.ClassroomServiceImpl;
 import com.techplant.yoga.coach.dao.CoachDaoImpl;
 import com.techplant.yoga.coach.service.impl.CoachServiceImpl;
+import com.techplant.yoga.common.config.BusinessTimeConfig;
 import com.techplant.yoga.common.response.PageResult;
 import com.techplant.yoga.common.testcontainers.AbstractYogaIntegrationTest;
 import com.techplant.yoga.common.testcontainers.YogaMyBatisTestConfig;
@@ -75,9 +76,9 @@ import com.techplant.yoga.store.service.impl.StoreServiceImpl;
  * <p>会员、会员卡、排课、课程、教练与门店都走真实 Service 与真实 SQL，不模拟内部调用；
  * 预约、扣返次、占位与流水的联动在同一事务里验证。</p>
  */
-@ContextConfiguration(classes = {YogaMyBatisTestConfig.class, StoreDaoImpl.class, StoreRegionDictDaoImpl.class,
-    StoreServiceImpl.class, ClassroomDaoImpl.class, ClassroomServiceImpl.class, CoachDaoImpl.class,
-    CoachServiceImpl.class, CourseDaoImpl.class, CourseServiceImpl.class, MemberDaoImpl.class,
+@ContextConfiguration(classes = {YogaMyBatisTestConfig.class, BusinessTimeConfig.class, StoreDaoImpl.class,
+    StoreRegionDictDaoImpl.class, StoreServiceImpl.class, ClassroomDaoImpl.class, ClassroomServiceImpl.class,
+    CoachDaoImpl.class, CoachServiceImpl.class, CourseDaoImpl.class, CourseServiceImpl.class, MemberDaoImpl.class,
     MemberLevelDictDaoImpl.class, MemberServiceImpl.class, MemberCardDaoImpl.class, MemberCardTransactionDaoImpl.class,
     MemberCardTransactionServiceImpl.class, CardNoGenerator.class, MemberCardServiceImpl.class, ScheduleDaoImpl.class,
     ScheduleBookingServiceImpl.class, ScheduleServiceImpl.class, ReservationDaoImpl.class,

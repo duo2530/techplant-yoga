@@ -39,7 +39,10 @@ public class MemberSecurityConfig {
                         // 免登录（发码／注册／登录／忘记密码）与允许清理的退出
                         .antMatchers("/api/auth/sms-code", "/api/auth/register", "/api/auth/login",
                                 "/api/auth/reset-password", "/api/auth/logout")
-                        .permitAll().antMatchers(HttpMethod.GET, "/api/stores", "/api/schedules", "/api/schedules/*")
+                        .permitAll()
+                        // 公开只读：门店、约课页排课、教练金牌列表／公开详情／教练排课（精确到 GET）
+                        .antMatchers(HttpMethod.GET, "/api/stores", "/api/schedules", "/api/schedules/*",
+                                "/api/coaches/featured", "/api/coaches/*", "/api/coaches/*/schedules")
                         .permitAll()
                         // 其余 /api/** 一律要求会员身份
                         .anyRequest().authenticated())

@@ -25,7 +25,7 @@ public enum CourseTypeEnum {
     /** 最大合法取值 */
     public static final int MAX_CODE = 4;
 
-    /** 取值非法时统一使用的参数校验提示语（业务码 500） */
+    /** 取值非法时统一使用的参数校验提示语 */
     public static final String INVALID_MESSAGE = "课程类型取值为 1~4";
 
     /** 课种码 */
@@ -76,7 +76,8 @@ public enum CourseTypeEnum {
     }
 
     /**
-     * 取值校验：非法即抛 {@code ServiceException}（业务码 500，与框架的参数校验口径一致）
+     * 取值校验：非法即抛 {@code ServiceException}，既有接口沿用框架参数校验口径（业务码 500）；
+     * 新增公开接口用 {@link #isValid(Integer)} 自行返回 400。
      *
      * @throws ServiceException 取值不在 1~4
      */

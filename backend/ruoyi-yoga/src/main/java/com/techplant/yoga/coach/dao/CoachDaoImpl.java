@@ -29,7 +29,8 @@ public class CoachDaoImpl implements CoachDao {
     public IPage<CoachDO> selectAdminPage(CoachQuery query) {
         // 列表只 select 必要列：intro 与 gallery 是大字段，不在列表返回
         LambdaQueryWrapper<CoachDO> wrapper = Wrappers.<CoachDO>lambdaQuery().select(CoachDO::getId, CoachDO::getName,
-                CoachDO::getAvatarUrl, CoachDO::getPhone, CoachDO::getCreateTime, CoachDO::getUpdateTime);
+                CoachDO::getAvatarUrl, CoachDO::getPhone, CoachDO::getLevel, CoachDO::getCreateTime,
+                CoachDO::getUpdateTime);
         boolean hasName = query.getName() != null && !query.getName().trim().isEmpty();
         wrapper.like(hasName, CoachDO::getName, query.getName());
         wrapper.orderByDesc(CoachDO::getId);
@@ -53,19 +54,41 @@ public class CoachDaoImpl implements CoachDao {
     }
 
     @Override
+    public List<CoachDO> selectFeatured() {
+        LambdaQueryWrapper<CoachDO> wrapper = Wrappers.<CoachDO>lambdaQuery()
+                .select(CoachDO::getId, CoachDO::getName, CoachDO::getAvatarUrl, CoachDO::getIntro)
+                .eq(CoachDO::getLevel, CoachDO.LEVEL_GOLD).orderByDesc(CoachDO::getId);
+        return coachMapper.selectList(wrapper);
+    }
+
+    @Override
+    public CoachDO selectPublicById(Long id) {
+        return coachMapper.selectOne(Wrappers.<CoachDO>lambdaQuery()
+                .select(CoachDO::getId, CoachDO::getName, CoachDO::getAvatarUrl, CoachDO::getIntro, CoachDO::getGallery)
+                .eq(CoachDO::getId, id));
+    }
+
+    @Override
     public int insert(CoachDO coach) {
         return coachMapper.insert(coach);
     }
 
     @Override
     public int updateById(CoachDO coach) {
-        // 显式指定更新列：不把 create_by/create_time/id 带进 UPDATE
+        // 显式指定更新列：不把 create_by/create_time/id/level 带进 UPDATE
         return coachMapper.update(null,
                 Wrappers.<CoachDO>lambdaUpdate().eq(CoachDO::getId, coach.getId())
                         .set(CoachDO::getName, coach.getName()).set(CoachDO::getAvatarUrl, coach.getAvatarUrl())
                         .set(CoachDO::getIntro, coach.getIntro()).set(CoachDO::getPhone, coach.getPhone())
                         .set(CoachDO::getGallery, coach.getGallery()).set(CoachDO::getUpdateBy, coach.getUpdateBy())
                         .set(CoachDO::getUpdateTime, LocalDateTime.now()));
+    }
+
+    @Override
+    public int updateLevel(Long id, Integer level, Long updateBy) {
+        return coachMapper.update(null,
+                Wrappers.<CoachDO>lambdaUpdate().eq(CoachDO::getId, id).set(CoachDO::getLevel, level)
+                        .set(CoachDO::getUpdateBy, updateBy).set(CoachDO::getUpdateTime, LocalDateTime.now()));
     }
 
     @Override

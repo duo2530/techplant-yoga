@@ -21,7 +21,9 @@ import com.techplant.yoga.coach.dto.CoachUpdateDTO;
 import com.techplant.yoga.coach.query.CoachQuery;
 import com.techplant.yoga.coach.service.CoachService;
 import com.techplant.yoga.coach.vo.CoachDetailVO;
+import com.techplant.yoga.coach.vo.CoachFeaturedVO;
 import com.techplant.yoga.coach.vo.CoachListItemVO;
+import com.techplant.yoga.coach.vo.CoachPublicDetailVO;
 import com.techplant.yoga.coach.vo.CoachSummaryVO;
 import com.techplant.yoga.common.response.PageResult;
 import com.techplant.yoga.common.util.CurrentUserUtils;
@@ -34,6 +36,9 @@ public class CoachServiceImpl implements CoachService {
     private static final int NOT_FOUND = 404;
     private static final int CONFLICT = 409;
     private static final int INTERNAL_ERROR = 500;
+
+    /** 参数非法（等级取值不在 1／2） */
+    private static final int PARAM_ERROR = 400;
 
     /** 相册元素上限 */
     private static final int MAX_GALLERY_SIZE = 5;
@@ -102,6 +107,36 @@ public class CoachServiceImpl implements CoachService {
             throw new ServiceException("该教练仍有 " + activeSchedules + " 节未结束的排课，无法删除", CONFLICT);
         }
         coachDao.deleteById(coachId);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void updateLevel(Long coachId, Integer level) {
+        if (level == null || (level != CoachDO.LEVEL_NORMAL && level != CoachDO.LEVEL_GOLD)) {
+            throw new ServiceException("教练等级取值为 1 或 2", PARAM_ERROR);
+        }
+        CoachDO coach = coachId == null ? null : coachDao.selectById(coachId);
+        if (coach == null) {
+            throw notFound();
+        }
+        // 并发删除时更新 0 行，按不存在处理
+        if (coachDao.updateLevel(coachId, level, CurrentUserUtils.getUserIdOrNull()) != 1) {
+            throw notFound();
+        }
+    }
+
+    @Override
+    public List<CoachFeaturedVO> featured() {
+        return CoachConverter.toFeaturedVOList(coachDao.selectFeatured());
+    }
+
+    @Override
+    public CoachPublicDetailVO getPublicDetail(Long coachId) {
+        CoachDO coach = coachId == null ? null : coachDao.selectPublicById(coachId);
+        if (coach == null) {
+            throw notFound();
+        }
+        return CoachConverter.toPublicDetailVO(coach, parseGallery(coach.getGallery()));
     }
 
     @Override

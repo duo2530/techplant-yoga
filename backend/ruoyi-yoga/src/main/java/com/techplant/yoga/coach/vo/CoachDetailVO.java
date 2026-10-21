@@ -37,6 +37,9 @@ public class CoachDetailVO {
     @ApiModelProperty(value = "相册，最多 5 张")
     private List<String> gallery;
 
+    @ApiModelProperty(value = "教练等级：1 普通、2 金牌", example = "1")
+    private Integer level;
+
     @ApiModelProperty(value = "创建时间", example = "2026-09-28 10:00:00")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createTime;

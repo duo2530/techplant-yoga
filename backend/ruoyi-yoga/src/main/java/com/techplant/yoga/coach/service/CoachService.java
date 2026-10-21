@@ -6,7 +6,9 @@ import com.techplant.yoga.coach.dto.CoachCreateDTO;
 import com.techplant.yoga.coach.dto.CoachUpdateDTO;
 import com.techplant.yoga.coach.query.CoachQuery;
 import com.techplant.yoga.coach.vo.CoachDetailVO;
+import com.techplant.yoga.coach.vo.CoachFeaturedVO;
 import com.techplant.yoga.coach.vo.CoachListItemVO;
+import com.techplant.yoga.coach.vo.CoachPublicDetailVO;
 import com.techplant.yoga.coach.vo.CoachSummaryVO;
 import com.techplant.yoga.common.response.PageResult;
 
@@ -30,6 +32,31 @@ public interface CoachService {
      * ③ 统计调用失败 → 409「引用检查未完成，已拒绝本次删除」（fail-closed，不降级放行）。
      */
     void delete(Long coachId);
+
+    /**
+     * 设置教练等级（1 普通／2 金牌）
+     *
+     * @param coachId 教练ID
+     * @param level   目标等级
+     * @throws com.ruoyi.common.exception.ServiceException 等级不是 1／2（400）；教练不存在（404）
+     */
+    void updateLevel(Long coachId, Integer level);
+
+    /**
+     * 用户端全部金牌教练（按 id DESC，不截断）
+     *
+     * @return 金牌教练公开卡片；没有金牌教练时返回空列表
+     */
+    List<CoachFeaturedVO> featured();
+
+    /**
+     * 用户端教练公开详情；不要求教练仍为金牌
+     *
+     * @param coachId 教练ID
+     * @return 公开资料与相册
+     * @throws com.ruoyi.common.exception.ServiceException 教练不存在或已被删除（404）
+     */
+    CoachPublicDetailVO getPublicDetail(Long coachId);
 
     /**
      * 按 ID 集合批量取教练摘要（排课模块补齐 coachName / coachAvatarUrl 用）。
