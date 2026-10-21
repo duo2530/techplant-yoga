@@ -35,7 +35,7 @@ mvn -f backend/pom.xml -pl ruoyi-yoga -am test
 
 ### 当前覆盖边界
 
-已覆盖 MyBatis 装配、教练／会员／排课数据访问、会员／会员卡／预约 HTTP 接口及预约事务。预约并发、故障回滚的规则与用例映射见[预约并发与事务核对](预约并发与事务核对.md)。安全过滤链、Redis 及该核对文档列出的并发组合仍有验证缺口，相关改动应补充测试或报告验证缺口。
+已覆盖 MyBatis 装配、教练／会员／排课数据访问、会员／会员卡／预约 HTTP 接口及预约事务。本次新增真实安全链 HTTP 测试（真实 MySQL＋Redis Testcontainers，请求经真实 `FilterChainProxy` 与 `@PreAuthorize`，令牌由真实 TokenService 生成）：覆盖游客／会员／无权限管理员的权限隔离、公开接口仅 GET 白名单、新增接口 400／404 错误契约。该上下文使用**固定测试时钟**（Asia/Shanghai）消除跨日不稳定；生产运行时的 `Clock` 由 `BusinessTimeConfig` 固定为 `Asia/Shanghai`，并有测试断言锁定该业务时区常量。另新增 SQL 升级脚本测试（一次性隔离 MySQL）：验证增量脚本可重复执行、旧数据与排课关联保留、旧教练默认普通等级，且**重复执行保留运营角色对 2010 的授权**、内置管理员绑定不重复插入、菜单内容不变、既有 2000~2008 菜单与绑定逐 ID 不变。新增测试类位于 `backend/ruoyi-yoga/src/test/java/com/techplant/yoga/` 下的 `coach/controller`、`schedule/controller`、`member/controller`、`common/sql` 与 `common/testcontainers`。预约并发、故障回滚的规则与用例映射见[预约并发与事务核对](预约并发与事务核对.md)。该核对文档列出的部分并发组合仍有验证缺口，相关改动应补充测试或报告验证缺口。
 
 接口级验证应检查统一响应、参数校验、ID 字符串化、身份隔离和失败分支。菜单相关改动应验证路由返回及页面入口，接口文档相关改动应检查 Swagger 中的接口是否可见。
 
@@ -43,13 +43,27 @@ mvn -f backend/pom.xml -pl ruoyi-yoga -am test
 
 ### Playwright
 
-用户端 H5 套件位于 `frontend/uni-app/tests/e2e`，覆盖会员卡与预约页面。运行命令、环境变量、用例及失败产物见[套件 README](../../frontend/uni-app/tests/e2e/README.md)。管理端尚未接入。
+用户端 H5 套件位于 `frontend/uni-app/tests/e2e`，覆盖会员卡、预约页面，以及本次新增的教练相关用例：`home-coaches`（8 条）、`coach-page`（9 条）、`coach-schedules`（9 条），共 26 条。教练、课程、教室与排课数据通过隔离后端的真实管理端接口准备与清理。运行命令、环境变量、用例及失败产物见[用户端套件 README](../../frontend/uni-app/tests/e2e/README.md)。
+
+管理端已接入最小 Playwright 套件，位于 `frontend/pc/tests/e2e`：独立 `package.json` ＋ `playwright-core`（使用系统已安装的 Edge／Chrome），托管 `npm run build:prod` 的 `frontend/pc/dist` 产物，并把 `/prod-api/**` 代理到隔离后端。运行方式：
+
+```powershell
+cd frontend/pc/tests/e2e
+npm ci
+$env:E2E_API_URL = 'http://<隔离后端>:8080'
+$env:E2E_ALLOW_DESTRUCTIVE = '1'
+npm test
+```
+
+前置条件：必须先**显式设置 `E2E_API_URL`**（不依赖默认值）并设置 **`E2E_ALLOW_DESTRUCTIVE=1`**，任一缺失时套件以退出码 3 拒绝执行，禁止指向开发库或共享库；隔离库 `sys.account.captchaEnabled=false`、MySQL／Redis 可用、管理员 `admin`／`admin123` 且角色具备 `yoga:coach:level`（账号可用环境变量覆盖）。用例与不覆盖范围见[管理端套件 README](../../frontend/pc/tests/e2e/README.md)。
 
 - 管理端覆盖登录、退出、表单校验、增删改查和异常反馈；涉及权限或字典时验证相应页面行为。
+- 教练用例覆盖首页金牌栏目、约教练资料与排课分页/筛选，以及**约教练页返回刷新**：从课程详情返回后重新拉取当前课种第一页、课种 Tab 与门店保持不变（回归用例）。
 - 使用稳定的类名或结构定位元素，通过可见结果断言和自动等待同步操作，避免固定延时。
 - 触底加载、下拉刷新等小程序页面生命周期在 H5 端不可靠（构建产物上 `onReachBottom` 不触发），
   这两类行为以微信开发者工具或真机验证为准。
 - uni-app 的测试工具使用独立目录与依赖配置。
+- 已知限制：`npm run build:h5`／`npm run build:mp-weixin` 当前产物不包含 `static/` 目录（既有 `UNI_INPUT_DIR=.` 与 uni copy 插件的相对路径判断冲突，非本次变更引入）。H5 端到端测试的静态服务对 `/static/**` 回退读取工程 `frontend/uni-app/static` 目录；正式发布需要另行配置静态资源复制，或后续单独修复构建脚本。
 
 ### 管理端辅助检查
 
@@ -86,3 +100,5 @@ npm run check:request
 ## 验证结果报告
 
 说明执行了什么、验证了哪些行为、是否通过，以及尚未覆盖的部分。区分编译、静态检查、集成测试、端到端测试和人工验收；环境不可用或测试尚未接入时明确报告，不能以跳过或未发现测试代替成功。
+
+本次交付（add-home-gold-coaches）的验证结果：后端全量 20 个测试类、159 个集成测试通过（失败 0／错误 0／跳过 0，BUILD SUCCESS；Java 风格检查 0 violations）；用户端 H5 全量 38 通过 / 2 跳过 / 0 失败（跳过为既有 booking 用例，因隔离库种子会员无可用会员卡/无预约记录，与本次无关），其中新增教练相关用例 26/26 通过（含「返回刷新」回归）；管理端最小套件 6/6 通过（0 失败 0 跳过）。构建与静态检查 `build:h5`、`build:mp-weixin`、`check:static`、`check:request`、`build:prod` 全部通过。完整链路（后台设置金牌 → 首页展示 → 约教练 → 课程详情 → 预约；后台取消金牌 → 首页移除；取消后已打开的教练资料仍可访问）复跑通过。

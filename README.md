@@ -181,6 +181,16 @@ SELECT COUNT(*) FROM t_store;                                   -- 5 张业务�
 
 ### 3. 构建并启动后端
 
+**Windows 一键启停（完成前面的环境、数据库和配置准备后）**
+
+在仓库根目录双击 `start.bat`，同时启动后端（8080）、管理端（80）和用户端 H5（9090）；双击 `stop.bat`，关闭这些服务及其子进程。
+
+- 启动会先执行 Maven 打包（跳过测试），前端缺少 `node_modules` 时自动执行 `npm ci`。首次启动需要联网下载依赖。
+- MySQL 和 Redis 需提前启动；脚本不负责数据库初始化，也不启动微信开发者工具。
+- 服务在后台运行，启动窗口关闭后继续运行；日志与进程记录位于 `.tmp/dev/`。启动失败时会关闭本次已启动的服务，保留日志。
+- 重复启动会跳过已由脚本启动的服务；端口被其他程序占用时提示错误。关闭仅处理脚本记录的进程，不处理 IDE 或其他终端启动的服务。
+- 修改后端代码后，先关闭再启动以重新打包。也可在 PowerShell 执行 `powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\dev.ps1 -Action Start`（关闭时将 `Start` 换成 `Stop`）。
+
 **方式 A：IDE 启动**
 
 用 IDEA / Eclipse 打开 `backend`，直接运行启动类 `backend/ruoyi-admin/src/main/java/com/ruoyi/RuoYiApplication.java`。
