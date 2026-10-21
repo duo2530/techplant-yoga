@@ -1,0 +1,168 @@
+{
+  "captured_at": "2026-10-17T12:35:07.191858+08:00",
+  "suite": {
+    "{http://www.w3.org/2001/XMLSchema-instance}noNamespaceSchemaLocation": "https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd",
+    "name": "com.techplant.yoga.reservation.service.ReservationServiceImplTest",
+    "time": "103.19",
+    "tests": "34",
+    "errors": "0",
+    "skipped": "0",
+    "failures": "0"
+  },
+  "runtime": {
+    "os.name": "Windows 10",
+    "java.home": "D:\\Develop\\Java\\jdk1.8.0_202\\jre",
+    "os.version": "10.0",
+    "java.version": "1.8.0_202"
+  },
+  "status": "PASS",
+  "root_cause": null,
+  "root_cause_found_in_log": false,
+  "test_phase": "See per-test Surefire results",
+  "test_cases": [
+    {
+      "name": "create_concurrentlyDuplicateSchedule_shouldAllowOnlyOne",
+      "result": "PASS"
+    },
+    {
+      "name": "pageForAdmin_shouldFilterAndAssemble",
+      "result": "PASS"
+    },
+    {
+      "name": "create_concurrentlySameRequestId_shouldBeIdempotent",
+      "result": "PASS"
+    },
+    {
+      "name": "create_withYearCard_shouldSkipDeductAndRejectMultiplePersons",
+      "result": "PASS"
+    },
+    {
+      "name": "create_concurrentlyInsufficientBalance_shouldNotOverdraw",
+      "result": "PASS"
+    },
+    {
+      "name": "stop_whenBookingCommitsFirst_shouldPreserveBooking",
+      "result": "PASS"
+    },
+    {
+      "name": "create_retryWithOldSnapshot_shouldReturnSuccessEvenWhenFull",
+      "result": "PASS"
+    },
+    {
+      "name": "create_withIllegalParams_shouldFail",
+      "result": "PASS"
+    },
+    {
+      "name": "create_withInsufficientPlaces_shouldConflict",
+      "result": "PASS"
+    },
+    {
+      "name": "create_withUnusableCard_shouldReject",
+      "result": "PASS"
+    },
+    {
+      "name": "cancel_shouldReleaseAndRefund",
+      "result": "PASS"
+    },
+    {
+      "name": "cancel_whenLedgerInsertFails_shouldRollbackEverything",
+      "result": "PASS"
+    },
+    {
+      "name": "create_withUnusableSchedule_shouldReject",
+      "result": "PASS"
+    },
+    {
+      "name": "pageForMember_shouldFilterAndAssemble",
+      "result": "PASS"
+    },
+    {
+      "name": "pageForMember_withDeletedRelations_shouldReturnNullFields",
+      "result": "PASS"
+    },
+    {
+      "name": "create_whenStopCommitsFirst_shouldReject",
+      "result": "PASS"
+    },
+    {
+      "name": "create_whenLedgerInsertFails_shouldRollbackEverything",
+      "result": "PASS"
+    },
+    {
+      "name": "create_withSameRequestId_shouldBeIdempotent",
+      "result": "PASS"
+    },
+    {
+      "name": "bookerDisplayNames_shouldDedupAndMask",
+      "result": "PASS"
+    },
+    {
+      "name": "cancel_concurrently_shouldRefundOnlyOnce",
+      "result": "PASS"
+    },
+    {
+      "name": "conflictChecks_shouldReadLatestCommittedAfterSnapshot",
+      "result": "PASS"
+    },
+    {
+      "name": "create_withTimesCard_shouldOccupyAndDeduct",
+      "result": "PASS"
+    },
+    {
+      "name": "pageForAdmin_withDeletedRelations_shouldReturnNullFields",
+      "result": "PASS"
+    },
+    {
+      "name": "updateBookingCount_shouldRejectOverCapacity",
+      "result": "PASS"
+    },
+    {
+      "name": "create_withSameRequestIdButDifferentParams_shouldConflict",
+      "result": "PASS"
+    },
+    {
+      "name": "create_concurrentlyLastSeat_shouldNotOversell",
+      "result": "PASS"
+    },
+    {
+      "name": "create_concurrentlyOverlapping_shouldAllowBoth",
+      "result": "PASS"
+    },
+    {
+      "name": "scheduleDetail_shouldReflectBookingCount",
+      "result": "PASS"
+    },
+    {
+      "name": "create_concurrentlySameRequestDifferentSchedule_shouldConflict",
+      "result": "PASS"
+    },
+    {
+      "name": "cancel_shouldRejectIllegalState",
+      "result": "PASS"
+    },
+    {
+      "name": "pageForAdmin_withIllegalQuery_shouldFail",
+      "result": "PASS"
+    },
+    {
+      "name": "create_whenScheduleCancellationCommitsFirst_shouldReject",
+      "result": "PASS"
+    },
+    {
+      "name": "create_withDuplicateSchedule_shouldConflict",
+      "result": "PASS"
+    },
+    {
+      "name": "checkIn_shouldWriteStatusAndRejectOutOfWindow",
+      "result": "PASS"
+    }
+  ],
+  "log": {
+    "path": ".tmp\\reservation-research-maven-retry.log",
+    "sha256": "bb9841cc8c29d873e579fa67d46ae39afab28a886bcd3eab01de07f0cb965690"
+  },
+  "surefire_xml": {
+    "path": "backend\\ruoyi-yoga\\target\\surefire-reports\\TEST-com.techplant.yoga.reservation.service.ReservationServiceImplTest.xml",
+    "sha256": "9d7c0fa4e4094f20cd0c9cd01a4a94adfa59949b03e84f38952a0518bfee9324"
+  }
+}

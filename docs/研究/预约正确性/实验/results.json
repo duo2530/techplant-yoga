@@ -1,0 +1,187 @@
+{
+  "python": "3.13.12 (tags/v3.13.12:1cbe481, Feb  3 2026, 18:22:25) [MSC v.1944 64 bit (AMD64)]",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "policy": "A01: close admissions, cancel, release occupancy, refund original deduction",
+  "limits": "2 schedules, 2 members/cards, 4 request keys, times cards only; atomic actions",
+  "model_sha256": "0cec7797c5f6fbe2838a449045c2fe2255a7260c811daeae51cae4aa83194d78",
+  "finite_exploration": {
+    "depth": 6,
+    "states": 2478,
+    "edges": 11748,
+    "action_alphabet": 11,
+    "violations": 0
+  },
+  "random_sequences": {
+    "seeds": [
+      0,
+      99
+    ],
+    "operations": 10000,
+    "violations": 0
+  },
+  "rollback_model": {
+    "injected_failures": 10,
+    "rolled_back": 10
+  },
+  "mutations": [
+    {
+      "mutation": "system-cancel-keeps-seat",
+      "trace": [
+        [
+          "create",
+          "a",
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          "close",
+          0
+        ]
+      ],
+      "detected": [
+        "I2-occupancy"
+      ],
+      "state": {
+        "capacity": [
+          2,
+          2
+        ],
+        "opened": [
+          false,
+          true
+        ],
+        "booked": [
+          1,
+          0
+        ],
+        "initial": [
+          2,
+          2
+        ],
+        "balance": [
+          2,
+          2
+        ],
+        "reservations": {
+          "a": [
+            0,
+            0,
+            0,
+            1,
+            "CANCELLED",
+            "SCHEDULE"
+          ]
+        },
+        "ledger": [
+          [
+            "a",
+            "D",
+            0,
+            -1,
+            2,
+            1
+          ],
+          [
+            "a",
+            "R",
+            0,
+            1,
+            1,
+            2
+          ]
+        ]
+      }
+    },
+    {
+      "mutation": "bypass-cancel-state-and-ledger-uniqueness",
+      "trace": [
+        [
+          "create",
+          "a",
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          "cancel",
+          "a"
+        ],
+        [
+          "cancel",
+          "a"
+        ]
+      ],
+      "detected": [
+        "I4-refund"
+      ],
+      "state": {
+        "capacity": [
+          2,
+          2
+        ],
+        "opened": [
+          true,
+          true
+        ],
+        "booked": [
+          0,
+          0
+        ],
+        "initial": [
+          2,
+          2
+        ],
+        "balance": [
+          3,
+          2
+        ],
+        "reservations": {
+          "a": [
+            0,
+            0,
+            0,
+            1,
+            "CANCELLED",
+            "MEMBER"
+          ]
+        },
+        "ledger": [
+          [
+            "a",
+            "D",
+            0,
+            -1,
+            2,
+            1
+          ],
+          [
+            "a",
+            "R",
+            0,
+            1,
+            1,
+            2
+          ],
+          [
+            "a",
+            "R",
+            0,
+            1,
+            2,
+            3
+          ]
+        ]
+      }
+    }
+  ],
+  "history_checker": {
+    "valid_race_accepted": true,
+    "two_successes_rejected": true,
+    "unknown_then_retry_accepted": true,
+    "real_time_violation_rejected": true,
+    "source": "synthetic histories, not observations of the Java service"
+  }
+}

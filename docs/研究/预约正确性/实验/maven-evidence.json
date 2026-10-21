@@ -1,0 +1,29 @@
+{
+  "captured_at": "2026-10-17T12:30:11.797120+08:00",
+  "suite": {
+    "{http://www.w3.org/2001/XMLSchema-instance}noNamespaceSchemaLocation": "https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd",
+    "name": "com.techplant.yoga.reservation.service.ReservationServiceImplTest",
+    "time": "5.873",
+    "tests": "34",
+    "errors": "34",
+    "skipped": "0",
+    "failures": "0"
+  },
+  "runtime": {
+    "os.name": "Windows 10",
+    "java.home": "D:\\Develop\\Java\\jdk1.8.0_202\\jre",
+    "os.version": "10.0",
+    "java.version": "1.8.0_202"
+  },
+  "root_cause": "Could not find a valid Docker environment",
+  "root_cause_found_in_log": true,
+  "test_phase": "Spring context and Testcontainers initialization; no business assertions reached",
+  "log": {
+    "path": ".tmp\\reservation-research-maven.log",
+    "sha256": "c1406c72dfd9ecb25ca96f8498441443626ca3ae76c4c99c742c443440d776b0"
+  },
+  "surefire_xml": {
+    "path": "backend\\ruoyi-yoga\\target\\surefire-reports\\TEST-com.techplant.yoga.reservation.service.ReservationServiceImplTest.xml",
+    "sha256": "351c6136fa90d01c37cbbdcef79f3e6adc062bfda9b93e0adc379339c6418174"
+  }
+}

@@ -1,0 +1,1586 @@
+{
+  "captured_at": "2026-10-17T12:35:07.191858+08:00",
+  "git_head": "890ac7ac429e2ff2c518a60e27e18b6fe9016e58",
+  "working_tree": "M backend/ruoyi-yoga/src/main/java/com/techplant/yoga/reservation/dao/ReservationDao.java\n M backend/ruoyi-yoga/src/main/java/com/techplant/yoga/reservation/dao/ReservationDaoImpl.java\n M backend/ruoyi-yoga/src/main/java/com/techplant/yoga/reservation/service/impl/ReservationServiceImpl.java\n M backend/ruoyi-yoga/src/test/java/com/techplant/yoga/reservation/service/ReservationServiceImplTest.java\n M \"docs/系统测试/AI Agent测试手册.md\"\n M docs/详细设计/用户端接口详细设计.md\n M docs/详细设计/预约管理详细设计.md\n?? docs/研究/\n?? docs/系统测试/预约并发与事务核对.md",
+  "observation": "working tree, including changes predating this research",
+  "sources": [
+    {
+      "path": "backend/sql/yoga.sql",
+      "sha256": "4e5e5e572928be55cc155b37a53017423f4176145c4039f8c6aa46a97c9fcac5",
+      "locations": [
+        {
+          "line": 148,
+          "text": "CREATE TABLE `t_store` ("
+        },
+        {
+          "line": 181,
+          "text": "CREATE TABLE `t_store_no_counter` ("
+        },
+        {
+          "line": 194,
+          "text": "CREATE TABLE `t_classroom` ("
+        },
+        {
+          "line": 220,
+          "text": "CREATE TABLE `t_coach` ("
+        },
+        {
+          "line": 258,
+          "text": "CREATE TABLE `t_course` ("
+        },
+        {
+          "line": 289,
+          "text": "CREATE TABLE `t_schedule` ("
+        },
+        {
+          "line": 363,
+          "text": "CREATE TABLE `t_member` ("
+        },
+        {
+          "line": 406,
+          "text": "CREATE TABLE `t_member_card` ("
+        },
+        {
+          "line": 469,
+          "text": "CREATE TABLE `t_reservation` ("
+        },
+        {
+          "line": 501,
+          "text": "CREATE TABLE `t_member_card_transaction` ("
+        }
+      ]
+    },
+    {
+      "path": "backend/pom.xml",
+      "sha256": "11e54f65dcf74b30525140aedb5c90eafa30f3b2df7fb67aff3c4e9b3116c33e",
+      "locations": []
+    },
+    {
+      "path": "backend/ruoyi-yoga/pom.xml",
+      "sha256": "288613df8e3297c34ef548e87e194ff55633b9961fd7641b3d7a2802a813a323",
+      "locations": []
+    },
+    {
+      "path": "backend/ruoyi-yoga/src/main/java/com/techplant/yoga/reservation/service/impl/ReservationServiceImpl.java",
+      "sha256": "842de09a91870bc585f87585b2634006ab53bc92ba2534b88ae66b67c7268b5c",
+      "locations": [
+        {
+          "line": 104,
+          "text": "public void create(Long memberId, ReservationCreateDTO dto) {"
+        },
+        {
+          "line": 168,
+          "text": "public void cancel(Long memberId, Long reservationId) {"
+        },
+        {
+          "line": 202,
+          "text": "public void checkIn(Long memberId, Long reservationId) {"
+        },
+        {
+          "line": 235,
+          "text": "public PageResult<ReservationPublicItemVO> pageForMember(Long memberId, ReservationPublicQuery query) {"
+        },
+        {
+          "line": 272,
+          "text": "public PageResult<ReservationAdminItemVO> pageForAdmin(ReservationAdminQuery query) {"
+        },
+        {
+          "line": 306,
+          "text": "private void validateAdminQuery(ReservationAdminQuery query) {"
+        },
+        {
+          "line": 324,
+          "text": "private void requirePositiveIdOrNull(Long id, String fieldName) {"
+        },
+        {
+          "line": 331,
+          "text": "public List<String> bookerDisplayNames(Long scheduleId) {"
+        },
+        {
+          "line": 359,
+          "text": "private String maskName(String name) {"
+        },
+        {
+          "line": 367,
+          "text": "private void validateSchedule(ScheduleBookingSnapshot schedule, Integer persons) {"
+        },
+        {
+          "line": 393,
+          "text": "private void validateCardLimit(MemberCardBookingSnapshot card, Integer persons) {"
+        },
+        {
+          "line": 411,
+          "text": "private void deductTimesIfNeeded(ReservationDO reservation, MemberCardBookingSnapshot card) {"
+        },
+        {
+          "line": 424,
+          "text": "private void refundTimesIfNeeded(ReservationDO reservation) {"
+        },
+        {
+          "line": 440,
+          "text": "private void requireSameRequest(ReservationDO reservation, Long scheduleId, Long memberCardId, Integer persons) {"
+        },
+        {
+          "line": 447,
+          "text": "private ReservationDO requireOwnedReservation(Long reservationId, Long memberId) {"
+        },
+        {
+          "line": 455,
+          "text": "private ReservationDO requireOwnedReservationForUpdate(Long reservationId, Long memberId) {"
+        },
+        {
+          "line": 463,
+          "text": "private ServiceException notFoundReservation() {"
+        },
+        {
+          "line": 467,
+          "text": "private String requireRequestId(String requestId) {"
+        },
+        {
+          "line": 480,
+          "text": "private Long requirePositiveId(Long id, String fieldName) {"
+        },
+        {
+          "line": 487,
+          "text": "private Integer requirePersons(Integer persons) {"
+        },
+        {
+          "line": 494,
+          "text": "private int bookedPersons(ScheduleBookingSnapshot schedule) {"
+        },
+        {
+          "line": 498,
+          "text": "private Set<Long> distinct(List<ReservationDO> reservations, Function<ReservationDO, Long> extractor) {"
+        },
+        {
+          "line": 509,
+          "text": "private Map<Long, ScheduleBookingSnapshot> indexSchedules(Collection<Long> scheduleIds) {"
+        },
+        {
+          "line": 517,
+          "text": "private Collection<Long> scheduleCourseIds(Collection<ScheduleBookingSnapshot> schedules) {"
+        },
+        {
+          "line": 527,
+          "text": "private Collection<Long> scheduleCoachIds(Collection<ScheduleBookingSnapshot> schedules) {"
+        },
+        {
+          "line": 537,
+          "text": "private Collection<Long> scheduleStoreIds(Collection<ScheduleBookingSnapshot> schedules) {"
+        },
+        {
+          "line": 547,
+          "text": "private Map<Long, CourseSummaryVO> indexCourses(Collection<Long> courseIds) {"
+        },
+        {
+          "line": 558,
+          "text": "private Map<Long, String> indexCoachNames(Collection<Long> coachIds) {"
+        },
+        {
+          "line": 569,
+          "text": "private Map<Long, String> indexStoreAddresses(Collection<Long> storeIds) {"
+        },
+        {
+          "line": 580,
+          "text": "private Collection<Long> scheduleClassroomIds(Collection<ScheduleBookingSnapshot> schedules) {"
+        },
+        {
+          "line": 590,
+          "text": "private Map<Long, String> indexClassroomNames(Collection<Long> classroomIds) {"
+        },
+        {
+          "line": 601,
+          "text": "private Map<Long, StoreSummaryVO> indexStoreSummaries(Collection<Long> storeIds) {"
+        },
+        {
+          "line": 612,
+          "text": "private Map<Long, MemberSummaryVO> indexMemberSummaries(Collection<Long> memberIds) {"
+        },
+        {
+          "line": 623,
+          "text": "private Map<Long, MemberCardSummaryVO> indexCardSummaries(Collection<Long> cardIds) {"
+        },
+        {
+          "line": 634,
+          "text": "private Collection<Long> reservationIds(List<ReservationDO> reservations) {"
+        },
+        {
+          "line": 644,
+          "text": "private Collection<Long> reservationMemberIds(List<ReservationDO> reservations) {"
+        },
+        {
+          "line": 654,
+          "text": "private Collection<Long> reservationCardIds(List<ReservationDO> reservations) {"
+        }
+      ]
+    },
+    {
+      "path": "backend/ruoyi-yoga/src/main/java/com/techplant/yoga/reservation/dao/ReservationDaoImpl.java",
+      "sha256": "85560b812bde76688b8a84062697a5448405e66d2b02826ab089127cd05d75f0",
+      "locations": [
+        {
+          "line": 26,
+          "text": "public ReservationDO selectById(Long reservationId) {"
+        },
+        {
+          "line": 34,
+          "text": "public ReservationDO selectByMemberAndRequestId(Long memberId, String requestId) {"
+        },
+        {
+          "line": 43,
+          "text": "public ReservationDO selectByMemberAndRequestIdForUpdate(Long memberId, String requestId) {"
+        },
+        {
+          "line": 53,
+          "text": "public ReservationDO selectByIdForUpdate(Long reservationId) {"
+        },
+        {
+          "line": 62,
+          "text": "public int insert(ReservationDO reservation) {"
+        },
+        {
+          "line": 67,
+          "text": "public IPage<ReservationDO> selectPageForMember(Long memberId, ReservationPublicQuery query,"
+        },
+        {
+          "line": 79,
+          "text": "public IPage<ReservationDO> selectAdminPage(ReservationAdminQuery query) {"
+        },
+        {
+          "line": 90,
+          "text": "public boolean existsActiveByMemberAndSchedule(Long memberId, Long scheduleId) {"
+        },
+        {
+          "line": 99,
+          "text": "public int cancel(Long reservationId, LocalDateTime cancelTime, Integer cancelReason) {"
+        },
+        {
+          "line": 109,
+          "text": "public int checkIn(Long reservationId, LocalDateTime checkInTime) {"
+        },
+        {
+          "line": 119,
+          "text": "public List<ReservationDO> selectActiveBySchedule(Long scheduleId) {"
+        }
+      ]
+    },
+    {
+      "path": "backend/ruoyi-yoga/src/main/java/com/techplant/yoga/reservation/controller/ReservationPublicController.java",
+      "sha256": "fb1a24b0945e047d57eb5834a70c95c5c9f3f012c1e044654c238a06a29ecd31",
+      "locations": [
+        {
+          "line": 39,
+          "text": "public AjaxResult create(@Valid @RequestBody ReservationCreateDTO dto) {"
+        },
+        {
+          "line": 47,
+          "text": "public AjaxResult cancel(@PathVariable Long reservationId) {"
+        },
+        {
+          "line": 55,
+          "text": "public AjaxResult checkIn(@PathVariable Long reservationId) {"
+        },
+        {
+          "line": 63,
+          "text": "public TableDataInfo list(@Valid ReservationPublicQuery query) {"
+        }
+      ]
+    },
+    {
+      "path": "backend/ruoyi-yoga/src/main/java/com/techplant/yoga/reservation/controller/ReservationController.java",
+      "sha256": "ba912b06f6419132b97a8db52162608191432f1cfd188d30616302078248155f",
+      "locations": [
+        {
+          "line": 32,
+          "text": "public TableDataInfo list(@Valid ReservationAdminQuery query) {"
+        }
+      ]
+    },
+    {
+      "path": "backend/ruoyi-yoga/src/main/java/com/techplant/yoga/schedule/service/impl/ScheduleServiceImpl.java",
+      "sha256": "9204974f27078eca79a770fd42c886c8b95bb3eaa6e00edcf64f64277ef96fa3",
+      "locations": [
+        {
+          "line": 94,
+          "text": "public PageResult<ScheduleListItemVO> page(ScheduleQuery query) {"
+        },
+        {
+          "line": 118,
+          "text": "public ScheduleDetailVO getById(Long scheduleId) {"
+        },
+        {
+          "line": 134,
+          "text": "public void create(ScheduleCreateDTO dto) {"
+        },
+        {
+          "line": 162,
+          "text": "public ScheduleDetailVO update(Long scheduleId, ScheduleUpdateDTO dto) {"
+        },
+        {
+          "line": 196,
+          "text": "public void changeStatus(Long scheduleId, Integer targetStatus) {"
+        },
+        {
+          "line": 230,
+          "text": "public void delete(Long scheduleId) {"
+        },
+        {
+          "line": 258,
+          "text": "public long countActiveByStoreId(Long storeId) {"
+        },
+        {
+          "line": 263,
+          "text": "public long countActiveByClassroomId(Long classroomId) {"
+        },
+        {
+          "line": 268,
+          "text": "public long countActiveByCoachId(Long coachId) {"
+        },
+        {
+          "line": 273,
+          "text": "public long countActiveByCourseId(Long courseId) {"
+        },
+        {
+          "line": 286,
+          "text": "public PageResult<ScheduleCardVO> publicPage(PublicScheduleQuery query) {"
+        },
+        {
+          "line": 327,
+          "text": "public PublicScheduleDetailVO publicDetail(Long scheduleId) {"
+        },
+        {
+          "line": 374,
+          "text": "private CourseSummaryVO validateRelations(Long storeId, Long courseId, Long coachId, Long classroomId) {"
+        },
+        {
+          "line": 393,
+          "text": "private void validateTimeRange(LocalDateTime startTime, LocalDateTime endTime) {"
+        },
+        {
+          "line": 401,
+          "text": "private void validatePersons(Integer maxPersons, Integer minPersons) {"
+        },
+        {
+          "line": 411,
+          "text": "private void validateScheduleWindow(LocalDate scheduleDate) {"
+        },
+        {
+          "line": 420,
+          "text": "private void validateSameSlot(Long storeId, Long courseId, LocalDateTime startTime, LocalDateTime endTime,"
+        },
+        {
+          "line": 428,
+          "text": "private void validateCoachOverlap(Long coachId, LocalDateTime startTime, LocalDateTime endTime, Long excludeId) {"
+        },
+        {
+          "line": 435,
+          "text": "private void validatePublicDateWindow(LocalDate date) {"
+        },
+        {
+          "line": 444,
+          "text": "private LocalDate parseDate(String date) {"
+        },
+        {
+          "line": 456,
+          "text": "private boolean isAllowedTransition(Integer current, Integer target) {"
+        },
+        {
+          "line": 467,
+          "text": "private boolean isPending(Integer status) {"
+        },
+        {
+          "line": 476,
+          "text": "private boolean isBookable(ScheduleDO schedule, LocalDateTime now) {"
+        },
+        {
+          "line": 494,
+          "text": "private String storeAddressOf(Long storeId) {"
+        },
+        {
+          "line": 505,
+          "text": "private ScheduleDO requireSchedule(Long scheduleId) {"
+        },
+        {
+          "line": 513,
+          "text": "private ServiceException notFoundSchedule() {"
+        },
+        {
+          "line": 517,
+          "text": "private void applyAdminNames(ScheduleListItemVO vo, ScheduleDO schedule, Map<Long, String> storeNames,"
+        },
+        {
+          "line": 525,
+          "text": "private Map<Long, String> storeNameMap(Collection<Long> ids) {"
+        },
+        {
+          "line": 543,
+          "text": "private Map<Long, String> courseNameMap(Collection<Long> ids) {"
+        },
+        {
+          "line": 552,
+          "text": "private Map<Long, CourseSummaryVO> courseSummaryMap(Collection<Long> ids) {"
+        },
+        {
+          "line": 570,
+          "text": "private Map<Long, String> coachNameMap(Collection<Long> ids) {"
+        },
+        {
+          "line": 588,
+          "text": "private Map<Long, String> classroomNameMap(Collection<Long> ids) {"
+        },
+        {
+          "line": 607,
+          "text": "private Set<Long> distinctIds(List<ScheduleDO> records, Function<ScheduleDO, Long> extractor) {"
+        },
+        {
+          "line": 619,
+          "text": "private Collection<Long> effectiveIds(Collection<Long> ids) {"
+        },
+        {
+          "line": 633,
+          "text": "private String nameOf(Map<Long, String> names, Long id) {"
+        },
+        {
+          "line": 641,
+          "text": "private String text(String value) {"
+        }
+      ]
+    },
+    {
+      "path": "backend/ruoyi-yoga/src/main/java/com/techplant/yoga/schedule/service/impl/ScheduleBookingServiceImpl.java",
+      "sha256": "9717d3d68c0279b104cf7091b118f49d6e0fcf94b0ff8276406f8c21d211091b",
+      "locations": [
+        {
+          "line": 24,
+          "text": "public ScheduleBookingSnapshot lockForBooking(Long scheduleId) {"
+        },
+        {
+          "line": 30,
+          "text": "public List<ScheduleBookingSnapshot> snapshots(Collection<Long> scheduleIds) {"
+        },
+        {
+          "line": 51,
+          "text": "public int updateBookingCount(Long scheduleId, Integer bookedPersons) {"
+        }
+      ]
+    },
+    {
+      "path": "backend/ruoyi-yoga/src/main/java/com/techplant/yoga/schedule/dao/ScheduleDaoImpl.java",
+      "sha256": "dfa04be828c9649d73d17a37ffae9904ee4452350fbb631fd430d44dc36b7f67",
+      "locations": [
+        {
+          "line": 31,
+          "text": "public IPage<ScheduleDO> selectPage(ScheduleQuery query) {"
+        },
+        {
+          "line": 49,
+          "text": "public IPage<ScheduleDO> selectPublicPage(PublicScheduleQuery query, LocalDate scheduleDate) {"
+        },
+        {
+          "line": 64,
+          "text": "public ScheduleDO selectById(Long id) {"
+        },
+        {
+          "line": 69,
+          "text": "public List<ScheduleDO> selectByIds(Collection<Long> ids) {"
+        },
+        {
+          "line": 77,
+          "text": "public ScheduleDO selectByIdForUpdate(Long id) {"
+        },
+        {
+          "line": 86,
+          "text": "public ScheduleDO selectVisibleById(Long id) {"
+        },
+        {
+          "line": 91,
+          "text": "public int insert(ScheduleDO schedule) {"
+        },
+        {
+          "line": 96,
+          "text": "public int updateById(ScheduleDO schedule) {"
+        },
+        {
+          "line": 113,
+          "text": "public int updateStatus(Long id, Integer status, Long updateBy) {"
+        },
+        {
+          "line": 120,
+          "text": "public int updateBookedPersons(Long id, Integer bookedPersons) {"
+        },
+        {
+          "line": 128,
+          "text": "public int deleteById(Long id) {"
+        },
+        {
+          "line": 134,
+          "text": "public boolean existsSameSlot(Long storeId, Long courseId, LocalDateTime startTime, LocalDateTime endTime,"
+        },
+        {
+          "line": 148,
+          "text": "public boolean existsCoachOverlap(Long coachId, LocalDateTime startTime, LocalDateTime endTime, Long excludeId) {"
+        },
+        {
+          "line": 160,
+          "text": "public long countActiveByStoreId(Long storeId) {"
+        },
+        {
+          "line": 165,
+          "text": "public long countActiveByClassroomId(Long classroomId) {"
+        },
+        {
+          "line": 170,
+          "text": "public long countActiveByCoachId(Long coachId) {"
+        },
+        {
+          "line": 175,
+          "text": "public long countActiveByCourseId(Long courseId) {"
+        },
+        {
+          "line": 180,
+          "text": "private LambdaQueryWrapper<ScheduleDO> buildActiveCondition() {"
+        },
+        {
+          "line": 186,
+          "text": "private LambdaQueryWrapper<ScheduleDO> buildVisibleCondition() {"
+        }
+      ]
+    },
+    {
+      "path": "backend/ruoyi-yoga/src/main/java/com/techplant/yoga/membercard/service/impl/MemberCardServiceImpl.java",
+      "sha256": "b03e39b2f0f616566b375445d7c86db9413193f1ef0eb60638b3ee491879d30c",
+      "locations": [
+        {
+          "line": 70,
+          "text": "public PageResult<MemberCardListItemVO> page(MemberCardQuery query) {"
+        },
+        {
+          "line": 78,
+          "text": "public MemberCardDetailVO getById(Long cardId) {"
+        },
+        {
+          "line": 83,
+          "text": "public PageResult<MemberCardPublicItemVO> pageForMember(Long memberId, MemberCardPublicQuery query) {"
+        },
+        {
+          "line": 94,
+          "text": "public void create(MemberCardCreateDTO dto) {"
+        },
+        {
+          "line": 132,
+          "text": "public MemberCardDetailVO activate(Long cardId) {"
+        },
+        {
+          "line": 165,
+          "text": "public MemberCardDetailVO stop(Long cardId, MemberCardStopDTO dto) {"
+        },
+        {
+          "line": 185,
+          "text": "public void delete(Long cardId) {"
+        },
+        {
+          "line": 194,
+          "text": "public MemberCardBookingSnapshot lockCard(Long memberCardId, Long memberId) {"
+        },
+        {
+          "line": 203,
+          "text": "public List<Long> cardIdsOfMember(Long memberId, Integer cardType) {"
+        },
+        {
+          "line": 208,
+          "text": "public List<MemberCardSummaryVO> summaries(Collection<Long> cardIds) {"
+        },
+        {
+          "line": 213,
+          "text": "public MemberCardBookingSnapshot lockBookableCard(Long memberCardId, Long memberId, Integer courseType,"
+        },
+        {
+          "line": 221,
+          "text": "public boolean deductTimes(Long memberCardId, Integer persons) {"
+        },
+        {
+          "line": 226,
+          "text": "public boolean refundTimes(Long memberCardId, Integer times) {"
+        },
+        {
+          "line": 231,
+          "text": "private void validateBookable(MemberCardBookingSnapshot card, Integer courseType, Long scheduleStoreId,"
+        },
+        {
+          "line": 262,
+          "text": "private List<MemberCardListItemVO> toListItemVOList(List<MemberCardDO> cards) {"
+        },
+        {
+          "line": 279,
+          "text": "private MemberCardDetailVO detailOf(MemberCardDO card) {"
+        },
+        {
+          "line": 291,
+          "text": "private List<MemberCardPublicItemVO> toPublicItemVOList(List<MemberCardDO> cards) {"
+        },
+        {
+          "line": 312,
+          "text": "private MemberCardPublicStatusEnum publicStatus(MemberCardDO card, LocalDateTime now) {"
+        },
+        {
+          "line": 330,
+          "text": "private String storeScopeText(MemberCardDO card, Map<Long, StoreSummaryVO> stores) {"
+        },
+        {
+          "line": 339,
+          "text": "private void validateCombination(MemberCardCreateDTO dto, MemberCardTypeEnum cardType) {"
+        },
+        {
+          "line": 370,
+          "text": "private int requireValidPeriodCount(MemberCardDO card) {"
+        },
+        {
+          "line": 380,
+          "text": "private Integer remainingDays(MemberCardDO card, LocalDate today) {"
+        },
+        {
+          "line": 392,
+          "text": "private MemberCardDO requireCard(Long cardId) {"
+        },
+        {
+          "line": 401,
+          "text": "private MemberCardDO requireCardForUpdate(Long cardId) {"
+        },
+        {
+          "line": 410,
+          "text": "private Map<Long, String> loadMemberNames(List<MemberCardDO> cards) {"
+        },
+        {
+          "line": 423,
+          "text": "private Map<Long, StoreSummaryVO> loadStoreSummaries(List<MemberCardDO> cards) {"
+        },
+        {
+          "line": 432,
+          "text": "private Map<Long, StoreSummaryVO> indexStores(List<StoreSummaryVO> summaries) {"
+        },
+        {
+          "line": 440,
+          "text": "private String storeNoOf(Map<Long, StoreSummaryVO> stores, Long storeId) {"
+        },
+        {
+          "line": 445,
+          "text": "private String storeNameOf(Map<Long, StoreSummaryVO> stores, Long storeId) {"
+        },
+        {
+          "line": 450,
+          "text": "private void addIfPresent(Collection<Long> target, Long value) {"
+        },
+        {
+          "line": 457,
+          "text": "private RuntimeException cardNoConflict(DuplicateKeyException cause) {"
+        },
+        {
+          "line": 467,
+          "text": "private String trimToNull(String value) {"
+        },
+        {
+          "line": 475,
+          "text": "private ServiceException notFound() {"
+        }
+      ]
+    },
+    {
+      "path": "backend/ruoyi-yoga/src/main/java/com/techplant/yoga/membercard/service/impl/MemberCardTransactionServiceImpl.java",
+      "sha256": "ec1c533d47ef2b717e13be9fcc06a76fc184612aa37c14d8e3603c888d722793",
+      "locations": [
+        {
+          "line": 26,
+          "text": "public void recordDeduct(Long reservationId, Long memberCardId, Long memberId, Integer persons, Integer beforeTimes,"
+        },
+        {
+          "line": 33,
+          "text": "public void recordRefund(Long reservationId, Long memberCardId, Long memberId, Integer persons, Integer refundTimes,"
+        },
+        {
+          "line": 40,
+          "text": "public Integer deductedTimesOf(Long reservationId) {"
+        },
+        {
+          "line": 47,
+          "text": "public Map<Long, Integer> deductedTimesOf(Collection<Long> reservationIds) {"
+        },
+        {
+          "line": 59,
+          "text": "private void append(Long reservationId, Long memberCardId, Long memberId, MemberCardChangeTypeEnum changeType,"
+        }
+      ]
+    },
+    {
+      "path": "backend/ruoyi-yoga/src/main/java/com/techplant/yoga/membercard/dao/MemberCardDaoImpl.java",
+      "sha256": "4a388b0692e5c9f44ef39020945a686f98c6ff66f4096248f3a0f1697f1bdc01",
+      "locations": [
+        {
+          "line": 30,
+          "text": "public IPage<MemberCardDO> selectPage(MemberCardQuery query) {"
+        },
+        {
+          "line": 43,
+          "text": "public IPage<MemberCardDO> selectPageForMember(Long memberId, MemberCardPublicQuery query) {"
+        },
+        {
+          "line": 52,
+          "text": "public MemberCardDO selectById(Long cardId) {"
+        },
+        {
+          "line": 60,
+          "text": "public List<Long> selectIdsByMemberAndType(Long memberId, Integer cardType) {"
+        },
+        {
+          "line": 72,
+          "text": "public List<MemberCardDO> selectByIds(Collection<Long> cardIds) {"
+        },
+        {
+          "line": 82,
+          "text": "public MemberCardDO selectByIdForUpdate(Long cardId) {"
+        },
+        {
+          "line": 91,
+          "text": "public int insert(MemberCardDO card) {"
+        },
+        {
+          "line": 96,
+          "text": "public int activate(Long cardId, Integer validPeriodUnit, LocalDateTime validStartTime, LocalDateTime validEndTime,"
+        },
+        {
+          "line": 106,
+          "text": "public int stop(Long cardId, LocalDateTime stopTime, String stopReason, Long updateBy) {"
+        },
+        {
+          "line": 115,
+          "text": "public int deleteById(Long cardId) {"
+        },
+        {
+          "line": 121,
+          "text": "public int deductTimes(Long cardId, Integer persons) {"
+        },
+        {
+          "line": 129,
+          "text": "public int refundTimes(Long cardId, Integer times) {"
+        },
+        {
+          "line": 137,
+          "text": "private String trimToNull(String value) {"
+        }
+      ]
+    },
+    {
+      "path": "backend/ruoyi-yoga/src/main/java/com/techplant/yoga/membercard/dao/MemberCardTransactionDaoImpl.java",
+      "sha256": "860b5ba529fc4e0012eb009393f202734dee638f128e3f60b9a49bc3008bfc28",
+      "locations": [
+        {
+          "line": 20,
+          "text": "public int insert(MemberCardTransactionDO transaction) {"
+        },
+        {
+          "line": 25,
+          "text": "public MemberCardTransactionDO selectByReservationAndType(Long reservationId, Integer changeType) {"
+        },
+        {
+          "line": 35,
+          "text": "public List<MemberCardTransactionDO> selectByReservationIdsAndType(Collection<Long> reservationIds,"
+        }
+      ]
+    },
+    {
+      "path": "backend/ruoyi-yoga/src/main/java/com/techplant/yoga/member/dao/MemberDaoImpl.java",
+      "sha256": "f069ce1faf7a9b0c31846f56489fdc75d7d315d4e1a14e6121ea7338cd038ef6",
+      "locations": [
+        {
+          "line": 25,
+          "text": "public IPage<MemberDO> selectPage(MemberQuery query) {"
+        },
+        {
+          "line": 43,
+          "text": "public MemberDO selectByPhone(String phone) {"
+        },
+        {
+          "line": 53,
+          "text": "public MemberDO selectById(Long memberId) {"
+        },
+        {
+          "line": 61,
+          "text": "public List<MemberDO> selectByIds(Collection<Long> memberIds) {"
+        },
+        {
+          "line": 72,
+          "text": "public MemberDO selectByIdForUpdate(Long memberId) {"
+        },
+        {
+          "line": 81,
+          "text": "public boolean existsRegisteredById(Long memberId) {"
+        },
+        {
+          "line": 91,
+          "text": "public int insert(MemberDO member) {"
+        },
+        {
+          "line": 96,
+          "text": "public int updatePasswordIfUnregistered(Long memberId, String passwordHash) {"
+        },
+        {
+          "line": 103,
+          "text": "public int updatePassword(Long memberId, String passwordHash) {"
+        },
+        {
+          "line": 109,
+          "text": "public int updateLastLoginTime(Long memberId, LocalDateTime lastLoginTime) {"
+        },
+        {
+          "line": 115,
+          "text": "public int updateProfile(Long memberId, Integer gender, Integer level, Long updateBy) {"
+        },
+        {
+          "line": 123,
+          "text": "public int deleteById(Long memberId) {"
+        },
+        {
+          "line": 131,
+          "text": "private String trimToNull(String value) {"
+        }
+      ]
+    },
+    {
+      "path": "backend/ruoyi-yoga/src/test/java/com/techplant/yoga/reservation/service/ReservationServiceImplTest.java",
+      "sha256": "cb29ee437d5fc96f977ecc89c5406e51174988737f53414492f29789327020d2",
+      "locations": [
+        {
+          "line": 715,
+          "text": "private void stopTimesCard() {"
+        },
+        {
+          "line": 721,
+          "text": "private void rejectLedgerInserts(int changeType) {"
+        },
+        {
+          "line": 726,
+          "text": "private void assertAccountingConsistent() {"
+        },
+        {
+          "line": 744,
+          "text": "private List<String> runWithFirstTransactionHeld(Runnable first, Runnable second) throws Exception {"
+        },
+        {
+          "line": 779,
+          "text": "private void awaitLatch(CountDownLatch latch) {"
+        },
+        {
+          "line": 788,
+          "text": "private List<String> runConcurrently(Runnable first, Runnable second) throws Exception {"
+        },
+        {
+          "line": 805,
+          "text": "private Callable<String> concurrentTask(Runnable action, CountDownLatch ready, CountDownLatch start) {"
+        },
+        {
+          "line": 991,
+          "text": "private ReservationAdminQuery adminQuery() {"
+        },
+        {
+          "line": 1014,
+          "text": "private void create(String requestId, Long scheduleId, Long memberCardId, Integer persons) {"
+        },
+        {
+          "line": 1018,
+          "text": "private void createForMember(Long memberId, String requestId, Long scheduleId, Long memberCardId, Integer persons) {"
+        },
+        {
+          "line": 1027,
+          "text": "private ReservationPublicQuery query(Integer status, Integer cardType) {"
+        },
+        {
+          "line": 1036,
+          "text": "private void assertMessage(int code, String message, Runnable action) {"
+        },
+        {
+          "line": 1042,
+          "text": "private Long reservationId() {"
+        },
+        {
+          "line": 1046,
+          "text": "private int countReservations() {"
+        },
+        {
+          "line": 1050,
+          "text": "private int countOf(String sql, Object... args) {"
+        },
+        {
+          "line": 1055,
+          "text": "private Integer intOf(String sql, Object... args) {"
+        },
+        {
+          "line": 1059,
+          "text": "private String expectedScheduleDate(Long scheduleId) {"
+        },
+        {
+          "line": 1065,
+          "text": "private LocalDateTime scheduleStartTime(Long scheduleId) {"
+        },
+        {
+          "line": 1070,
+          "text": "private LocalDateTime scheduleEndTime(Long scheduleId) {"
+        },
+        {
+          "line": 1075,
+          "text": "private void insertStores() {"
+        },
+        {
+          "line": 1080,
+          "text": "private void insertStore(Long id, String storeNo, String name, String regionCode, String address) {"
+        },
+        {
+          "line": 1088,
+          "text": "private void insertClassroom() {"
+        },
+        {
+          "line": 1097,
+          "text": "private void insertCoach() {"
+        },
+        {
+          "line": 1102,
+          "text": "private void insertCourses() {"
+        },
+        {
+          "line": 1107,
+          "text": "private void insertCourse(Long id, String name, int courseType) {"
+        },
+        {
+          "line": 1114,
+          "text": "private void insertMembers() {"
+        },
+        {
+          "line": 1121,
+          "text": "private void insertMember(Long id, String phone, String name) {"
+        },
+        {
+          "line": 1128,
+          "text": "private void insertCards() {"
+        },
+        {
+          "line": 1155,
+          "text": "private void insertCard(Long id, Long memberId, int cardType, int courseScope, Long storeId, Integer remainingTimes,"
+        },
+        {
+          "line": 1168,
+          "text": "private void insertSchedules() {"
+        },
+        {
+          "line": 1190,
+          "text": "private void insertSchedule(Long id, Long courseId, int courseType, LocalDateTime startTime, LocalDateTime endTime,"
+        },
+        {
+          "line": 1196,
+          "text": "private void insertSchedule(Long id, Long storeId, Long classroomId, Long courseId, int courseType,"
+        },
+        {
+          "line": 1207,
+          "text": "private void insertReservation(Long id, String requestId, Long memberId, Long scheduleId, Long memberCardId,"
+        },
+        {
+          "line": 1217,
+          "text": "private void insertReservation(Long id, String requestId, Long memberId, Long scheduleId, Long memberCardId,"
+        },
+        {
+          "line": 1227,
+          "text": "private void insertReservation(Long id, String requestId, Long memberId, Long scheduleId, Long memberCardId,"
+        },
+        {
+          "line": 1240,
+          "text": "private void insertReservationWithNewConnection(Long id, String requestId, Long memberId, Long scheduleId,"
+        },
+        {
+          "line": 1265,
+          "text": "private void insertAdminReservation(Long id, String requestId, Long memberId, Long scheduleId, Long memberCardId,"
+        },
+        {
+          "line": 1277,
+          "text": "private void insertDeductTransaction(Long reservationId, Long memberCardId, Long memberId, int persons) {"
+        }
+      ]
+    },
+    {
+      "path": "backend/ruoyi-yoga/src/test/java/com/techplant/yoga/common/testcontainers/YogaMyBatisTestConfig.java",
+      "sha256": "81349999b441856ef895a67ab3efe53e189a909e627efe944e1c08b02a7e9b53",
+      "locations": [
+        {
+          "line": 22,
+          "text": "public DataSource dataSource() {"
+        },
+        {
+          "line": 27,
+          "text": "public PlatformTransactionManager transactionManager(DataSource dataSource) {"
+        }
+      ]
+    },
+    {
+      "path": "backend/ruoyi-yoga/src/test/java/com/techplant/yoga/common/testcontainers/YogaMySqlContainer.java",
+      "sha256": "6fb71740edb1672545e08276919b01d8329c1b12b3ffe1f4f33fea6a9feb7000",
+      "locations": [
+        {
+          "line": 38,
+          "text": "public static DataSource dataSource() {"
+        },
+        {
+          "line": 48,
+          "text": "private static String currentOffset() {"
+        }
+      ]
+    },
+    {
+      "path": "backend/ruoyi-yoga/src/test/java/com/techplant/yoga/common/testcontainers/YogaSchema.java",
+      "sha256": "319e52e123eca8e0c6cb22324a5ec5851b2940327c50069054387029c4e05d2c",
+      "locations": [
+        {
+          "line": 31,
+          "text": "public static void reset(DataSource dataSource, String... tables) {"
+        },
+        {
+          "line": 44,
+          "text": "private static String createTableStatement(String businessContent, Path businessScript, String table) {"
+        },
+        {
+          "line": 58,
+          "text": "* 匹配 {@code CREATE TABLE} 语句，兼容带反引号与不带反引号的两种写法"
+        },
+        {
+          "line": 60,
+          "text": "private static String findCreateTable(String scriptContent, String table) {"
+        },
+        {
+          "line": 66,
+          "text": "private static String read(Path script) {"
+        },
+        {
+          "line": 78,
+          "text": "private static Path locateScript(String scriptName) {"
+        }
+      ]
+    },
+    {
+      "path": "backend/ruoyi-framework/src/main/java/com/ruoyi/framework/config/DruidConfig.java",
+      "sha256": "c60a3751afa6aa11eb605842307bd8e61d71ba12b0f9b63f34ae59bf3b4b9cc3",
+      "locations": [
+        {
+          "line": 37,
+          "text": "public DataSource masterDataSource(DruidProperties druidProperties)"
+        },
+        {
+          "line": 46,
+          "text": "public DataSource slaveDataSource(DruidProperties druidProperties)"
+        },
+        {
+          "line": 54,
+          "text": "public DynamicDataSource dataSource(DataSource masterDataSource)"
+        },
+        {
+          "line": 69,
+          "text": "public void setDataSource(Map<Object, Object> targetDataSources, String sourceName, String beanName)"
+        },
+        {
+          "line": 87,
+          "text": "public FilterRegistrationBean removeDruidFilterRegistrationBean(DruidStatProperties properties)"
+        },
+        {
+          "line": 99,
+          "text": "public void init(javax.servlet.FilterConfig filterConfig) throws ServletException"
+        },
+        {
+          "line": 103,
+          "text": "public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)"
+        },
+        {
+          "line": 117,
+          "text": "public void destroy()"
+        }
+      ]
+    },
+    {
+      "path": "backend/ruoyi-framework/src/main/java/com/ruoyi/framework/aspectj/DataSourceAspect.java",
+      "sha256": "9c63da73f5d348e39acc438b70da9cd686f8d09d5bcc51d3da872d3034887aa1",
+      "locations": [
+        {
+          "line": 32,
+          "text": "public void dsPointCut()"
+        },
+        {
+          "line": 38,
+          "text": "public Object around(ProceedingJoinPoint point) throws Throwable"
+        },
+        {
+          "line": 61,
+          "text": "public DataSource getDataSource(ProceedingJoinPoint point)"
+        }
+      ]
+    },
+    {
+      "path": "docs/系统测试/AI Agent测试手册.md",
+      "sha256": "7fd2dacc844265f891d3794f0ec89fb27d2e7684465676564be54aa079e22ce6",
+      "locations": [
+        {
+          "line": 1,
+          "text": "# AI Agent测试手册"
+        },
+        {
+          "line": 5,
+          "text": "## 测试策略"
+        },
+        {
+          "line": 15,
+          "text": "## 后端集成测试"
+        },
+        {
+          "line": 17,
+          "text": "### 环境与运行"
+        },
+        {
+          "line": 29,
+          "text": "### 配置与数据"
+        },
+        {
+          "line": 36,
+          "text": "### 当前覆盖边界"
+        },
+        {
+          "line": 42,
+          "text": "## 前端端到端测试"
+        },
+        {
+          "line": 44,
+          "text": "### Playwright"
+        },
+        {
+          "line": 54,
+          "text": "### 管理端辅助检查"
+        },
+        {
+          "line": 64,
+          "text": "### uni-app 辅助检查"
+        },
+        {
+          "line": 86,
+          "text": "## 验证结果报告"
+        }
+      ]
+    },
+    {
+      "path": "docs/系统测试/预约并发与事务核对.md",
+      "sha256": "c1825859ebcce9d18ef39891584806aa92588d22df9e3e19b18661014a6cc91e",
+      "locations": [
+        {
+          "line": 1,
+          "text": "# 预约并发与事务核对"
+        },
+        {
+          "line": 3,
+          "text": "## 核对范围"
+        },
+        {
+          "line": 9,
+          "text": "## 规则、机制与测试证据"
+        },
+        {
+          "line": 33,
+          "text": "## 已发现的实现边界"
+        },
+        {
+          "line": 40,
+          "text": "## 执行方式"
+        },
+        {
+          "line": 48,
+          "text": "## 本次执行结果"
+        }
+      ]
+    },
+    {
+      "path": "docs/详细设计/预约管理详细设计.md",
+      "sha256": "a948f7271a2b8acafc95ee79afd59af9572987c37bc7f9d86580d244b970512c",
+      "locations": [
+        {
+          "line": 1,
+          "text": "# 瑜伽普拉提预约管理详细设计文档"
+        },
+        {
+          "line": 3,
+          "text": "# 1、数据架构"
+        },
+        {
+          "line": 5,
+          "text": "## 1.2 数据库逻辑模型"
+        },
+        {
+          "line": 7,
+          "text": "### 1.2.1 `t_reservation` 字段定义"
+        },
+        {
+          "line": 31,
+          "text": "### 1.2.2 枚举值"
+        },
+        {
+          "line": 43,
+          "text": "### 1.2.3 `t_member_card_transaction` 字段定义"
+        },
+        {
+          "line": 58,
+          "text": "## 1.3 数据库物理模型"
+        },
+        {
+          "line": 60,
+          "text": "### 1.3.1 建表语句"
+        },
+        {
+          "line": 63,
+          "text": "CREATE TABLE `t_reservation` ("
+        },
+        {
+          "line": 85,
+          "text": "CREATE TABLE `t_member_card_transaction` ("
+        },
+        {
+          "line": 103,
+          "text": "# 2、接口"
+        },
+        {
+          "line": 105,
+          "text": "## 2.2 预约管理接口"
+        },
+        {
+          "line": 113,
+          "text": "### 2.2.1 查询预约列表"
+        },
+        {
+          "line": 119,
+          "text": "#### 请求参数"
+        },
+        {
+          "line": 187,
+          "text": "#### 返回结果"
+        },
+        {
+          "line": 198,
+          "text": "## 2.3 数据模型"
+        },
+        {
+          "line": 200,
+          "text": "### 2.3.1 `ReservationAdminItemVO`"
+        },
+        {
+          "line": 246,
+          "text": "### 2.3.2 `ReservationAdminQuery`"
+        },
+        {
+          "line": 262,
+          "text": "# 3、开发架构"
+        },
+        {
+          "line": 264,
+          "text": "## 3.1 包结构与职责"
+        },
+        {
+          "line": 295,
+          "text": "## 3.2 事务与并发"
+        },
+        {
+          "line": 301,
+          "text": "# 4、运行流程"
+        },
+        {
+          "line": 305,
+          "text": "## 4.1 查询预约列表"
+        }
+      ]
+    },
+    {
+      "path": "docs/详细设计/排课管理详细设计.md",
+      "sha256": "b733acfaaf46003dd14f1c0a308d602fc73be110d9e19b040a6e853216d67c06",
+      "locations": [
+        {
+          "line": 1,
+          "text": "# 瑜伽普拉提排课管理详细设计文档"
+        },
+        {
+          "line": 3,
+          "text": "# 1、数据架构"
+        },
+        {
+          "line": 5,
+          "text": "## 1.1 数据库 ER 模型"
+        },
+        {
+          "line": 9,
+          "text": "## 1.2 数据库逻辑模型"
+        },
+        {
+          "line": 11,
+          "text": "### 1.2.1 `t_schedule` 字段定义"
+        },
+        {
+          "line": 33,
+          "text": "### 1.2.2 枚举值与状态全量视图"
+        },
+        {
+          "line": 45,
+          "text": "## 1.3 数据库物理模型"
+        },
+        {
+          "line": 47,
+          "text": "### 1.3.1 建表语句"
+        },
+        {
+          "line": 50,
+          "text": "CREATE TABLE `t_schedule` ("
+        },
+        {
+          "line": 74,
+          "text": "# 2、接口"
+        },
+        {
+          "line": 77,
+          "text": "## 2.2 排课管理接口"
+        },
+        {
+          "line": 88,
+          "text": "### 2.2.1 查询排课列表"
+        },
+        {
+          "line": 94,
+          "text": "#### 请求参数"
+        },
+        {
+          "line": 143,
+          "text": "#### 返回结果"
+        },
+        {
+          "line": 151,
+          "text": "### 2.2.2 查询排课详情"
+        },
+        {
+          "line": 157,
+          "text": "#### 请求参数"
+        },
+        {
+          "line": 195,
+          "text": "#### 返回结果"
+        },
+        {
+          "line": 204,
+          "text": "### 2.2.3 新增排课"
+        },
+        {
+          "line": 208,
+          "text": "#### 请求参数"
+        },
+        {
+          "line": 232,
+          "text": "#### 返回结果"
+        },
+        {
+          "line": 242,
+          "text": "### 2.2.4 修改排课"
+        },
+        {
+          "line": 246,
+          "text": "#### 请求参数"
+        },
+        {
+          "line": 292,
+          "text": "#### 返回结果"
+        },
+        {
+          "line": 302,
+          "text": "### 2.2.5 状态流转"
+        },
+        {
+          "line": 306,
+          "text": "#### 请求参数"
+        },
+        {
+          "line": 324,
+          "text": "#### 返回结果"
+        },
+        {
+          "line": 334,
+          "text": "### 2.2.6 删除排课"
+        },
+        {
+          "line": 340,
+          "text": "#### 请求参数"
+        },
+        {
+          "line": 357,
+          "text": "#### 返回结果"
+        },
+        {
+          "line": 366,
+          "text": "### 2.2.7 结束排课"
+        },
+        {
+          "line": 373,
+          "text": "## 2.3 数据模型"
+        },
+        {
+          "line": 375,
+          "text": "### 2.3.1 `ScheduleListItemVO` / `ScheduleDetailVO`"
+        },
+        {
+          "line": 395,
+          "text": "### 2.3.2 `ScheduleCreateDTO` / `ScheduleUpdateDTO`"
+        },
+        {
+          "line": 399,
+          "text": "### 2.3.3 `ScheduleQuery`"
+        },
+        {
+          "line": 403,
+          "text": "### 2.3.4 状态接口的入参"
+        },
+        {
+          "line": 409,
+          "text": "# 3、开发架构"
+        },
+        {
+          "line": 411,
+          "text": "## 3.1 包结构"
+        },
+        {
+          "line": 429,
+          "text": "## 3.2 类与职责"
+        },
+        {
+          "line": 445,
+          "text": "## 3.3 调用关系"
+        },
+        {
+          "line": 461,
+          "text": "# 4、运行流程"
+        },
+        {
+          "line": 463,
+          "text": "## 4.1 查询列表"
+        },
+        {
+          "line": 469,
+          "text": "## 4.2 查询详情"
+        },
+        {
+          "line": 473,
+          "text": "## 4.3 新增排课"
+        },
+        {
+          "line": 483,
+          "text": "## 4.4 修改排课"
+        },
+        {
+          "line": 491,
+          "text": "## 4.5 状态流转"
+        },
+        {
+          "line": 498,
+          "text": "## 4.6 删除排课"
+        },
+        {
+          "line": 505,
+          "text": "## 4.7 结束状态定时维护（后续交付）"
+        }
+      ]
+    },
+    {
+      "path": "docs/需求文档/全局说明.md",
+      "sha256": "9b886257ef51c0bd424c1fb37acb0dca45b90ee66774f23821f211fa2bb29207",
+      "locations": [
+        {
+          "line": 1,
+          "text": "# 全局说明"
+        },
+        {
+          "line": 8,
+          "text": "## 1. 一期做什么"
+        },
+        {
+          "line": 15,
+          "text": "## 2. 一期不做"
+        },
+        {
+          "line": 21,
+          "text": "## 3. 五个业务对象"
+        },
+        {
+          "line": 36,
+          "text": "## 4. 一句话记住的几条"
+        }
+      ]
+    },
+    {
+      "path": "docs/需求文档/状态流转图.md",
+      "sha256": "a2d1ffea410a9aa783cd1f261f32c5cadf34b4876ec51d04c9ae1b3b2cefeb4b",
+      "locations": [
+        {
+          "line": 1,
+          "text": "# 状态流转图"
+        },
+        {
+          "line": 3,
+          "text": "## 排课状态图"
+        },
+        {
+          "line": 14,
+          "text": "## 会员卡状态图"
+        },
+        {
+          "line": 41,
+          "text": "## 预约状态图"
+        }
+      ]
+    },
+    {
+      "path": "docs/需求分析/用例/UC-009-维护排课.md",
+      "sha256": "d3f34e32d45e009570c0c6dee46ad33d3252f7e0c408d82d769331907a182f11",
+      "locations": [
+        {
+          "line": 1,
+          "text": "# 用例：维护排课"
+        },
+        {
+          "line": 3,
+          "text": "## 概览"
+        },
+        {
+          "line": 15,
+          "text": "## 前置条件"
+        },
+        {
+          "line": 22,
+          "text": "## 主成功场景"
+        },
+        {
+          "line": 34,
+          "text": "## 替代流程"
+        },
+        {
+          "line": 54,
+          "text": "## 后置条件"
+        },
+        {
+          "line": 56,
+          "text": "### 成功后的状态"
+        },
+        {
+          "line": 63,
+          "text": "### 失败后的状态"
+        },
+        {
+          "line": 68,
+          "text": "## 业务规则"
+        },
+        {
+          "line": 98,
+          "text": "## 相关用例"
+        }
+      ]
+    }
+  ]
+}
