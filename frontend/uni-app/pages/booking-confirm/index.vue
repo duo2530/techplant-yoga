@@ -417,7 +417,6 @@ async function load() {
     pickCard()
     clampPersons()
   } catch (error) {
-    // 404（不存在 / 已删除 / 待上架）与 500（参数非法）都由 utils/request 统一 toast 服务端 msg
     onNotFound()
   }
 }

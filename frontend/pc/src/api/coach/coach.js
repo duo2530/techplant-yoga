@@ -35,19 +35,19 @@ export function updateCoach(coachId, data) {
   })
 }
 
-// 删除教练（物理删除，服务端带排课删除门禁）
-export function delCoach(coachId) {
-  return request({
-    url: '/admin/coaches/' + coachId,
-    method: 'delete'
-  })
-}
-
-// 设置教练等级（1 普通 / 2 金牌），等级维护与资料编辑相互独立
+// 设置教练等级（1 普通 / 2 金牌），level 通过查询参数传递
 export function updateCoachLevel(coachId, level) {
   return request({
     url: '/admin/coaches/' + coachId + '/level',
     method: 'put',
     params: { level }
+  })
+}
+
+// 删除教练（物理删除，服务端带排课删除门禁）
+export function delCoach(coachId) {
+  return request({
+    url: '/admin/coaches/' + coachId,
+    method: 'delete'
   })
 }

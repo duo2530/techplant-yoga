@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import com.ruoyi.common.constant.HttpStatus;
 import com.ruoyi.common.core.controller.BaseController;
@@ -65,6 +66,13 @@ public class CoachController extends BaseController {
     @PutMapping("/{coachId}")
     public AjaxResult update(@PathVariable("coachId") Long coachId, @Valid @RequestBody CoachUpdateDTO dto) {
         return AjaxResult.success(coachService.update(coachId, dto));
+    }
+
+    @ApiOperation("设置教练等级")
+    @PutMapping("/{coachId}/level")
+    public AjaxResult updateLevel(@PathVariable("coachId") Long coachId, @RequestParam("level") Integer level) {
+        coachService.updateLevel(coachId, level);
+        return success();
     }
 
     /**  删除教练（物理删除，带排课删除门禁） */

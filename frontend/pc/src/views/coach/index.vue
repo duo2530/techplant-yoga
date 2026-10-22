@@ -53,7 +53,6 @@
         <template #default="scope">
           <el-button link type="primary" icon="Edit" @click="handleUpdate(scope.row)">修改</el-button>
           <el-button
-            v-hasPermi="['yoga:coach:level']"
             link
             :type="isGold(scope.row) ? 'warning' : 'success'"
             :icon="isGold(scope.row) ? 'Star' : 'StarFilled'"

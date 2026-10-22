@@ -45,8 +45,10 @@ public class StoreServiceImpl implements StoreService {
     /** 状态冲突：名称重复、编号冲突或已用尽、删除门禁未通过 */
     private static final int CONFLICT = 409;
 
-    /** 参数校验失败／系统异常 */
-    private static final int PARAM_INVALID = 500;
+    /** 参数校验失败 */
+    private static final int PARAM_INVALID = 400;
+
+    private static final int INTERNAL_ERROR = 500;
 
     /** 门店编号上限（从 0001 起连续分配，0000 不使用） */
     private static final int MAX_STORE_NO = 9999;
@@ -115,7 +117,7 @@ public class StoreServiceImpl implements StoreService {
             throw conflictOf(e);
         }
         if (rows != 1 || store.getId() == null) {
-            throw new ServiceException("新增门店失败", PARAM_INVALID);
+            throw new ServiceException("新增门店失败", INTERNAL_ERROR);
         }
     }
 
@@ -215,7 +217,7 @@ public class StoreServiceImpl implements StoreService {
     private String allocateStoreNo() {
         StoreNoCounterDO counter = storeDao.selectCounterForUpdate();
         if (counter == null || counter.getLastNo() == null) {
-            throw new ServiceException("门店编号计数器未初始化，无法新增门店", PARAM_INVALID);
+            throw new ServiceException("门店编号计数器未初始化，无法新增门店", INTERNAL_ERROR);
         }
         int nextNo = counter.getLastNo() + 1;
         if (nextNo > MAX_STORE_NO) {
@@ -275,7 +277,7 @@ public class StoreServiceImpl implements StoreService {
         return exception;
     }
 
-    /** 门店类型取值校验（1 主力店 / 2 精品店），越界 → 参数校验失败（500） */
+    /** 门店类型取值校验（1 主力店 / 2 精品店），越界 → 参数校验失败（400） */
     private void validateStoreType(Integer storeType) {
         if (!StoreTypeEnum.isValid(storeType)) {
             throw new ServiceException("门店类型取值为 1 或 2", PARAM_INVALID);

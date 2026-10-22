@@ -27,25 +27,23 @@ import com.techplant.yoga.common.testcontainers.YogaSchema;
  * 管理端教练等级接口的 HTTP 集成测试：真实管理端安全过滤链 ＋ 真实 MySQL。
  *
  * <p>覆盖等级 1／2 设置与取消、非法等级与非法 ID 返回 400、不存在返回 404、重复设置幂等、
- * 审计字段、新增默认普通、资料编辑不覆盖等级，以及游客／会员／无权限管理员不可操作。</p>
+ * 审计字段、新增默认普通、资料编辑不覆盖等级，以及游客／会员不可操作，普通管理员可操作。</p>
  */
-@DisplayName("管理端教练等级接口（真实安全链：权限 / 400 / 404 / 幂等 / 审计 / 等级隔离）")
+@DisplayName("管理端教练等级接口（真实安全链：认证 / 400 / 404 / 幂等 / 审计 / 等级隔离）")
 class CoachLevelHttpTest extends AbstractYogaHttpIntegrationTest {
     private static final long COACH_ID = 9001L;
 
-    private static final long WITH_PERMISSION_USER_ID = 100L;
+    private static final long ADMIN_USER_ID = 100L;
 
-    private static final long WITHOUT_PERMISSION_USER_ID = 101L;
-
-    private static final String PERMISSION = "yoga:coach:level";
+    private static final long OTHER_ADMIN_USER_ID = 101L;
 
     private static final ObjectMapper JSON = new ObjectMapper();
 
     private JdbcTemplate jdbcTemplate;
 
-    private String withPermissionToken;
+    private String adminToken;
 
-    private String withoutPermissionToken;
+    private String otherAdminToken;
 
     private String memberToken;
 
@@ -58,8 +56,8 @@ class CoachLevelHttpTest extends AbstractYogaHttpIntegrationTest {
         insertCoach(COACH_ID, "林教练", 1, LocalDateTime.of(2026, 1, 1, 0, 0, 0));
         prepareMember();
 
-        withPermissionToken = createAdminToken("gold_admin");
-        withoutPermissionToken = createAdminToken("plain_admin");
+        adminToken = createAdminToken("gold_admin");
+        otherAdminToken = createAdminToken("plain_admin");
         com.techplant.yoga.member.domain.MemberDO member = new com.techplant.yoga.member.domain.MemberDO();
         member.setId(1856739201475235902L);
         member.setPhone("13800138000");
@@ -71,15 +69,15 @@ class CoachLevelHttpTest extends AbstractYogaHttpIntegrationTest {
     // ------------------------------------------------------------------
 
     @Test
-    @DisplayName("有权管理员：设为金牌与取消金牌成功，成功返回 {code,msg} 不返回 data")
-    void updateLevel_withPermission_shouldSucceed() throws Exception {
+    @DisplayName("管理员：设为金牌与取消金牌成功，成功返回 {code,msg} 不返回 data")
+    void updateLevel_asAdmin_shouldSucceed() throws Exception {
         mockMvc.perform(put("/admin/coaches/" + COACH_ID + "/level").param("level", "2").header(AUTHORIZATION,
-                bearer(withPermissionToken))).andExpect(status().isOk()).andExpect(jsonPath("$.code").value(200))
+                bearer(adminToken))).andExpect(status().isOk()).andExpect(jsonPath("$.code").value(200))
                 .andExpect(jsonPath("$.data").doesNotExist());
         assertEquals(2, levelOf(COACH_ID));
 
         mockMvc.perform(put("/admin/coaches/" + COACH_ID + "/level").param("level", "1").header(AUTHORIZATION,
-                bearer(withPermissionToken))).andExpect(jsonPath("$.code").value(200));
+                bearer(adminToken))).andExpect(jsonPath("$.code").value(200));
         assertEquals(1, levelOf(COACH_ID));
     }
 
@@ -88,7 +86,7 @@ class CoachLevelHttpTest extends AbstractYogaHttpIntegrationTest {
     void updateLevel_repeated_shouldBeIdempotent() throws Exception {
         for (int round = 0; round < 2; round++) {
             mockMvc.perform(put("/admin/coaches/" + COACH_ID + "/level").param("level", "2").header(AUTHORIZATION,
-                    bearer(withPermissionToken))).andExpect(jsonPath("$.code").value(200));
+                    bearer(adminToken))).andExpect(jsonPath("$.code").value(200));
         }
         assertEquals(2, levelOf(COACH_ID));
     }
@@ -97,12 +95,12 @@ class CoachLevelHttpTest extends AbstractYogaHttpIntegrationTest {
     @DisplayName("等级更新写入 update_by 与 update_time")
     void updateLevel_shouldWriteAuditFields() throws Exception {
         mockMvc.perform(put("/admin/coaches/" + COACH_ID + "/level").param("level", "2").header(AUTHORIZATION,
-                bearer(withPermissionToken))).andExpect(jsonPath("$.code").value(200));
+                bearer(adminToken))).andExpect(jsonPath("$.code").value(200));
 
         Map<String, Object> row = jdbcTemplate
                 .queryForMap("SELECT level, update_by, update_time FROM t_coach WHERE id = ?", COACH_ID);
         assertEquals(2, ((Number) row.get("level")).intValue());
-        assertEquals(WITH_PERMISSION_USER_ID, ((Number) row.get("update_by")).longValue(), "写当前管理员");
+        assertEquals(ADMIN_USER_ID, ((Number) row.get("update_by")).longValue(), "写当前管理员");
         assertNotNull(row.get("update_time"));
         assertEquals(1,
                 jdbcTemplate.queryForObject(
@@ -115,16 +113,16 @@ class CoachLevelHttpTest extends AbstractYogaHttpIntegrationTest {
     @DisplayName("非法等级：3／0／缺失／非数字都返回业务码 400，等级不变")
     void updateLevel_invalidLevel_shouldReturnBadRequest() throws Exception {
         assertBadRequestWithMessage(put("/admin/coaches/" + COACH_ID + "/level").param("level", "3")
-                .header(AUTHORIZATION, bearer(withPermissionToken)), "教练等级取值为 1 或 2");
+                .header(AUTHORIZATION, bearer(adminToken)), "教练等级取值为 1 或 2");
         assertBadRequestWithMessage(put("/admin/coaches/" + COACH_ID + "/level").param("level", "0")
-                .header(AUTHORIZATION, bearer(withPermissionToken)), "教练等级取值为 1 或 2");
+                .header(AUTHORIZATION, bearer(adminToken)), "教练等级取值为 1 或 2");
         assertBadRequestWithMessage(
-                put("/admin/coaches/" + COACH_ID + "/level").header(AUTHORIZATION, bearer(withPermissionToken)),
+                put("/admin/coaches/" + COACH_ID + "/level").header(AUTHORIZATION, bearer(adminToken)),
                 "参数[level]不能为空");
         assertBadRequestWithMessage(put("/admin/coaches/" + COACH_ID + "/level").param("level", "abc")
-                .header(AUTHORIZATION, bearer(withPermissionToken)), "参数[level]格式非法");
+                .header(AUTHORIZATION, bearer(adminToken)), "参数[level]格式非法");
         assertBadRequestWithMessage(put("/admin/coaches/" + COACH_ID + "/level").param("level", "2.5")
-                .header(AUTHORIZATION, bearer(withPermissionToken)), "参数[level]格式非法");
+                .header(AUTHORIZATION, bearer(adminToken)), "参数[level]格式非法");
 
         assertEquals(1, levelOf(COACH_ID), "非法请求不得改动等级");
     }
@@ -133,11 +131,12 @@ class CoachLevelHttpTest extends AbstractYogaHttpIntegrationTest {
     @DisplayName("非法 coachId 返回 400；教练不存在返回 404")
     void updateLevel_invalidOrMissingCoach() throws Exception {
         assertBadRequestWithMessage(
-                put("/admin/coaches/abc/level").param("level", "2").header(AUTHORIZATION, bearer(withPermissionToken)),
+                put("/admin/coaches/abc/level").param("level", "2").header(AUTHORIZATION, bearer(adminToken)),
                 "参数[coachId]格式非法");
 
-        mockMvc.perform(put("/admin/coaches/999999999/level").param("level", "2").header(AUTHORIZATION,
-                bearer(withPermissionToken))).andExpect(status().isOk()).andExpect(jsonPath("$.code").value(404))
+        mockMvc.perform(
+                put("/admin/coaches/999999999/level").param("level", "2").header(AUTHORIZATION, bearer(adminToken)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.code").value(404))
                 .andExpect(jsonPath("$.msg").value("教练不存在或已被删除"));
     }
 
@@ -162,11 +161,13 @@ class CoachLevelHttpTest extends AbstractYogaHttpIntegrationTest {
     }
 
     @Test
-    @DisplayName("无权限管理员：返回业务码 403，等级不变")
-    void updateLevel_withoutPermission_shouldBeForbidden() throws Exception {
+    @DisplayName("普通管理员无需等级按钮权限即可设置和取消金牌")
+    void updateLevel_asOrdinaryAdmin_shouldSucceed() throws Exception {
         mockMvc.perform(put("/admin/coaches/" + COACH_ID + "/level").param("level", "2").header(AUTHORIZATION,
-                bearer(withoutPermissionToken))).andExpect(status().isOk()).andExpect(jsonPath("$.code").value(403))
-                .andExpect(jsonPath("$.msg").value("没有权限，请联系管理员授权"));
+                bearer(otherAdminToken))).andExpect(status().isOk()).andExpect(jsonPath("$.code").value(200));
+        assertEquals(2, levelOf(COACH_ID));
+        mockMvc.perform(put("/admin/coaches/" + COACH_ID + "/level").param("level", "1").header(AUTHORIZATION,
+                bearer(otherAdminToken))).andExpect(status().isOk()).andExpect(jsonPath("$.code").value(200));
         assertEquals(1, levelOf(COACH_ID));
     }
 
@@ -178,12 +179,12 @@ class CoachLevelHttpTest extends AbstractYogaHttpIntegrationTest {
     @DisplayName("新增教练固定普通等级，审计字段写当前管理员")
     void create_shouldDefaultToNormalLevel() throws Exception {
         mockMvc.perform(post("/admin/coaches").contentType(MediaType.APPLICATION_JSON)
-                .content("{\"name\":\"新教练\",\"intro\":\"新简介\"}").header(AUTHORIZATION, bearer(withPermissionToken)))
+                .content("{\"name\":\"新教练\",\"intro\":\"新简介\"}").header(AUTHORIZATION, bearer(adminToken)))
                 .andExpect(jsonPath("$.code").value(200));
 
         Map<String, Object> row = jdbcTemplate.queryForMap("SELECT level, create_by FROM t_coach WHERE name = '新教练'");
         assertEquals(1, ((Number) row.get("level")).intValue(), "新增教练固定普通等级");
-        assertEquals(WITH_PERMISSION_USER_ID, ((Number) row.get("create_by")).longValue());
+        assertEquals(ADMIN_USER_ID, ((Number) row.get("create_by")).longValue());
     }
 
     @Test
@@ -193,7 +194,7 @@ class CoachLevelHttpTest extends AbstractYogaHttpIntegrationTest {
 
         mockMvc.perform(put("/admin/coaches/" + COACH_ID).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"name\":\"林教练\",\"intro\":\"更新后的简介\",\"gallery\":[]}")
-                .header(AUTHORIZATION, bearer(withPermissionToken))).andExpect(jsonPath("$.code").value(200))
+                .header(AUTHORIZATION, bearer(adminToken))).andExpect(jsonPath("$.code").value(200))
                 .andExpect(jsonPath("$.data.level").value(2));
 
         Map<String, Object> row = jdbcTemplate.queryForMap("SELECT level, intro FROM t_coach WHERE id = ?", COACH_ID);
@@ -208,7 +209,7 @@ class CoachLevelHttpTest extends AbstractYogaHttpIntegrationTest {
 
         mockMvc.perform(put("/admin/coaches/" + COACH_ID).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"name\":\"林教练\",\"intro\":\"夹带等级的编辑\",\"level\":1,\"gallery\":[]}")
-                .header(AUTHORIZATION, bearer(withPermissionToken))).andExpect(jsonPath("$.code").value(200))
+                .header(AUTHORIZATION, bearer(adminToken))).andExpect(jsonPath("$.code").value(200))
                 .andExpect(jsonPath("$.data.level").value(2));
 
         assertEquals(2, levelOf(COACH_ID), "请求体里的 level 不生效，等级仍是 2");
@@ -220,16 +221,35 @@ class CoachLevelHttpTest extends AbstractYogaHttpIntegrationTest {
         jdbcTemplate.update("UPDATE t_coach SET level = 2 WHERE id = ?", COACH_ID);
 
         mockMvc.perform(get("/admin/coaches").param("pageNum", "1").param("pageSize", "10").header(AUTHORIZATION,
-                bearer(withPermissionToken))).andExpect(jsonPath("$.code").value(200))
+                bearer(adminToken))).andExpect(jsonPath("$.code").value(200))
                 .andExpect(jsonPath("$.rows[0].level").value(2));
 
-        mockMvc.perform(get("/admin/coaches/" + COACH_ID).header(AUTHORIZATION, bearer(withPermissionToken)))
+        mockMvc.perform(get("/admin/coaches/" + COACH_ID).header(AUTHORIZATION, bearer(adminToken)))
                 .andExpect(jsonPath("$.code").value(200)).andExpect(jsonPath("$.data.level").value(2));
     }
 
-    // ------------------------------------------------------------------
-    // 夹具
-    // ------------------------------------------------------------------
+    @Test
+    @DisplayName("教练管理参数错误统一返回 400，非法资料请求不写入数据库")
+    void coachManagement_invalidParameters_shouldReturnBadRequest() throws Exception {
+        assertBadRequestWithMessage(get("/admin/coaches/abc").header(AUTHORIZATION, bearer(adminToken)),
+                "参数[coachId]格式非法");
+        assertBadRequestWithMessage(
+                get("/admin/coaches").param("pageNum", "abc").header(AUTHORIZATION, bearer(adminToken)),
+                "参数[pageNum]格式非法");
+        mockMvc.perform(get("/admin/coaches").param("pageSize", "101").header(AUTHORIZATION, bearer(adminToken)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.code").value(400));
+        mockMvc.perform(post("/admin/coaches").contentType(MediaType.APPLICATION_JSON).content("{}")
+                .header(AUTHORIZATION, bearer(adminToken))).andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(400));
+        mockMvc.perform(put("/admin/coaches/" + COACH_ID).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"\",\"intro\":\"非法编辑\"}").header(AUTHORIZATION, bearer(adminToken)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.code").value(400));
+
+        assertEquals(1, jdbcTemplate.queryForObject("SELECT COUNT(*) FROM t_coach", Integer.class).intValue());
+        assertEquals("旧简介",
+                jdbcTemplate.queryForObject("SELECT intro FROM t_coach WHERE id = ?", String.class, COACH_ID));
+        assertEquals(1, levelOf(COACH_ID));
+    }
 
     private void createUser(long userId, String userName, long roleId) {
         jdbcTemplate.update("INSERT INTO sys_user (user_id, user_name, nick_name, user_type, email, phonenumber, sex,"
@@ -245,19 +265,17 @@ class CoachLevelHttpTest extends AbstractYogaHttpIntegrationTest {
     }
 
     private void prepareAdminFixtures() {
-        // 角色 2 拥有教练菜单与等级按钮；角色 3 只有教练菜单，没有等级按钮
         jdbcTemplate.update("INSERT INTO sys_role (role_id, role_name, role_key, role_sort, data_scope,"
                 + " menu_check_strictly, dept_check_strictly, status, del_flag, create_by, create_time) VALUES"
                 + " (2, '运营管理员', 'operation', 2, '1', 1, 1, '0', '0', 'admin', NOW())");
         jdbcTemplate.update("INSERT INTO sys_role (role_id, role_name, role_key, role_sort, data_scope,"
                 + " menu_check_strictly, dept_check_strictly, status, del_flag, create_by, create_time) VALUES"
-                + " (3, '只读管理员', 'viewer', 3, '1', 1, 1, '0', '0', 'admin', NOW())");
-        createUser(WITH_PERMISSION_USER_ID, "gold_admin", 2L);
-        createUser(WITHOUT_PERMISSION_USER_ID, "plain_admin", 3L);
+                + " (3, '普通管理员', 'ordinary', 3, '1', 1, 1, '0', '0', 'admin', NOW())");
+        createUser(ADMIN_USER_ID, "gold_admin", 2L);
+        createUser(OTHER_ADMIN_USER_ID, "plain_admin", 3L);
 
         insertMenu(2003L, "教练管理", 2000L, "coach", "C", "");
-        insertMenu(2010L, "金牌教练设置", 2003L, "coach-level", "F", PERMISSION);
-        jdbcTemplate.update("INSERT INTO sys_role_menu (role_id, menu_id) VALUES (2, 2003), (2, 2010), (3, 2003)");
+        jdbcTemplate.update("INSERT INTO sys_role_menu (role_id, menu_id) VALUES (2, 2003), (3, 2003)");
     }
 
     private void insertMenu(long menuId, String name, long parentId, String path, String menuType, String perms) {

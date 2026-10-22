@@ -21,7 +21,7 @@ public class SmsCodeService {
     private static final int CONFLICT = 409;
 
     /** 场景不合法：参数校验失败 */
-    private static final int PARAM_INVALID = 500;
+    private static final int PARAM_INVALID = 400;
 
     /**
      * 校验并消费验证码的 Lua 脚本（原子：读取 → 比较 → 删除）

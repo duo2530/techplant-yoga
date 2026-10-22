@@ -30,8 +30,8 @@ public class AccountServiceImpl implements AccountService {
     /** 状态冲突：验证码错误／过期、注册冲突、登录失败 */
     private static final int CONFLICT = 409;
 
-    /** 参数校验失败／系统异常 */
-    private static final int PARAM_INVALID = 500;
+    /** 参数校验失败 */
+    private static final int PARAM_INVALID = 400;
 
     /** 密码强度：8～20 位且同时包含字母与数字（与 DTO 上的校验规则一致，防 service 直调） */
     private static final String PASSWORD_PATTERN = "^(?=.*[A-Za-z])(?=.*\\d).{8,20}$";
@@ -111,7 +111,7 @@ public class AccountServiceImpl implements AccountService {
         }
     }
 
-    /** 手机号规整与兜底校验：接口层已校验格式，这里防住 service 直调（null／空白 → 500） */
+    /** 手机号规整与兜底校验：接口层已校验格式，这里防住 service 直调（null／空白 → 400） */
     private String normalizePhone(String phone) {
         if (phone == null || phone.trim().isEmpty()) {
             throw new ServiceException("手机号不能为空", PARAM_INVALID);

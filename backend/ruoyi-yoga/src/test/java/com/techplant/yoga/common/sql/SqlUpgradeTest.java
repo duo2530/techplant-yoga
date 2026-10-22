@@ -46,7 +46,7 @@ class SqlUpgradeTest {
     private static final long OLD_COACH_ID = 9101L;
 
     @Test
-    @DisplayName("新建库导入 yoga.sql 正常；旧库升级后数据保留、可重复执行且不覆盖运营角色授权")
+    @DisplayName("新建库无等级按钮；旧库升级保留数据、清理等级按钮且不影响其它授权")
     void freshImportAndExistingDatabaseUpgrade() throws Exception {
         MySQLContainer<?> container = new MySQLContainer<>(DockerImageName.parse(IMAGE)).withDatabaseName(DATABASE)
                 .withUsername("yoga").withPassword("yoga").withCommand("--default-time-zone=+08:00");
@@ -60,7 +60,7 @@ class SqlUpgradeTest {
             assertLevelColumn(dataSource);
             assertEquals(3, count(dataSource, "SELECT COUNT(*) FROM t_coach"), "样例教练 3 条");
             assertEquals(0, count(dataSource, "SELECT COUNT(*) FROM t_coach WHERE level <> 1"), "新建库样例教练一律普通等级");
-            assertMenuPermission(dataSource);
+            assertNoLevelPermission(dataSource);
             assertEquals(9, count(dataSource, "SELECT COUNT(*) FROM sys_menu WHERE menu_id BETWEEN 2000 AND 2008"),
                     "既有业务菜单 2000~2008 完整");
 
@@ -82,25 +82,18 @@ class SqlUpgradeTest {
                     queryLongList(dataSource,
                             "SELECT menu_id FROM sys_menu WHERE menu_id BETWEEN 2000 AND 2008 ORDER BY menu_id"),
                     "模拟旧库不改动既有菜单");
-            assertEquals(0, count(dataSource, "SELECT COUNT(*) FROM sys_menu WHERE menu_id = 2010"), "旧库没有 2010 按钮");
+            assertEquals(1, count(dataSource, "SELECT COUNT(*) FROM sys_menu WHERE menu_id = 2010"), "旧库含等级按钮");
 
             executeScript(dataSource, YogaSchema.locateScript(UPGRADE_SCRIPT));
-            assertMenuPermission(dataSource);
-            Map<String, Object> menuAfterFirstUpgrade = queryRow(dataSource,
-                    "SELECT menu_name, parent_id, order_num, path, menu_type, perms, status, remark"
-                            + " FROM sys_menu WHERE menu_id = 2010");
-
-            // 首次升级后管理员把「金牌教练设置」授予运营角色（role_id = 2）
-            execute(dataSource, "INSERT INTO sys_role_menu (role_id, menu_id) VALUES (2, 2010)");
-
-            // 第二遍验证幂等：不报错、不重复写菜单、保留既有角色授权
+            assertNoLevelPermission(dataSource);
             executeScript(dataSource, YogaSchema.locateScript(UPGRADE_SCRIPT));
 
             assertLevelColumn(dataSource);
+            assertNoLevelPermission(dataSource);
             assertEquals(oldCoachCount + 1, count(dataSource, "SELECT COUNT(*) FROM t_coach"), "旧数据不丢失");
-            assertEquals(0, count(dataSource, "SELECT COUNT(*) FROM t_coach WHERE level <> 1"), "升级后全部旧教练为普通等级");
+            assertEquals(0, count(dataSource, "SELECT COUNT(*) FROM t_coach WHERE level <> 1"), "旧教练默认普通等级");
             assertEquals(Integer.valueOf(1),
-                    queryInt(dataSource, "SELECT level FROM t_coach WHERE id = " + OLD_COACH_ID), "新加列默认值为 1");
+                    queryInt(dataSource, "SELECT level FROM t_coach WHERE id = " + OLD_COACH_ID), "等级默认值为 1");
             assertEquals(sampleCoach,
                     queryRow(dataSource, "SELECT name, intro, gallery FROM t_coach WHERE id = " + SAMPLE_COACH_ID),
                     "旧资料保持不变");
@@ -110,44 +103,42 @@ class SqlUpgradeTest {
                     "旧排课关联保留");
             assertEquals(1, count(dataSource, "SELECT COUNT(*) FROM t_schedule WHERE coach_id = " + OLD_COACH_ID),
                     "旧教练的排课关联保留");
-            assertMenuPermission(dataSource);
-            assertEquals(menuAfterFirstUpgrade,
-                    queryRow(dataSource,
-                            "SELECT menu_name, parent_id, order_num, path, menu_type, perms, status, remark"
-                                    + " FROM sys_menu WHERE menu_id = 2010"),
-                    "重复执行菜单行内容不变");
             assertEquals(existingMenus,
                     queryLongList(dataSource,
                             "SELECT menu_id FROM sys_menu WHERE menu_id BETWEEN 2000 AND 2008 ORDER BY menu_id"),
-                    "升级后既有菜单完整保留");
+                    "升级后既有菜单保留");
             assertEquals(existingRoleMenus,
                     queryLongList(dataSource,
                             "SELECT menu_id FROM sys_role_menu WHERE menu_id BETWEEN 2000 AND 2008 ORDER BY menu_id"),
-                    "升级后既有角色菜单绑定完整保留");
-            assertEquals(1, count(dataSource, "SELECT COUNT(*) FROM sys_menu WHERE menu_id = 2010"), "2010 只保留一条菜单行");
-            assertEquals(1,
-                    count(dataSource, "SELECT COUNT(*) FROM sys_role_menu WHERE role_id = 1 AND menu_id = 2010"),
-                    "管理员角色绑定不重复");
-            assertEquals(1,
-                    count(dataSource, "SELECT COUNT(*) FROM sys_role_menu WHERE role_id = 2 AND menu_id = 2010"),
-                    "重复执行保留运营角色已授予的绑定");
-            assertEquals(2, count(dataSource, "SELECT COUNT(*) FROM sys_role_menu WHERE menu_id = 2010"),
-                    "2010 只有管理员与运营角色两条绑定");
-            assertEquals(existingMenus.size() + 1,
+                    "升级后既有角色菜单绑定保留");
+            assertEquals(existingMenus.size(),
                     count(dataSource, "SELECT COUNT(*) FROM sys_menu WHERE menu_id BETWEEN 2000 AND 2010"),
-                    "业务菜单总数只增加 2010");
+                    "既有业务菜单保持不变");
+            assertEquals(1, count(dataSource, "SELECT COUNT(*) FROM sys_menu WHERE menu_id = 2011"), "其它按钮保留");
+            assertEquals(1,
+                    count(dataSource, "SELECT COUNT(*) FROM sys_role_menu WHERE role_id = 2 AND menu_id = 2011"),
+                    "其它按钮授权保留");
+            execute(dataSource, "UPDATE t_coach SET level = 2 WHERE id = " + OLD_COACH_ID);
+            executeScript(dataSource, YogaSchema.locateScript(UPGRADE_SCRIPT));
+            assertEquals(Integer.valueOf(2),
+                    queryInt(dataSource, "SELECT level FROM t_coach WHERE id = " + OLD_COACH_ID), "重复升级不重置已维护的金牌等级");
         } finally {
             container.stop();
         }
     }
 
     /**
-     * 把新建库改造成旧版形态：只去掉 level 列与新增的 2010 菜单/绑定，既有菜单与旧数据保持原样。
+     * 把新建库改造成旧版形态：去掉 level 列，准备旧等级按钮及其它按钮授权。
      */
     private void simulateOldDatabase(DataSource dataSource) throws Exception {
         execute(dataSource, "ALTER TABLE t_coach DROP COLUMN level");
         execute(dataSource, "DELETE FROM sys_role_menu WHERE menu_id = 2010");
         execute(dataSource, "DELETE FROM sys_menu WHERE menu_id = 2010");
+        execute(dataSource,
+                "INSERT INTO sys_menu (menu_id, menu_name, parent_id, menu_type, perms) VALUES"
+                        + " (2010, '金牌教练设置', 2003, 'F', 'yoga:coach:level'),"
+                        + " (2011, '其它按钮', 2003, 'F', 'yoga:coach:other')");
+        execute(dataSource, "INSERT INTO sys_role_menu (role_id, menu_id) VALUES (1, 2010), (2, 2010), (2, 2011)");
         execute(dataSource,
                 "INSERT INTO t_coach (id, name, phone) VALUES (" + OLD_COACH_ID + ", '旧教练'," + " '13800000009')");
         execute(dataSource,
@@ -173,16 +164,9 @@ class SqlUpgradeTest {
         assertEquals("1", String.valueOf(column.get("column_default")));
     }
 
-    private void assertMenuPermission(DataSource dataSource) throws Exception {
-        Map<String, Object> menu = queryRow(dataSource,
-                "SELECT menu_name, parent_id, menu_type, perms, status" + " FROM sys_menu WHERE menu_id = 2010");
-        assertEquals("金牌教练设置", menu.get("menu_name"));
-        assertEquals(2003L, ((Number) menu.get("parent_id")).longValue(), "按钮挂在教练管理下");
-        assertEquals("F", menu.get("menu_type"));
-        assertEquals("yoga:coach:level", menu.get("perms"));
-        assertEquals("0", menu.get("status"));
-        assertEquals(1, count(dataSource, "SELECT COUNT(*) FROM sys_role_menu WHERE role_id = 1 AND menu_id = 2010"),
-                "内置管理员角色拥有该按钮权限");
+    private void assertNoLevelPermission(DataSource dataSource) throws Exception {
+        assertEquals(0, count(dataSource, "SELECT COUNT(*) FROM sys_menu WHERE menu_id = 2010"), "不保留独立等级按钮");
+        assertEquals(0, count(dataSource, "SELECT COUNT(*) FROM sys_role_menu WHERE menu_id = 2010"), "不保留等级按钮角色绑定");
     }
 
     // ------------------------------------------------------------------

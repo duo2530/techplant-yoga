@@ -37,7 +37,7 @@ public interface MemberCardService {
      * 发卡（创建待开卡）：卡号由服务端生成，次数卡剩余次数初值为购买与赠送之和，不写有效期起止
      *
      * @throws com.ruoyi.common.exception.ServiceException 会员／开卡门店／适用门店不存在（404）、
-     *         卡号冲突（409）、字段组合或枚举非法（500）
+     *         卡号冲突（409）、字段组合或枚举非法（400）
      */
     void create(MemberCardCreateDTO dto);
 

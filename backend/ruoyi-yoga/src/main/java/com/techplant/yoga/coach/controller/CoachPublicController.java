@@ -7,9 +7,9 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import com.ruoyi.common.annotation.Anonymous;
+import com.ruoyi.common.core.controller.BaseController;
 import com.ruoyi.common.core.domain.AjaxResult;
 import com.techplant.yoga.coach.service.CoachService;
-import com.techplant.yoga.common.web.AbstractParamErrorController;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 
@@ -19,7 +19,7 @@ import io.swagger.annotations.ApiOperation;
 @RestController
 @RequestMapping("/api/coaches")
 @RequiredArgsConstructor
-public class CoachPublicController extends AbstractParamErrorController {
+public class CoachPublicController extends BaseController {
     private final CoachService coachService;
 
     /** 全部金牌教练：一次返回完整列表，按 id DESC，不截断 */

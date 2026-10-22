@@ -175,20 +175,20 @@ class ReservationControllerTest extends AbstractYogaIntegrationTest {
     }
 
     @Test
-    @DisplayName("查询预约列表：分页缺失、状态非法与日期范围倒置都返回业务码 500")
+    @DisplayName("查询预约列表：分页缺失、状态非法与日期范围倒置都返回业务码 400")
     void list_withIllegalQuery_shouldReject() throws Exception {
-        mockMvc.perform(get("/admin/reservations")).andExpect(status().isOk()).andExpect(jsonPath("$.code").value(500))
+        mockMvc.perform(get("/admin/reservations")).andExpect(status().isOk()).andExpect(jsonPath("$.code").value(400))
                 .andExpect(jsonPath("$.msg", Matchers.anyOf(Matchers.is("页码不能为空"), Matchers.is("每页条数不能为空"))));
 
         mockMvc.perform(get("/admin/reservations").param("pageNum", "1").param("pageSize", "10").param("status", "9"))
-                .andExpect(jsonPath("$.code").value(500));
+                .andExpect(jsonPath("$.code").value(400));
 
         mockMvc.perform(get("/admin/reservations").param("pageNum", "1").param("pageSize", "10")
                 .param("startDate", tomorrow().plusDays(1).toString()).param("endDate", tomorrow().toString()))
-                .andExpect(jsonPath("$.code").value(500)).andExpect(jsonPath("$.msg").value("结束日期不能早于起始日期"));
+                .andExpect(jsonPath("$.code").value(400)).andExpect(jsonPath("$.msg").value("结束日期不能早于起始日期"));
 
         mockMvc.perform(get("/admin/reservations").param("pageNum", "1").param("pageSize", "101"))
-                .andExpect(jsonPath("$.code").value(500)).andExpect(jsonPath("$.msg").value("每页条数不能超过 100"));
+                .andExpect(jsonPath("$.code").value(400)).andExpect(jsonPath("$.msg").value("每页条数不能超过 100"));
     }
 
     private LocalDate tomorrow() {

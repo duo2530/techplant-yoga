@@ -26,7 +26,7 @@ public enum MemberGenderEnum {
     public static final String INVALID_MESSAGE = "性别取值为 0~2";
 
     /** 参数校验失败 */
-    private static final int PARAM_INVALID = 500;
+    private static final int PARAM_INVALID = 400;
 
     /** 性别码 */
     private final Integer code;

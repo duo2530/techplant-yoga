@@ -114,7 +114,7 @@ class MemberCardPublicControllerTest extends AbstractYogaIntegrationTest {
     }
 
     @Test
-    @DisplayName("分页：缺页码／缺每页条数 → 500；页码 0、每页 101 → 500")
+    @DisplayName("分页：缺页码／缺每页条数 → 400；页码 0、每页 101 → 400")
     void list_withInvalidPaging_shouldReject() throws Exception {
         String missingPageNum = performMessage(get("/api/member-cards").param("pageSize", "10"));
         assertEquals("页码不能为空", missingPageNum);
@@ -305,7 +305,7 @@ class MemberCardPublicControllerTest extends AbstractYogaIntegrationTest {
 
     /** 取统一响应里的 msg，供缺失字段顺序不确定的用例断言（MockMvc 响应未声明字符集，按 UTF-8 解码） */
     private String performMessage(MockHttpServletRequestBuilder request) throws Exception {
-        MvcResult result = mockMvc.perform(request).andExpect(status().isOk()).andExpect(jsonPath("$.code").value(500))
+        MvcResult result = mockMvc.perform(request).andExpect(status().isOk()).andExpect(jsonPath("$.code").value(400))
                 .andReturn();
         String body = new String(result.getResponse().getContentAsByteArray(), StandardCharsets.UTF_8);
         return objectMapper.readTree(body).get("msg").asText();

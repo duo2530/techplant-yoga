@@ -17,7 +17,7 @@ public enum MemberCardTypeEnum {
     /** 年卡：按年计，固定 365 天，有效期数量固定 1；用户端按期限卡展示 */
     ANNUAL(2, "年卡", "期限卡", ValidPeriodUnitEnum.YEAR, 365);
 
-    /** 取值非法时统一使用的参数校验提示语（业务码 500） */
+    /** 取值非法时统一使用的参数校验提示语（业务码 400） */
     public static final String INVALID_MESSAGE = "卡类型取值为 1 或 2";
 
     /** 次数卡可选的有效期数量（月） */
@@ -103,14 +103,14 @@ public enum MemberCardTypeEnum {
     }
 
     /**
-     * 取值校验：非法即抛 {@code ServiceException}（业务码 500）
+     * 取值校验：非法即抛 {@code ServiceException}（业务码 400）
      *
      * @return 校验通过的枚举
      */
     public static MemberCardTypeEnum validate(Integer code) {
         MemberCardTypeEnum item = of(code);
         if (item == null) {
-            throw new ServiceException(code == null ? "卡类型不能为空" : INVALID_MESSAGE, 500);
+            throw new ServiceException(code == null ? "卡类型不能为空" : INVALID_MESSAGE, 400);
         }
         return item;
     }

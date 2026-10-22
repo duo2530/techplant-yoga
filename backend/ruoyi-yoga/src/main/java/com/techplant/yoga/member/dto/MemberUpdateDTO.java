@@ -8,7 +8,7 @@ import io.swagger.annotations.ApiModelProperty;
 /**
  * 修改会员的请求体：只维护性别与等级。
  *
- * <p>省略字段保留原值；显式提交 {@code null} 视为参数非法（由服务层报 500）。
+ * <p>省略字段保留原值；显式提交 {@code null} 视为参数非法（由服务层报 400）。
  * 手机号、显示名与登录字段不在本模型内，请求中携带时由 JSON 反序列化直接忽略。</p>
  */
 @ApiModel("修改会员请求")

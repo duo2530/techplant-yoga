@@ -85,6 +85,8 @@ IntelliJ IDEA 可通过 Eclipse Code Formatter 插件导入格式化规则，通
 
 ### 4.2 统一异常处理
 
+Controller 直接继承 `BaseController`，参数异常统一交给 `GlobalExceptionHandler`，不另建处理参数异常的 Controller 基类。
+
 一句话口径：**业务失败就抛 `ServiceException("提示语", 业务码)`，剩下的交给框架唯一的全局异常处理器**；不要 `catch` 之后自己拼响应，也不要吞异常返回 null。
 
 | 环节 | 落点 | 说明 |
@@ -92,8 +94,9 @@ IntelliJ IDEA 可通过 Eclipse Code Formatter 插件导入格式化规则，通
 | **唯一的处理器** | `ruoyi-framework/.../web/exception/GlobalExceptionHandler.java` | `@RestControllerAdvice`，把所有异常统一转成 `AjaxResult`； |
 | 抛业务异常 | `com.ruoyi.common.exception.ServiceException` | `throw new ServiceException("课程不存在或已被删除", 404)`；不带码时默认 500 |
 | 401 未登录 / 登录态失效 | `framework/security/handle/AuthenticationEntryPointImpl` | 用 `ServletUtils.renderString` 手工写 `AjaxResult.error(401, ...)`，**HTTP 仍是 200** |
-| 403 无权限 | `GlobalExceptionHandler#handleAccessDeniedException` | 固定文案「没有权限，请联系管理员授权」；**管理端业务不做 RBAC**，暂不返回 |
-| 参数校验失败 | 同一个处理器里的 `MethodArgumentNotValidException` / `BindException` 分支 | 业务码是 **500（不是 400）**，`msg` 是具体字段提示（如「课程名称不能为空」） |
+| 403 无权限 | `GlobalExceptionHandler#handleAccessDeniedException` | 固定文案「没有权限，请联系管理员授权」；用于若依系统模块的方法级权限校验 |
+| 参数校验失败 | 同一个处理器里的 `MethodArgumentNotValidException` / `BindException` 分支 | 业务码 400，`msg` 为字段校验提示；绑定类型错误返回「参数[字段名]格式非法」 |
+| 参数缺失、类型错误或请求体无法读取 | `MissingServletRequestParameterException` / `MethodArgumentTypeMismatchException` / `HttpMessageNotReadableException` 分支 | 业务码 400，不返回请求体原文或内部类型信息 |
 | 兜底 | `RuntimeException` / `Exception` 分支 | 会把 `e.getMessage()` 直接放进 `msg` —— 所以**不要往异常提示语里塞内部细节**（数据库异常会带出表名与语句片段） |
 
 业务码口径：
@@ -101,16 +104,17 @@ IntelliJ IDEA 可通过 Eclipse Code Formatter 插件导入格式化规则，通
 | code | 用在 | 本项目的实例 |
 |---|---|---|
 | 200 | 成功 | 所有接口 |
+| 400 | 请求参数错误 | 参数缺失、绑定／校验失败、请求体格式非法；业务层输入校验显式抛出带 400 的 `ServiceException` |
 | 401 | 未登录 / 登录态失效 | 框架返回 |
-| 403 | 无权限 | 管理端业务不做 RBAC，暂不返回 |
+| 403 | 无权限 | 缺少接口要求的方法级权限 |
 | 404 | 资源不存在 | 「课程不存在或已被删除」 |
 | 409 | 业务冲突 | 名称重复、卡号重复或状态流转非法 |
-| 500 | 参数校验失败 / 系统异常 | `@Valid` 校验失败也走这里 |
+| 500 | 系统异常 | 数据库写入失败、服务端配置缺失及未预期异常 |
 
 响应处理约定：
 
 1. **409 的结构化明细放不进 `data`**：`AjaxResult` 只有 `code/msg/data`，而框架处理器不会附带 `data`，所以阻塞明细（几个排班、几条预约）现在是**拼进 `msg`** 的。这是 R11 的已知遗留，要结构化明细就得改框架处理器（会同时影响 `sys_*` 接口）。
-2. **`@Valid` 校验失败返回 500**，与直觉里的 400 不一样；要改成 400 同样得动框架处理器 —— **不要顺手改**。
+2. 参数错误统一返回业务码 400，HTTP 状态码沿用 200；业务层抛出的 `ServiceException` 保留显式业务码，不根据异常文案猜测分类。路径模板与 `@PathVariable` 声明不匹配产生的 `MissingPathVariableException` 属于服务端错误，保留 500。
 
 范例：`ruoyi-yoga/.../course/service/impl/CourseServiceImpl.java`；响应转换通过真实 HTTP 接口集成测试验证。
 
@@ -135,7 +139,7 @@ IntelliJ IDEA 可通过 Eclipse Code Formatter 插件导入格式化规则，通
 
 ### 4.6 认证与鉴权
 
-- 管理端复用若依 `sys_user`、JWT 与 `TokenService`，Redis 前缀 `login_tokens:`；业务接口要求登录，不加业务权限串。
+- 管理端复用若依 `sys_user`、JWT 与 `TokenService`，Redis 前缀 `login_tokens:`；业务接口只要求管理员登录，不另配业务按钮权限。
 - 用户端使用 `t_member` 与 `MemberTokenService`，Redis 前缀 `member_tokens:`；具体放行清单、会话和鉴权流程见[用户端接口详细设计](../详细设计/用户端接口详细设计.md)。
 - 若依 `sys_*` 接口继续使用框架权限体系，公开接口按安全配置放行。
 
@@ -181,9 +185,9 @@ IntelliJ IDEA 可通过 Eclipse Code Formatter 插件导入格式化规则，通
 ### 4.11 已知缺口 / 沿用上游未收敛的行为（**别当成 bug 去"修"**）
 
 - **XSS 过滤器没覆盖业务接口**：`application.yml` 的 `xss.urlPatterns` 是 `/system/*,/monitor/*,/tool/*`，`/admin/**` **不在其中**。是否补齐待定，**不要擅自扩大**（会改变现有请求体行为）。
-- **参数校验失败业务码是 500 而不是 400**，`RuntimeException` 分支会把异常 message 原样给前端 —— 都是框架既有行为，改动会波及 `sys_*` 接口。
+- `RuntimeException` 分支会把异常 message 原样给前端，业务异常提示语避免包含内部细节。
 - **409 没有结构化明细**（明细拼在 `msg` 里），R11 遗留。
-- **管理端不做 RBAC**，业务接口只要求登录。
+- 管理端业务接口只要求登录；若依系统模块沿用原有方法级权限。
 - **`exception` 包不存在**：R11 删掉了自定义异常类，业务侧统一用框架的 `ServiceException`。横切能力的口径以本手册**第 4 节**为准。
 
 ## 5、技术栈

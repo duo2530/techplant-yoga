@@ -59,11 +59,10 @@ public class ScheduleServiceImpl implements ScheduleService {
     /** 状态冲突、业务范围校验不通过、删除门禁未通过 */
     private static final int CONFLICT = 409;
 
-    /** 参数校验失败／系统异常 */
-    private static final int PARAM_ERROR = 500;
+    /** 参数校验失败 */
+    private static final int PARAM_ERROR = 400;
 
-    /** 新增公开接口的参数错误业务码 */
-    private static final int BAD_REQUEST = 400;
+    private static final int INTERNAL_ERROR = 500;
 
     /** 排课窗口：今天起 14 天内（含今天） */
     private static final int SCHEDULE_WINDOW_DAYS = 14;
@@ -158,7 +157,7 @@ public class ScheduleServiceImpl implements ScheduleService {
         // 课种快照从课程复制、上课日期由开始时间推导、状态固定 1、已预约人数固定 0
         ScheduleDO schedule = ScheduleConverter.toDO(dto, course.getCourseType(), scheduleDate);
         if (scheduleDao.insert(schedule) != 1) {
-            throw new ServiceException("新增排课失败", PARAM_ERROR);
+            throw new ServiceException("新增排课失败", INTERNAL_ERROR);
         }
     }
 
@@ -409,20 +408,20 @@ public class ScheduleServiceImpl implements ScheduleService {
     /** 教练页查询参数：缺失或越界一律 400（新增公开接口的契约口径） */
     private void validateCoachScheduleQuery(CoachScheduleQuery query) {
         if (query == null || query.getStoreId() == null) {
-            throw new ServiceException("门店ID不能为空", BAD_REQUEST);
+            throw new ServiceException("门店ID不能为空", PARAM_ERROR);
         }
         if (query.getCourseType() == null) {
-            throw new ServiceException("课程类型不能为空", BAD_REQUEST);
+            throw new ServiceException("课程类型不能为空", PARAM_ERROR);
         }
         if (!CourseTypeEnum.isValid(query.getCourseType())) {
-            throw new ServiceException(CourseTypeEnum.INVALID_MESSAGE, BAD_REQUEST);
+            throw new ServiceException(CourseTypeEnum.INVALID_MESSAGE, PARAM_ERROR);
         }
         if (query.pageNumOrDefault() < 1) {
-            throw new ServiceException("页码不能小于 1", BAD_REQUEST);
+            throw new ServiceException("页码不能小于 1", PARAM_ERROR);
         }
         int pageSize = query.pageSizeOrDefault();
         if (pageSize < 1 || pageSize > CoachScheduleQuery.MAX_PAGE_SIZE) {
-            throw new ServiceException("每页条数必须在 1~100 之间", BAD_REQUEST);
+            throw new ServiceException("每页条数必须在 1~100 之间", PARAM_ERROR);
         }
     }
 

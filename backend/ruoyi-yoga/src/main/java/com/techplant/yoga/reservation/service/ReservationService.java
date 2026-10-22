@@ -19,7 +19,7 @@ public interface ReservationService {
      * @param memberId 登录会员 ID，由登录态取得
      * @throws com.ruoyi.common.exception.ServiceException 排课不存在／待上架、会员卡不存在或不属于本人、
      *         关联资料已删除（404）；不可预约、人数超限、卡不可用或不适用、重复预约、时间冲突、
-     *         幂等参数冲突（409）；参数格式非法（500）
+     *         幂等参数冲突（409）；参数格式非法（400）
      */
     void create(Long memberId, ReservationCreateDTO dto);
 
@@ -42,7 +42,7 @@ public interface ReservationService {
     /**
      * 我的预约分页：固定按登录会员筛选，无记录或页码超界返回空列表
      *
-     * @throws com.ruoyi.common.exception.ServiceException 状态或卡类型取值非法（500）
+     * @throws com.ruoyi.common.exception.ServiceException 状态或卡类型取值非法（400）
      */
     PageResult<ReservationPublicItemVO> pageForMember(Long memberId, ReservationPublicQuery query);
 
@@ -52,7 +52,7 @@ public interface ReservationService {
      * <p>按排课查询名单同样使用本方法；无记录或页码超界返回空 rows，total 为筛选结果总数。
      * 课程、教练、门店、教室、会员与会员卡的展示字段读取当前资料，关联资料已删除时对应字段为空。</p>
      *
-     * @throws com.ruoyi.common.exception.ServiceException 状态、卡类型、日期范围或 ID 非法（500）
+     * @throws com.ruoyi.common.exception.ServiceException 状态、卡类型、日期范围或 ID 非法（400）
      */
     PageResult<ReservationAdminItemVO> pageForAdmin(ReservationAdminQuery query);
 

@@ -163,7 +163,7 @@ module.exports = {
       }
     },
     {
-      name: '无金牌权限账号不显示等级操作',
+      name: '普通管理员可设置和取消金牌',
       async run(helper)
       {
         const name = helper.fixture.name
@@ -207,23 +207,23 @@ module.exports = {
         try
         {
           await apiCreateRole(adminSession.token, {
-            roleName: `E2E金牌查看${suffix}`,
+            roleName: `E2E教练管理${suffix}`,
             roleKey,
             roleSort: 99,
             status: '0',
             menuIds: [2000, 2003],
-            remark: 'E2E 仅教练查看、无等级权限'
+            remark: 'E2E 仅配置教练菜单'
           })
           roleId = await findRoleId()
           assert.ok(roleId, '新增的角色未出现在角色列表')
 
           await apiCreateUser(adminSession.token, {
             userName,
-            nickName: 'E2E无权限账号',
+            nickName: 'E2E普通管理员',
             password,
             status: '0',
             roleIds: [roleId],
-            remark: 'E2E 权限用例账号'
+            remark: 'E2E 普通管理员账号'
           })
           userId = await findUserId()
           assert.ok(userId, '新增的用户未出现在用户列表')
@@ -241,18 +241,20 @@ module.exports = {
           )
           assert.equal(
             await row.getByRole('button', { name: '设为金牌', exact: true }).count(),
-            0,
-            '无 yoga:coach:level 权限的账号不应看到「设为金牌」'
+            1,
+            '普通管理员应能看到「设为金牌」'
           )
-          assert.equal(
-            await row.getByRole('button', { name: '取消金牌', exact: true }).count(),
-            0,
-            '无 yoga:coach:level 权限的账号不应看到「取消金牌」'
-          )
+          await helper.clickLevelAction(name, '设为金牌')
+          await helper.confirmDialog()
+          await helper.expectSuccessToast('设为金牌成功')
+          await helper.waitLevelDisplay(name, '金牌')
+          assert.equal(await helper.fetchLevel(), 2, '普通管理员设置金牌后应持久化')
 
-          const denied = await apiUpdateCoachLevelRaw(restricted.token, helper.fixture.id, 2)
-          assert.equal(denied.code, 403, '无权限账号直接调用等级接口应返回 403')
-          assert.equal(await helper.fetchLevel(), 1, '无权限写入后等级不应改变')
+          await helper.clickLevelAction(name, '取消金牌')
+          await helper.confirmDialog()
+          await helper.expectSuccessToast('取消金牌成功')
+          await helper.waitLevelDisplay(name, '普通')
+          assert.equal(await helper.fetchLevel(), 1, '普通管理员取消金牌后应持久化')
         }
         catch (error)
         {

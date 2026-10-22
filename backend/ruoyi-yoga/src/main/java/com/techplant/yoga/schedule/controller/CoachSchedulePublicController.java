@@ -9,9 +9,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import com.ruoyi.common.annotation.Anonymous;
 import com.ruoyi.common.constant.HttpStatus;
+import com.ruoyi.common.core.controller.BaseController;
 import com.ruoyi.common.core.page.TableDataInfo;
 import com.techplant.yoga.common.response.PageResult;
-import com.techplant.yoga.common.web.AbstractParamErrorController;
 import com.techplant.yoga.schedule.query.CoachScheduleQuery;
 import com.techplant.yoga.schedule.service.ScheduleService;
 import com.techplant.yoga.schedule.vo.ScheduleCardVO;
@@ -24,7 +24,7 @@ import io.swagger.annotations.ApiOperation;
 @RestController
 @RequestMapping("/api/coaches/{coachId}/schedules")
 @RequiredArgsConstructor
-public class CoachSchedulePublicController extends AbstractParamErrorController {
+public class CoachSchedulePublicController extends BaseController {
     private final ScheduleService scheduleService;
 
     /** 当前门店、所选教练与课种的近期排课（业务时区今天起 14 天，含今天） */

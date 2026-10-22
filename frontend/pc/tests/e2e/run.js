@@ -21,7 +21,7 @@ const { runSuite, timestamp } = require('./lib/runner')
  *   npm run test:build    先执行 npm run build:prod 再跑用例
  *   可选参数：--only=<spec 标识> 只跑标识匹配的用例文件，标识取文件名（如 coach-level）
  *
- * 用例依赖隔离后端：验证码关闭、管理员账号可用、教练菜单与 yoga:coach:level 权限已配置。
+ * 用例依赖隔离后端：验证码关闭、管理员账号可用、教练菜单已配置。
  * 套件会创建并删除教练、系统用户与角色，因此必须显式设置 E2E_API_URL 与 E2E_ALLOW_DESTRUCTIVE=1。
  */
 

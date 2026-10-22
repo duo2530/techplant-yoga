@@ -62,8 +62,10 @@ public class ReservationServiceImpl implements ReservationService {
     /** 业务冲突：名额、次数、时间、重复预约与状态流转 */
     private static final int CONFLICT = 409;
 
-    /** 参数校验失败／系统异常 */
-    private static final int PARAM_ERROR = 500;
+    /** 参数校验失败 */
+    private static final int PARAM_ERROR = 400;
+
+    private static final int INTERNAL_ERROR = 500;
 
     /** 预约业务时区 */
     private static final ZoneId BUSINESS_ZONE = ZoneId.of("Asia/Shanghai");
@@ -145,7 +147,7 @@ public class ReservationServiceImpl implements ReservationService {
         ReservationDO reservation = ReservationConverter.toDO(dto, memberId, schedule, reservationTime);
         try {
             if (reservationDao.insert(reservation) != 1 || reservation.getId() == null) {
-                throw new ServiceException("预约失败，请稍后重试", PARAM_ERROR);
+                throw new ServiceException("预约失败，请稍后重试", INTERNAL_ERROR);
             }
         } catch (DuplicateKeyException e) {
             ReservationDO duplicated = reservationDao.selectByMemberAndRequestIdForUpdate(memberId, requestId);
@@ -381,7 +383,7 @@ public class ReservationServiceImpl implements ReservationService {
             throw new ServiceException("只能预约今天起 14 天内的课程", CONFLICT);
         }
         if (schedule.getMaxPersons() == null) {
-            throw new ServiceException("排课最大人数缺失，不能预约", PARAM_ERROR);
+            throw new ServiceException("排课最大人数缺失，不能预约", INTERNAL_ERROR);
         }
         int remainingPlaces = Math.max(schedule.getMaxPersons() - bookedPersons(schedule), 0);
         if (persons > remainingPlaces) {
@@ -393,7 +395,7 @@ public class ReservationServiceImpl implements ReservationService {
     private void validateCardLimit(MemberCardBookingSnapshot card, Integer persons) {
         MemberCardTypeEnum cardType = MemberCardTypeEnum.of(card.getCardType());
         if (cardType == null) {
-            throw new ServiceException("卡类型取值非法，无法预约", PARAM_ERROR);
+            throw new ServiceException("卡类型取值非法，无法预约", INTERNAL_ERROR);
         }
         if (!cardType.isTimesCard()) {
             if (persons != 1) {

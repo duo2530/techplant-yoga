@@ -52,8 +52,10 @@ public class MemberCardServiceImpl implements MemberCardService {
     /** 状态冲突：卡号冲突、开卡与停卡的状态流转非法 */
     private static final int CONFLICT = 409;
 
-    /** 参数校验失败／系统异常 */
-    private static final int PARAM_INVALID = 500;
+    /** 参数校验失败 */
+    private static final int PARAM_INVALID = 400;
+
+    private static final int INTERNAL_ERROR = 500;
 
     /** 卡号唯一索引名（唯一键冲突归类用） */
     private static final String UK_CARD_NO = "uk_card_no";
@@ -120,7 +122,7 @@ public class MemberCardServiceImpl implements MemberCardService {
         try {
             int rows = memberCardDao.insert(card);
             if (rows != 1 || card.getId() == null) {
-                throw new ServiceException("发卡失败", PARAM_INVALID);
+                throw new ServiceException("发卡失败", INTERNAL_ERROR);
             }
         } catch (DuplicateKeyException e) {
             throw cardNoConflict(e);
@@ -141,7 +143,7 @@ public class MemberCardServiceImpl implements MemberCardService {
 
         MemberCardTypeEnum cardType = MemberCardTypeEnum.of(card.getCardType());
         if (cardType == null) {
-            throw new ServiceException("卡类型取值非法，无法开卡", PARAM_INVALID);
+            throw new ServiceException("卡类型取值非法，无法开卡", INTERNAL_ERROR);
         }
         int validPeriodCount = cardType.isTimesCard()
                 ? requireValidPeriodCount(card)
@@ -369,7 +371,7 @@ public class MemberCardServiceImpl implements MemberCardService {
     /** 次数卡开卡时读取发卡保存的有效期数量，缺失按数据异常处理 */
     private int requireValidPeriodCount(MemberCardDO card) {
         if (card.getValidPeriodCount() == null) {
-            throw new ServiceException("会员卡有效期数量缺失，无法开卡", PARAM_INVALID);
+            throw new ServiceException("会员卡有效期数量缺失，无法开卡", INTERNAL_ERROR);
         }
         return card.getValidPeriodCount();
     }

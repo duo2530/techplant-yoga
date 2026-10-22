@@ -13,8 +13,7 @@ import io.swagger.annotations.ApiModelProperty;
  * 新增教练请求。
  *
  * <p>姓名字段必填；<b>姓名允许重名</b>，服务端不做唯一校验。
- * 相册元素上限（≤ 5）由 service 统一校验并返回 <b>409</b>，因此此处<b>不加</b>
- * {@code @Size(max = 5)}（{@code @Valid} 失败会走框架的 500 分支，与设计口径不符）。</p>
+ * 相册元素上限（≤ 5）由 service 统一校验，超出时返回业务码 409。</p>
  */
 @ApiModel("新增教练请求")
 @Getter

@@ -138,16 +138,16 @@ class ReservationPublicControllerTest extends AbstractYogaIntegrationTest {
     }
 
     @Test
-    @DisplayName("预约课程：必填缺失与 UUID 非法都返回业务码 500，提示语来自校验规则")
+    @DisplayName("预约课程：必填缺失与 UUID 非法都返回业务码 400，提示语来自校验规则")
     void create_withIllegalBody_shouldReject() throws Exception {
         mockMvc.perform(post("/api/reservations").contentType(MediaType.APPLICATION_JSON).content(
                 "{\"scheduleId\":\"" + SCHEDULE_ID + "\",\"memberCardId\":\"" + TIMES_CARD_ID + "\",\"persons\":1}"))
-                .andExpect(status().isOk()).andExpect(jsonPath("$.code").value(500))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.code").value(400))
                 .andExpect(jsonPath("$.msg").value("请求幂等标识不能为空"));
 
         mockMvc.perform(post("/api/reservations").contentType(MediaType.APPLICATION_JSON)
                 .content(body("not-a-uuid", SCHEDULE_ID, TIMES_CARD_ID, 1))).andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(500)).andExpect(jsonPath("$.msg").value("请求幂等标识格式非法，应为 UUID"));
+                .andExpect(jsonPath("$.code").value(400)).andExpect(jsonPath("$.msg").value("请求幂等标识格式非法，应为 UUID"));
 
         assertEquals(Integer.valueOf(0), countOf("SELECT COUNT(*) FROM t_reservation"));
     }
@@ -189,13 +189,13 @@ class ReservationPublicControllerTest extends AbstractYogaIntegrationTest {
     }
 
     @Test
-    @DisplayName("我的预约：分页参数缺失与状态取值非法都返回 500")
+    @DisplayName("我的预约：分页参数缺失与状态取值非法都返回 400")
     void list_withIllegalQuery_shouldReject() throws Exception {
-        mockMvc.perform(get("/api/reservations")).andExpect(status().isOk()).andExpect(jsonPath("$.code").value(500))
+        mockMvc.perform(get("/api/reservations")).andExpect(status().isOk()).andExpect(jsonPath("$.code").value(400))
                 .andExpect(jsonPath("$.msg", Matchers.anyOf(Matchers.is("页码不能为空"), Matchers.is("每页条数不能为空"))));
 
         mockMvc.perform(get("/api/reservations").param("pageNum", "1").param("pageSize", "10").param("status", "9"))
-                .andExpect(status().isOk()).andExpect(jsonPath("$.code").value(500))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.code").value(400))
                 .andExpect(jsonPath("$.msg").value("预约状态取值为 1、2 或 3"));
     }
 

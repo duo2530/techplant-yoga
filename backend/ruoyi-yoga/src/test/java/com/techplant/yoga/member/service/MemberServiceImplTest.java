@@ -115,20 +115,20 @@ class MemberServiceImplTest extends AbstractYogaIntegrationTest {
     }
 
     @Test
-    @DisplayName("新增：性别取值非法、等级不在字典（含已停用）→ 500，且不落库")
+    @DisplayName("新增：性别取值非法、等级不在字典（含已停用）→ 400，且不落库")
     void create_withInvalidGenderOrLevel_shouldFail() {
         ServiceException invalidGender = assertThrows(ServiceException.class,
                 () -> memberService.create(createDTO(PHONE, 3, null)));
-        assertEquals(Integer.valueOf(500), invalidGender.getCode());
+        assertEquals(Integer.valueOf(400), invalidGender.getCode());
 
         ServiceException unknownLevel = assertThrows(ServiceException.class,
                 () -> memberService.create(createDTO(PHONE, 0, 5)));
-        assertEquals(Integer.valueOf(500), unknownLevel.getCode());
+        assertEquals(Integer.valueOf(400), unknownLevel.getCode());
         assertEquals("会员等级取值非法", unknownLevel.getMessage());
 
         ServiceException disabledLevel = assertThrows(ServiceException.class,
                 () -> memberService.create(createDTO(PHONE, 0, DISABLED_LEVEL)));
-        assertEquals(Integer.valueOf(500), disabledLevel.getCode());
+        assertEquals(Integer.valueOf(400), disabledLevel.getCode());
 
         assertNull(memberDao.selectByPhone(PHONE));
     }
@@ -159,7 +159,7 @@ class MemberServiceImplTest extends AbstractYogaIntegrationTest {
         assertEquals("男", page.getList().get(0).getGenderText());
 
         ServiceException unknownLevel = assertThrows(ServiceException.class, () -> memberService.page(queryByLevel(5)));
-        assertEquals(Integer.valueOf(500), unknownLevel.getCode());
+        assertEquals(Integer.valueOf(400), unknownLevel.getCode());
         assertEquals("会员等级取值非法", unknownLevel.getMessage());
 
         PageResult<MemberListItemVO> all = memberService.page(queryByName("会员800"));
@@ -182,7 +182,7 @@ class MemberServiceImplTest extends AbstractYogaIntegrationTest {
     }
 
     @Test
-    @DisplayName("修改：省略字段保留原值；等级按字典校验；提交 null → 500；不存在 → 404")
+    @DisplayName("修改：省略字段保留原值；等级按字典校验；提交 null → 400；不存在 → 404")
     void update_shouldOnlyApplySubmittedFields() {
         memberService.create(createDTO(PHONE, 1, 0));
         Long memberId = memberDao.selectByPhone(PHONE).getId();
@@ -207,17 +207,17 @@ class MemberServiceImplTest extends AbstractYogaIntegrationTest {
 
         MemberUpdateDTO nullGender = new MemberUpdateDTO();
         nullGender.setGender(null);
-        assertEquals(Integer.valueOf(500),
+        assertEquals(Integer.valueOf(400),
                 assertThrows(ServiceException.class, () -> memberService.update(memberId, nullGender)).getCode());
 
         MemberUpdateDTO unknownLevel = new MemberUpdateDTO();
         unknownLevel.setLevel(5);
-        assertEquals(Integer.valueOf(500),
+        assertEquals(Integer.valueOf(400),
                 assertThrows(ServiceException.class, () -> memberService.update(memberId, unknownLevel)).getCode());
 
         MemberUpdateDTO disabledLevel = new MemberUpdateDTO();
         disabledLevel.setLevel(DISABLED_LEVEL);
-        assertEquals(Integer.valueOf(500),
+        assertEquals(Integer.valueOf(400),
                 assertThrows(ServiceException.class, () -> memberService.update(memberId, disabledLevel)).getCode());
 
         MemberUpdateDTO missingMember = new MemberUpdateDTO();

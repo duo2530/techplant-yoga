@@ -113,7 +113,7 @@ async function apiUpdateCoachLevel(token, coachId, level)
   }
 }
 
-/** 直接返回后端统一响应体，用于断言非法等级、无权限等失败分支的业务码 */
+/** 直接返回后端统一响应体，用于断言非法等级等失败分支的业务码 */
 async function apiUpdateCoachLevelRaw(token, coachId, level)
 {
   const { body } = await apiRequest(`/admin/coaches/${coachId}/level?level=${level}`, {

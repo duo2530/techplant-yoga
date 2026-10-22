@@ -38,8 +38,10 @@ public class MemberServiceImpl implements MemberService {
     /** 状态冲突：手机号已建档／已注册／并发冲突 */
     private static final int CONFLICT = 409;
 
-    /** 参数校验失败／系统异常 */
-    private static final int PARAM_INVALID = 500;
+    /** 参数校验失败 */
+    private static final int PARAM_INVALID = 400;
+
+    private static final int INTERNAL_ERROR = 500;
 
     /** 显示名前缀：忻会员 + 手机号后 4 位 */
     private static final String NAME_PREFIX = "忻会员";
@@ -97,7 +99,7 @@ public class MemberServiceImpl implements MemberService {
         try {
             int rows = memberDao.insert(member);
             if (rows != 1) {
-                throw new ServiceException("新增会员失败", PARAM_INVALID);
+                throw new ServiceException("新增会员失败", INTERNAL_ERROR);
             }
         } catch (DuplicateKeyException e) {
             // uk_member_phone 并发兜底：唯一键冲突同样 409，不覆盖并发建档结果
@@ -176,7 +178,7 @@ public class MemberServiceImpl implements MemberService {
         try {
             int rows = memberDao.insert(member);
             if (rows != 1) {
-                throw new ServiceException("注册失败，请稍后重试", PARAM_INVALID);
+                throw new ServiceException("注册失败，请稍后重试", INTERNAL_ERROR);
             }
         } catch (DuplicateKeyException e) {
             // uk_member_phone 并发兜底：唯一键冲突同样 409，不覆盖并发建档结果
@@ -248,7 +250,7 @@ public class MemberServiceImpl implements MemberService {
             return;
         }
         if (levelLabels.isEmpty()) {
-            throw new ServiceException("会员等级字典未配置，无法保存会员等级", PARAM_INVALID);
+            throw new ServiceException("会员等级字典未配置，无法保存会员等级", INTERNAL_ERROR);
         }
         if (!levelLabels.containsKey(level)) {
             throw new ServiceException("会员等级取值非法", PARAM_INVALID);

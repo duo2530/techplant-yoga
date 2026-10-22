@@ -231,7 +231,7 @@ class CoachScheduleHttpTest extends AbstractYogaHttpIntegrationTest {
     }
 
     @Test
-    @DisplayName("既有单日排课接口行为不变：参数合法时正常返回，缺失参数仍按既有 500 口径拒绝")
+    @DisplayName("单日排课接口：参数合法时正常返回，缺失参数统一返回 400")
     void existingPublicScheduleEndpoint_shouldKeepBehavior() throws Exception {
         MvcResult result = mockMvc
                 .perform(get("/api/schedules").param("storeId", String.valueOf(STORE_ID))
@@ -241,7 +241,7 @@ class CoachScheduleHttpTest extends AbstractYogaHttpIntegrationTest {
         assertEquals(200, root.get("code").asInt());
         assertEquals(1, root.get("total").asInt(), "单日接口只返回该日期的 1 条可见排课");
 
-        mockMvc.perform(get("/api/schedules")).andExpect(status().isOk()).andExpect(jsonPath("$.code").value(500));
+        mockMvc.perform(get("/api/schedules")).andExpect(status().isOk()).andExpect(jsonPath("$.code").value(400));
     }
 
     private JsonNode performList(Long coachId, Long storeId, Integer courseType, Integer pageNum, Integer pageSize)

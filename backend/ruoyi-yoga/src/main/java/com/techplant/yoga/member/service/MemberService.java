@@ -30,15 +30,15 @@ public interface MemberService {
     /**
      * 新增会员档案（不建登录凭证，不返回新 ID）
      *
-     * @throws com.ruoyi.common.exception.ServiceException 手机号已建档（409）、性别取值非法或等级不在字典 {@code member_level} 中（500）
+     * @throws com.ruoyi.common.exception.ServiceException 手机号已建档（409）、性别取值非法或等级不在字典 {@code member_level} 中（400）
      */
     void create(MemberCreateDTO dto);
 
     /**
-     * 修改会员档案：只维护性别与等级，省略字段保留原值，显式提交 null 报 500
+     * 修改会员档案：只维护性别与等级，省略字段保留原值，显式提交 null 报 400
      *
      * @return 更新后的会员详情
-     * @throws com.ruoyi.common.exception.ServiceException 会员不存在（404）、取值非法或提交 null（500）
+     * @throws com.ruoyi.common.exception.ServiceException 会员不存在（404）、取值非法或提交 null（400）
      */
     MemberDetailVO update(Long memberId, MemberUpdateDTO dto);
 

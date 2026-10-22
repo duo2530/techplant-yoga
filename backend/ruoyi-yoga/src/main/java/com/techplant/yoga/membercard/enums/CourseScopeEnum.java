@@ -14,7 +14,7 @@ public enum CourseScopeEnum {
     /** 私教课 */
     PERSONAL(2, "私教课");
 
-    /** 取值非法时统一使用的参数校验提示语（业务码 500） */
+    /** 取值非法时统一使用的参数校验提示语（业务码 400） */
     public static final String INVALID_MESSAGE = "适用课种范围取值为 1 或 2";
 
     /** 课种范围码 */
@@ -74,14 +74,14 @@ public enum CourseScopeEnum {
     }
 
     /**
-     * 取值校验：非法即抛 {@code ServiceException}（业务码 500，与框架的参数校验口径一致）
+     * 取值校验：非法即抛 {@code ServiceException}（业务码 400，与框架的参数校验口径一致）
      *
      * @return 校验通过的枚举
      */
     public static CourseScopeEnum validate(Integer code) {
         CourseScopeEnum item = of(code);
         if (item == null) {
-            throw new ServiceException(code == null ? "适用课种范围不能为空" : INVALID_MESSAGE, 500);
+            throw new ServiceException(code == null ? "适用课种范围不能为空" : INVALID_MESSAGE, 400);
         }
         return item;
     }

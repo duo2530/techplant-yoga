@@ -27,7 +27,7 @@ public interface StoreService {
     /**
      * 新增门店：名称唯一校验；门店编号在事务内从编号计数器分配；成功不返回新 ID
      *
-     * @throws com.ruoyi.common.exception.ServiceException 名称重复（409）、编号已用尽或冲突（409）、取值非法（500）
+     * @throws com.ruoyi.common.exception.ServiceException 名称重复（409）、编号已用尽或冲突（409）、取值非法（400）
      */
     void create(StoreCreateDTO dto);
 

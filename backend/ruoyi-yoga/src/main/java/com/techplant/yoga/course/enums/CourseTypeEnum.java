@@ -76,17 +76,16 @@ public enum CourseTypeEnum {
     }
 
     /**
-     * 取值校验：非法即抛 {@code ServiceException}，既有接口沿用框架参数校验口径（业务码 500）；
-     * 新增公开接口用 {@link #isValid(Integer)} 自行返回 400。
+     * 取值校验：非法即抛 {@code ServiceException}（业务码 400）。
      *
      * @throws ServiceException 取值不在 1~4
      */
     public static void validate(Integer code) {
         if (code == null) {
-            throw new ServiceException("课程类型不能为空", 500);
+            throw new ServiceException("课程类型不能为空", 400);
         }
         if (!isValid(code)) {
-            throw new ServiceException(INVALID_MESSAGE, 500);
+            throw new ServiceException(INVALID_MESSAGE, 400);
         }
     }
 }

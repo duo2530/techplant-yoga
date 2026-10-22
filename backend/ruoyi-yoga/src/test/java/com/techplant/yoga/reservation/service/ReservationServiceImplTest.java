@@ -301,9 +301,9 @@ class ReservationServiceImplTest extends AbstractYogaIntegrationTest {
     @Test
     @DisplayName("预约课程：参数格式非法返回参数错误")
     void create_withIllegalParams_shouldFail() {
-        assertMessage(500, "请求幂等标识格式非法，应为 UUID", () -> create("not-a-uuid", SCHEDULE_ID, TIMES_CARD_ID, 1));
-        assertMessage(500, "预约人数必须大于 0", () -> create(REQUEST_ID, SCHEDULE_ID, TIMES_CARD_ID, 0));
-        assertMessage(500, "排课ID格式非法", () -> create(REQUEST_ID, 0L, TIMES_CARD_ID, 1));
+        assertMessage(400, "请求幂等标识格式非法，应为 UUID", () -> create("not-a-uuid", SCHEDULE_ID, TIMES_CARD_ID, 1));
+        assertMessage(400, "预约人数必须大于 0", () -> create(REQUEST_ID, SCHEDULE_ID, TIMES_CARD_ID, 0));
+        assertMessage(400, "排课ID格式非法", () -> create(REQUEST_ID, 0L, TIMES_CARD_ID, 1));
         assertEquals(0, countReservations());
     }
 
@@ -419,8 +419,8 @@ class ReservationServiceImplTest extends AbstractYogaIntegrationTest {
         assertTrue(empty.getList().isEmpty());
         assertEquals(Long.valueOf(3), empty.getTotal());
 
-        assertMessage(500, "预约状态取值为 1、2 或 3", () -> reservationService.pageForMember(MEMBER_ID, query(9, null)));
-        assertMessage(500, "卡类型取值为 1 或 2", () -> reservationService.pageForMember(MEMBER_ID, query(null, 9)));
+        assertMessage(400, "预约状态取值为 1、2 或 3", () -> reservationService.pageForMember(MEMBER_ID, query(9, null)));
+        assertMessage(400, "卡类型取值为 1 或 2", () -> reservationService.pageForMember(MEMBER_ID, query(null, 9)));
     }
 
     @Test
@@ -969,24 +969,24 @@ class ReservationServiceImplTest extends AbstractYogaIntegrationTest {
     void pageForAdmin_withIllegalQuery_shouldFail() {
         ReservationAdminQuery badStatus = adminQuery();
         badStatus.setStatus(9);
-        assertMessage(500, "预约状态取值为 1、2 或 3", () -> reservationService.pageForAdmin(badStatus));
+        assertMessage(400, "预约状态取值为 1、2 或 3", () -> reservationService.pageForAdmin(badStatus));
 
         ReservationAdminQuery badCardType = adminQuery();
         badCardType.setCardType(9);
-        assertMessage(500, "卡类型取值为 1 或 2", () -> reservationService.pageForAdmin(badCardType));
+        assertMessage(400, "卡类型取值为 1 或 2", () -> reservationService.pageForAdmin(badCardType));
 
         ReservationAdminQuery inverted = adminQuery();
         inverted.setStartDate(LocalDate.now(BUSINESS_ZONE).plusDays(2));
         inverted.setEndDate(LocalDate.now(BUSINESS_ZONE).plusDays(1));
-        assertMessage(500, "结束日期不能早于起始日期", () -> reservationService.pageForAdmin(inverted));
+        assertMessage(400, "结束日期不能早于起始日期", () -> reservationService.pageForAdmin(inverted));
 
         ReservationAdminQuery badId = adminQuery();
         badId.setScheduleId(0L);
-        assertMessage(500, "排课ID格式非法", () -> reservationService.pageForAdmin(badId));
+        assertMessage(400, "排课ID格式非法", () -> reservationService.pageForAdmin(badId));
 
         ReservationAdminQuery badMember = adminQuery();
         badMember.setMemberId(-1L);
-        assertMessage(500, "会员ID格式非法", () -> reservationService.pageForAdmin(badMember));
+        assertMessage(400, "会员ID格式非法", () -> reservationService.pageForAdmin(badMember));
     }
 
     private ReservationAdminQuery adminQuery() {

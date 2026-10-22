@@ -18,7 +18,7 @@ import com.techplant.yoga.membercard.service.MemberCardTransactionService;
 @RequiredArgsConstructor
 public class MemberCardTransactionServiceImpl implements MemberCardTransactionService {
     /** 系统异常：流水写入失败 */
-    private static final int PARAM_ERROR = 500;
+    private static final int INTERNAL_ERROR = 500;
 
     private final MemberCardTransactionDao memberCardTransactionDao;
 
@@ -68,7 +68,7 @@ public class MemberCardTransactionServiceImpl implements MemberCardTransactionSe
         transaction.setBeforeTimes(beforeTimes);
         transaction.setAfterTimes(afterTimes);
         if (memberCardTransactionDao.insert(transaction) != 1) {
-            throw new ServiceException("会员卡次数流水写入失败", PARAM_ERROR);
+            throw new ServiceException("会员卡次数流水写入失败", INTERNAL_ERROR);
         }
     }
 }

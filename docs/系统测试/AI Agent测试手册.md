@@ -35,7 +35,9 @@ mvn -f backend/pom.xml -pl ruoyi-yoga -am test
 
 ### 当前覆盖边界
 
-已覆盖 MyBatis 装配、教练／会员／排课数据访问、会员／会员卡／预约 HTTP 接口及预约事务。本次新增真实安全链 HTTP 测试（真实 MySQL＋Redis Testcontainers，请求经真实 `FilterChainProxy` 与 `@PreAuthorize`，令牌由真实 TokenService 生成）：覆盖游客／会员／无权限管理员的权限隔离、公开接口仅 GET 白名单、新增接口 400／404 错误契约。该上下文使用**固定测试时钟**（Asia/Shanghai）消除跨日不稳定；生产运行时的 `Clock` 由 `BusinessTimeConfig` 固定为 `Asia/Shanghai`，并有测试断言锁定该业务时区常量。另新增 SQL 升级脚本测试（一次性隔离 MySQL）：验证增量脚本可重复执行、旧数据与排课关联保留、旧教练默认普通等级，且**重复执行保留运营角色对 2010 的授权**、内置管理员绑定不重复插入、菜单内容不变、既有 2000~2008 菜单与绑定逐 ID 不变。新增测试类位于 `backend/ruoyi-yoga/src/test/java/com/techplant/yoga/` 下的 `coach/controller`、`schedule/controller`、`member/controller`、`common/sql` 与 `common/testcontainers`。预约并发、故障回滚的规则与用例映射见[预约并发与事务核对](预约并发与事务核对.md)。该核对文档列出的部分并发组合仍有验证缺口，相关改动应补充测试或报告验证缺口。
+已覆盖 MyBatis 装配、教练／会员／排课数据访问、会员／会员卡／预约 HTTP 接口及预约事务。本次新增真实安全链 HTTP 测试（真实 MySQL＋Redis Testcontainers，请求经真实 `FilterChainProxy`，令牌由真实 TokenService 生成）：覆盖游客／会员不能修改等级、普通管理员可修改等级的身份隔离、公开接口仅 GET 白名单、新增接口 400／404 错误契约。该上下文使用**固定测试时钟**（Asia/Shanghai）消除跨日不稳定；生产运行时的 `Clock` 由 `BusinessTimeConfig` 固定为 `Asia/Shanghai`，并有测试断言锁定该业务时区常量。另新增 SQL 升级脚本测试（一次性隔离 MySQL）：验证增量脚本可重复执行、旧数据与排课关联保留、旧教练默认普通等级，并清理旧等级按钮与角色绑定、重复执行不影响其它按钮与授权、既有 2000~2008 菜单与绑定逐 ID 不变。新增测试类位于 `backend/ruoyi-yoga/src/test/java/com/techplant/yoga/` 下的 `coach/controller`、`schedule/controller`、`member/controller`、`common/sql` 与 `common/testcontainers`。预约并发、故障回滚的规则与用例映射见[预约并发与事务核对](预约并发与事务核对.md)。该核对文档列出的部分并发组合仍有验证缺口，相关改动应补充测试或报告验证缺口。
+
+全局参数异常由 `GlobalExceptionHandler` 统一返回业务码 400，HTTP 状态码仍为 200。会员、会员卡、预约和教练 HTTP 用例覆盖参数缺失、类型错误与校验失败；`MemberControllerTest` 还覆盖请求体缺失、JSON 损坏及字段类型错误返回 400，并验证服务端等级字典缺失返回 500、失败请求不写入数据库。
 
 接口级验证应检查统一响应、参数校验、ID 字符串化、身份隔离和失败分支。菜单相关改动应验证路由返回及页面入口，接口文档相关改动应检查 Swagger 中的接口是否可见。
 
@@ -55,7 +57,7 @@ $env:E2E_ALLOW_DESTRUCTIVE = '1'
 npm test
 ```
 
-前置条件：必须先**显式设置 `E2E_API_URL`**（不依赖默认值）并设置 **`E2E_ALLOW_DESTRUCTIVE=1`**，任一缺失时套件以退出码 3 拒绝执行，禁止指向开发库或共享库；隔离库 `sys.account.captchaEnabled=false`、MySQL／Redis 可用、管理员 `admin`／`admin123` 且角色具备 `yoga:coach:level`（账号可用环境变量覆盖）。用例与不覆盖范围见[管理端套件 README](../../frontend/pc/tests/e2e/README.md)。
+前置条件：必须先**显式设置 `E2E_API_URL`**（不依赖默认值）并设置 **`E2E_ALLOW_DESTRUCTIVE=1`**，任一缺失时套件以退出码 3 拒绝执行，禁止指向开发库或共享库；隔离库 `sys.account.captchaEnabled=false`、MySQL／Redis 可用、管理员 `admin`／`admin123` （账号可用环境变量覆盖）。用例与不覆盖范围见[管理端套件 README](../../frontend/pc/tests/e2e/README.md)。
 
 - 管理端覆盖登录、退出、表单校验、增删改查和异常反馈；涉及权限或字典时验证相应页面行为。
 - 教练用例覆盖首页金牌栏目、约教练资料与排课分页/筛选，以及**约教练页返回刷新**：从课程详情返回后重新拉取当前课种第一页、课种 Tab 与门店保持不变（回归用例）。

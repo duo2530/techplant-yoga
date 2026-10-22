@@ -121,44 +121,44 @@ class MemberCardServiceImplTest extends AbstractYogaIntegrationTest {
     }
 
     @Test
-    @DisplayName("发卡：次数卡缺适用门店／缺次数／合计为 0／有效期非 3、6、12 → 500；年卡提交次数类字段 → 500")
+    @DisplayName("发卡：次数卡缺适用门店／缺次数／合计为 0／有效期非 3、6、12 → 400；年卡提交次数类字段 → 400")
     void create_withInvalidCombination_shouldFail() {
         MemberCardCreateDTO withoutStore = timesCardDTO();
         withoutStore.setStoreId(null);
-        assertMessage(withoutStore, 500, "次数卡必须选择适用门店");
+        assertMessage(withoutStore, 400, "次数卡必须选择适用门店");
 
         MemberCardCreateDTO withoutTimes = timesCardDTO();
         withoutTimes.setPurchaseTimes(null);
-        assertMessage(withoutTimes, 500, "次数卡必须填写购买次数与赠送次数");
+        assertMessage(withoutTimes, 400, "次数卡必须填写购买次数与赠送次数");
 
         MemberCardCreateDTO zeroTotal = timesCardDTO();
         zeroTotal.setPurchaseTimes(0);
         zeroTotal.setGiftTimes(0);
-        assertMessage(zeroTotal, 500, "购买次数与赠送次数合计必须大于 0");
+        assertMessage(zeroTotal, 400, "购买次数与赠送次数合计必须大于 0");
 
         MemberCardCreateDTO badPeriod = timesCardDTO();
         badPeriod.setValidPeriodCount(4);
-        assertMessage(badPeriod, 500, "次数卡有效期数量只能是 3、6 或 12 个月");
+        assertMessage(badPeriod, 400, "次数卡有效期数量只能是 3、6 或 12 个月");
 
         MemberCardCreateDTO annualWithStore = annualCardDTO();
         annualWithStore.setStoreId(STORE_ID);
-        assertMessage(annualWithStore, 500, "年卡不能选择适用门店");
+        assertMessage(annualWithStore, 400, "年卡不能选择适用门店");
 
         MemberCardCreateDTO annualWithTimes = annualCardDTO();
         annualWithTimes.setPurchaseTimes(1);
-        assertMessage(annualWithTimes, 500, "年卡不能填写购买次数与赠送次数");
+        assertMessage(annualWithTimes, 400, "年卡不能填写购买次数与赠送次数");
 
         MemberCardCreateDTO annualWithPeriod = annualCardDTO();
         annualWithPeriod.setValidPeriodCount(12);
-        assertMessage(annualWithPeriod, 500, "年卡不能填写有效期数量，有效期固定 1 年");
+        assertMessage(annualWithPeriod, 400, "年卡不能填写有效期数量，有效期固定 1 年");
 
         MemberCardCreateDTO badCardType = timesCardDTO();
         badCardType.setCardType(3);
-        assertMessage(badCardType, 500, "卡类型取值为 1 或 2");
+        assertMessage(badCardType, 400, "卡类型取值为 1 或 2");
 
         MemberCardCreateDTO badCourseScope = timesCardDTO();
         badCourseScope.setCourseScope(3);
-        assertMessage(badCourseScope, 500, "适用课种范围取值为 1 或 2");
+        assertMessage(badCourseScope, 400, "适用课种范围取值为 1 或 2");
 
         assertTrue(allCards().isEmpty(), "校验失败不落库");
     }
@@ -256,7 +256,7 @@ class MemberCardServiceImplTest extends AbstractYogaIntegrationTest {
     }
 
     @Test
-    @DisplayName("停卡：写入原因、保留剩余次数与有效期；重复停卡 → 409；原因缺失 → 500")
+    @DisplayName("停卡：写入原因、保留剩余次数与有效期；重复停卡 → 409；原因缺失 → 400")
     void stop_shouldWriteReasonAndKeepTimes() {
         memberCardService.create(timesCardDTO());
         Long cardId = latestCard().getId();
@@ -280,7 +280,7 @@ class MemberCardServiceImplTest extends AbstractYogaIntegrationTest {
         blank.setStopReason("   ");
         memberCardService.create(timesCardDTO(STORE_ID, OPEN_STORE_ID));
         Long pendingId = latestCard().getId();
-        assertEquals(Integer.valueOf(500),
+        assertEquals(Integer.valueOf(400),
                 assertThrows(ServiceException.class, () -> memberCardService.stop(pendingId, blank)).getCode());
 
         assertMessage(UNKNOWN_ID, 404, "会员卡不存在或已被删除");

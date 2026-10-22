@@ -30,7 +30,6 @@
 --
 -- v2.6 新增：
 --   · t_coach 增加 level（1 普通教练／2 金牌教练，默认 1），供首页金牌教练列表使用
---   · 菜单 2010：教练管理（2003）下的按钮权限 yoga:coach:level
 --   · 已有库升级用独立增量脚本 yoga_upgrade_v2.6_gold_coach.sql，不改动本文件的建表语句
 --   · 本脚本是「全新建库」口径：会重建 2000~2010 业务菜单与内置管理员绑定；
 --     已有库请执行增量脚本，避免覆盖管理员给其它角色授予的业务菜单权限
@@ -53,7 +52,7 @@ SET NAMES utf8mb4;
 --    （只清理 2000~2010，不动若依自带的「系统管理」那套菜单）
 --    2001~2008 已随本脚本交付；2009=账号管理 仍未交付：
 --    未交付菜单一并纳入清理范围，菜单行的 INSERT 由各自模块的 SQL 交付时补。
---    2010=教练金牌按钮权限，挂在教练管理（2003）下，随本脚本交付。
+--    清理范围包含已废止的 2010 教练等级按钮权限。
 -- ============================================================================
 
 DELETE FROM `sys_role_menu` WHERE `menu_id` IN (2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010);
@@ -72,13 +71,6 @@ INSERT INTO `sys_menu` VALUES ('2006', '会员管理', '2000', '6', 'member',   
 INSERT INTO `sys_menu` VALUES ('2007', '会员卡管理', '2000', '7', 'membercard', 'membercard/index', '', '', 1, 0, 'C', '0', '0', '', 'money', 'admin', SYSDATE(), '', NULL, '会员卡管理菜单');
 INSERT INTO `sys_menu` VALUES ('2008', '预约管理', '2000', '8', 'reservation', 'reservation/index', '', '', 1, 0, 'C', '0', '0', '', 'date', 'admin', SYSDATE(), '', NULL, '预约管理菜单');
 
--- 按钮权限：设置／取消金牌教练（教练管理 2003 下）
-INSERT INTO `sys_menu` (`menu_id`, `menu_name`, `parent_id`, `order_num`, `path`, `component`, `query`, `route_name`,
-  `is_frame`, `is_cache`, `menu_type`, `visible`, `status`, `perms`, `icon`, `create_by`, `create_time`, `update_by`,
-  `update_time`, `remark`)
-VALUES ('2010', '金牌教练设置', '2003', '1', '', '', '', '', 1, 0, 'F', '0', '0', 'yoga:coach:level', '#',
-  'admin', SYSDATE(), '', NULL, '设置或取消教练金牌的按钮权限');
-
 -- 绑定若依内置管理员角色（role_id = 1）
 INSERT INTO `sys_role_menu` VALUES ('1', '2000');
 INSERT INTO `sys_role_menu` VALUES ('1', '2001');
@@ -89,7 +81,6 @@ INSERT INTO `sys_role_menu` VALUES ('1', '2005');
 INSERT INTO `sys_role_menu` VALUES ('1', '2006');
 INSERT INTO `sys_role_menu` VALUES ('1', '2007');
 INSERT INTO `sys_role_menu` VALUES ('1', '2008');
-INSERT INTO `sys_role_menu` VALUES ('1', '2010');
 
 -- ============================================================================
 -- 2. 字典
