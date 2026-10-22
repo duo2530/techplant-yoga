@@ -22,7 +22,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.techplant.yoga.common.testcontainers.AbstractYogaHttpIntegrationTest;
 import com.techplant.yoga.common.testcontainers.YogaSchema;
-import com.techplant.yoga.common.testcontainers.YogaSecurityTestConfig;
 import com.techplant.yoga.member.domain.MemberDO;
 
 /**
@@ -53,7 +52,7 @@ class MemberSecurityChainHttpTest extends AbstractYogaHttpIntegrationTest {
     void setUpData() {
         YogaSchema.reset(dataSource, "t_coach", "t_store", "t_course", "t_classroom", "t_schedule", "t_member");
         jdbcTemplate = new JdbcTemplate(dataSource);
-        LocalDate today = YogaSecurityTestConfig.FIXED_TODAY;
+        LocalDate today = LocalDate.now();
         jdbcTemplate.update(
                 "INSERT INTO t_coach (id, name, avatar_url, intro, level) VALUES (?, '林教练', NULL," + " '专注基础体式', 2)",
                 COACH_ID);

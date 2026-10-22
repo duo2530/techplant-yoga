@@ -1,7 +1,6 @@
 package com.techplant.yoga.membercard.service;
 
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import org.springframework.stereotype.Component;
 import com.ruoyi.common.exception.ServiceException;
@@ -9,14 +8,11 @@ import com.ruoyi.common.exception.ServiceException;
 /**
  * 卡号生成器：{@code yyyyMMdd + 门店编号(4) + HHmmss}，共 18 位。
  *
- * <p>时间取发卡时刻的会员卡业务时区 {@code Asia/Shanghai}，不接受客户端传入；
+ * <p>时间取服务端的发卡时刻，不接受客户端传入；
  * 组成精度只到秒，同一开卡门店同一秒只能生成一个卡号，唯一性由 {@code uk_card_no} 兜底。</p>
  */
 @Component
 public class CardNoGenerator {
-    /** 会员卡业务时区：卡号与有效期都按它计算 */
-    public static final ZoneId CARD_ZONE = ZoneId.of("Asia/Shanghai");
-
     /** 卡号中的发卡日期 */
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyyMMdd");
 
@@ -25,7 +21,7 @@ public class CardNoGenerator {
 
     /** 按当前时间生成卡号 */
     public String generate(String storeNo) {
-        return generate(storeNo, LocalDateTime.now(CARD_ZONE));
+        return generate(storeNo, LocalDateTime.now());
     }
 
     /**

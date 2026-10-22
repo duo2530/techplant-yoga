@@ -13,7 +13,7 @@ import io.swagger.annotations.ApiModelProperty;
  * 教练页排课查询条件。
  *
  * <p>门店与课种必填；分页默认 {@code pageNum=1, pageSize=10}，上限 100。
- * 日期窗口由服务端按业务时区计算，客户端不传日期。</p>
+ * 日期窗口由服务端计算，客户端不传日期。</p>
  */
 @ApiModel("教练页排课查询条件")
 @Getter

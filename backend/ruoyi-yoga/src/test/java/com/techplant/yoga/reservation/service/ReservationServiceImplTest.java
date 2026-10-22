@@ -12,7 +12,6 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -35,7 +34,6 @@ import com.techplant.yoga.classroom.dao.ClassroomDaoImpl;
 import com.techplant.yoga.classroom.service.impl.ClassroomServiceImpl;
 import com.techplant.yoga.coach.dao.CoachDaoImpl;
 import com.techplant.yoga.coach.service.impl.CoachServiceImpl;
-import com.techplant.yoga.common.config.BusinessTimeConfig;
 import com.techplant.yoga.common.response.PageResult;
 import com.techplant.yoga.common.testcontainers.AbstractYogaIntegrationTest;
 import com.techplant.yoga.common.testcontainers.YogaMyBatisTestConfig;
@@ -76,17 +74,15 @@ import com.techplant.yoga.store.service.impl.StoreServiceImpl;
  * <p>会员、会员卡、排课、课程、教练与门店都走真实 Service 与真实 SQL，不模拟内部调用；
  * 预约、扣返次、占位与流水的联动在同一事务里验证。</p>
  */
-@ContextConfiguration(classes = {YogaMyBatisTestConfig.class, BusinessTimeConfig.class, StoreDaoImpl.class,
-    StoreRegionDictDaoImpl.class, StoreServiceImpl.class, ClassroomDaoImpl.class, ClassroomServiceImpl.class,
-    CoachDaoImpl.class, CoachServiceImpl.class, CourseDaoImpl.class, CourseServiceImpl.class, MemberDaoImpl.class,
+@ContextConfiguration(classes = {YogaMyBatisTestConfig.class, StoreDaoImpl.class, StoreRegionDictDaoImpl.class,
+    StoreServiceImpl.class, ClassroomDaoImpl.class, ClassroomServiceImpl.class, CoachDaoImpl.class,
+    CoachServiceImpl.class, CourseDaoImpl.class, CourseServiceImpl.class, MemberDaoImpl.class,
     MemberLevelDictDaoImpl.class, MemberServiceImpl.class, MemberCardDaoImpl.class, MemberCardTransactionDaoImpl.class,
     MemberCardTransactionServiceImpl.class, CardNoGenerator.class, MemberCardServiceImpl.class, ScheduleDaoImpl.class,
     ScheduleBookingServiceImpl.class, ScheduleServiceImpl.class, ReservationDaoImpl.class,
     ReservationServiceImpl.class})
 @DisplayName("ReservationService 集成测试（Testcontainers MySQL：预约 / 取消 / 签到 / 扣返次 / 占位 / 我的预约）")
 class ReservationServiceImplTest extends AbstractYogaIntegrationTest {
-    private static final ZoneId BUSINESS_ZONE = ZoneId.of("Asia/Shanghai");
-
     private static final Long STORE_ID = 1000L;
 
     private static final Long OTHER_STORE_ID = 2000L;
@@ -381,7 +377,7 @@ class ReservationServiceImplTest extends AbstractYogaIntegrationTest {
     @Test
     @DisplayName("我的预约：按状态与卡类型筛选，倒序稳定排序，关联资料缺失时字段为空")
     void pageForMember_shouldFilterAndAssemble() {
-        LocalDateTime base = LocalDateTime.now(BUSINESS_ZONE).withNano(0);
+        LocalDateTime base = LocalDateTime.now().withNano(0);
         insertReservation(9101L, REQUEST_ID, MEMBER_ID, SCHEDULE_ID, TIMES_CARD_ID, 1, 1, base.minusDays(2));
         insertReservation(9102L, OTHER_REQUEST_ID, MEMBER_ID, SCHEDULE_SECOND_ID, YEAR_CARD_ID, 1, 3,
                 base.minusDays(1));
@@ -442,7 +438,7 @@ class ReservationServiceImplTest extends AbstractYogaIntegrationTest {
     @Test
     @DisplayName("排课详情：预约人员按会员去重、姓名脱敏、排除已取消")
     void bookerDisplayNames_shouldDedupAndMask() {
-        LocalDateTime base = LocalDateTime.now(BUSINESS_ZONE).withNano(0);
+        LocalDateTime base = LocalDateTime.now().withNano(0);
         insertReservation(9301L, REQUEST_ID, OTHER_MEMBER_ID, SCHEDULE_ID, OTHER_MEMBER_CARD_ID, 1, 1,
                 base.minusMinutes(4));
         insertReservation(9302L, OTHER_REQUEST_ID, MEMBER_ID, SCHEDULE_ID, TIMES_CARD_ID, 1, 1, base.minusMinutes(3));
@@ -499,7 +495,7 @@ class ReservationServiceImplTest extends AbstractYogaIntegrationTest {
             // 另一个连接提交一条与该场次重叠的预约（模拟并发事务，不受本事务快照影响）
             try {
                 insertReservationWithNewConnection(9401L, OTHER_REQUEST_ID, MEMBER_ID, SCHEDULE_OVERLAP_ID,
-                        TIMES_CARD_ID, 1, 1, LocalDateTime.now(BUSINESS_ZONE).withNano(0));
+                        TIMES_CARD_ID, 1, 1, LocalDateTime.now().withNano(0));
             } catch (SQLException e) {
                 throw new IllegalStateException("独立连接写入预约失败", e);
             }
@@ -823,7 +819,7 @@ class ReservationServiceImplTest extends AbstractYogaIntegrationTest {
     @Test
     @DisplayName("管理端预约列表：门店／课程／排课／会员／状态／卡类型／上课日期筛选，倒序分页并装配关联资料")
     void pageForAdmin_shouldFilterAndAssemble() {
-        LocalDateTime base = LocalDateTime.now(BUSINESS_ZONE).withNano(0);
+        LocalDateTime base = LocalDateTime.now().withNano(0);
         insertAdminReservation(9501L, REQUEST_ID, MEMBER_ID, SCHEDULE_ID, TIMES_CARD_ID, 2, 1, base.minusMinutes(3),
                 null, null, null);
         insertDeductTransaction(9501L, TIMES_CARD_ID, MEMBER_ID, 2);
@@ -851,7 +847,7 @@ class ReservationServiceImplTest extends AbstractYogaIntegrationTest {
         assertEquals("徐汇店", item.getStoreName());
         assertEquals("漕溪北路 88 号", item.getStoreAddress());
         assertEquals("瑜伽团课大教室", item.getClassroomName());
-        assertEquals(LocalDate.now(BUSINESS_ZONE).plusDays(1).toString(), item.getScheduleDate());
+        assertEquals(LocalDate.now().plusDays(1).toString(), item.getScheduleDate());
         assertEquals(Integer.valueOf(60), item.getDurationMinutes(), "起止时间差为整分钟数");
         assertEquals(Integer.valueOf(2), item.getPersons());
         assertEquals(TIMES_CARD_ID, item.getMemberCardId());
@@ -916,7 +912,7 @@ class ReservationServiceImplTest extends AbstractYogaIntegrationTest {
         assertEquals(Long.valueOf(1), reservationService.pageForAdmin(byYearCard).getTotal());
 
         // 上课日期区间含首尾当天
-        LocalDate tomorrow = LocalDate.now(BUSINESS_ZONE).plusDays(1);
+        LocalDate tomorrow = LocalDate.now().plusDays(1);
         ReservationAdminQuery byDate = adminQuery();
         byDate.setStartDate(tomorrow);
         byDate.setEndDate(tomorrow);
@@ -938,7 +934,7 @@ class ReservationServiceImplTest extends AbstractYogaIntegrationTest {
     @DisplayName("管理端预约列表：排课与关联资料已删除时对应展示字段为空，预约自身字段照常返回")
     void pageForAdmin_withDeletedRelations_shouldReturnNullFields() {
         insertAdminReservation(9601L, REQUEST_ID, MEMBER_ID, SCHEDULE_ID, TIMES_CARD_ID, 1, 1,
-                LocalDateTime.now(BUSINESS_ZONE).withNano(0), null, null, null);
+                LocalDateTime.now().withNano(0), null, null, null);
         jdbcTemplate.update("DELETE FROM t_course WHERE id = ?", COURSE_ID);
         jdbcTemplate.update("DELETE FROM t_coach WHERE id = ?", COACH_ID);
         jdbcTemplate.update("DELETE FROM t_classroom WHERE id = ?", CLASSROOM_ID);
@@ -976,8 +972,8 @@ class ReservationServiceImplTest extends AbstractYogaIntegrationTest {
         assertMessage(400, "卡类型取值为 1 或 2", () -> reservationService.pageForAdmin(badCardType));
 
         ReservationAdminQuery inverted = adminQuery();
-        inverted.setStartDate(LocalDate.now(BUSINESS_ZONE).plusDays(2));
-        inverted.setEndDate(LocalDate.now(BUSINESS_ZONE).plusDays(1));
+        inverted.setStartDate(LocalDate.now().plusDays(2));
+        inverted.setEndDate(LocalDate.now().plusDays(1));
         assertMessage(400, "结束日期不能早于起始日期", () -> reservationService.pageForAdmin(inverted));
 
         ReservationAdminQuery badId = adminQuery();
@@ -1127,7 +1123,7 @@ class ReservationServiceImplTest extends AbstractYogaIntegrationTest {
     }
 
     private void insertCards() {
-        LocalDateTime now = LocalDateTime.now(BUSINESS_ZONE);
+        LocalDateTime now = LocalDateTime.now();
         // 次数卡：团课类、本店、剩余 12 次、有效期未过
         insertCard(TIMES_CARD_ID, MEMBER_ID, 1, 1, STORE_ID, 12, now.minusDays(1), now.plusDays(300), now.minusDays(1),
                 null);
@@ -1167,9 +1163,9 @@ class ReservationServiceImplTest extends AbstractYogaIntegrationTest {
     }
 
     private void insertSchedules() {
-        LocalDate today = LocalDate.now(BUSINESS_ZONE);
+        LocalDate today = LocalDate.now();
         LocalDate tomorrow = today.plusDays(1);
-        LocalDateTime now = LocalDateTime.now(BUSINESS_ZONE).withNano(0);
+        LocalDateTime now = LocalDateTime.now().withNano(0);
         insertSchedule(SCHEDULE_ID, COURSE_ID, 1, tomorrow.atTime(10, 0), tomorrow.atTime(11, 0), 2, 0, 2);
         insertSchedule(SCHEDULE_SECOND_ID, COURSE_ID, 1, tomorrow.atTime(14, 0), tomorrow.atTime(15, 0), 5, 0, 2);
         insertSchedule(SCHEDULE_OVERLAP_ID, COURSE_ID, 1, tomorrow.atTime(10, 30), tomorrow.atTime(11, 30), 5, 0, 2);
@@ -1212,7 +1208,7 @@ class ReservationServiceImplTest extends AbstractYogaIntegrationTest {
         LocalDateTime endTime = jdbcTemplate.queryForObject("SELECT end_time FROM t_schedule WHERE id = ?",
                 LocalDateTime.class, scheduleId);
         insertReservation(id, requestId, memberId, scheduleId, memberCardId, persons, status,
-                LocalDateTime.now(BUSINESS_ZONE).withNano(0).minusMinutes(1), startTime, endTime);
+                LocalDateTime.now().withNano(0).minusMinutes(1), startTime, endTime);
     }
 
     private void insertReservation(Long id, String requestId, Long memberId, Long scheduleId, Long memberCardId,

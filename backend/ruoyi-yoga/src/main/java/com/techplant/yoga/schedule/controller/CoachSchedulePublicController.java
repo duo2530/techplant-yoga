@@ -27,7 +27,7 @@ import io.swagger.annotations.ApiOperation;
 public class CoachSchedulePublicController extends BaseController {
     private final ScheduleService scheduleService;
 
-    /** 当前门店、所选教练与课种的近期排课（业务时区今天起 14 天，含今天） */
+    /** 当前门店、所选教练与课种的近期排课（今天起 14 天，含今天） */
     @ApiOperation("查询教练排课列表")
     @GetMapping
     public TableDataInfo list(@PathVariable("coachId") Long coachId, @Valid CoachScheduleQuery query) {

@@ -27,7 +27,7 @@
 
 ## Impact
 
-- 后端：`backend/ruoyi-yoga` 的 coach、schedule 模块及公开接口鉴权；`backend/sql/yoga.sql` 和已有数据库的增量升级脚本。
+- 后端：`backend/ruoyi-yoga` 的 coach、schedule 模块及公开接口鉴权；`backend/sql/yoga.sql` 的表结构与初始化数据。
 - 管理端：`frontend/pc/src/views/coach/index.vue` 与 `src/api/coach/coach.js`。
 - 用户端：`frontend/uni-app/pages/home/index.vue`、`pages/coaches/index.vue`、`api/coach.js`、`pages.json` 及相关样式和图片资源。
 - 文档：UC-001、UC-007、用例总览、业务规则、教练管理与用户端接口详细设计及测试映射。

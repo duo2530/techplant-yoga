@@ -10,30 +10,24 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.nio.charset.StandardCharsets;
 import java.sql.Date;
 import java.sql.Timestamp;
-import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.techplant.yoga.common.config.BusinessTimeConfig;
 import com.techplant.yoga.common.testcontainers.AbstractYogaHttpIntegrationTest;
 import com.techplant.yoga.common.testcontainers.YogaSchema;
-import com.techplant.yoga.common.testcontainers.YogaSecurityTestConfig;
 
 /**
- * 教练页排课接口的 HTTP 集成测试：真实用户端安全过滤链 ＋ 真实 MySQL ＋ 固定测试时钟。
+ * 教练页排课接口的 HTTP 集成测试：真实用户端安全过滤链 ＋ 真实 MySQL。
  *
  * <p>覆盖窗口首尾日、窗口外排除、其他教练／门店排除、课种快照、待上架排除、已取消／已结束状态、
- * 满员、排序、分页，以及既有单日排课接口的回归。所有「今天」都来自
- * {@link YogaSecurityTestConfig#FIXED_TODAY}，不依赖运行时刻。</p>
+ * 满员、排序、分页，以及既有单日排课接口的回归。</p>
  */
 @DisplayName("教练页排课接口（真实安全链：14 天窗口 / 可见性 / 快照 / 排序 / 分页 / 参数错误）")
 class CoachScheduleHttpTest extends AbstractYogaHttpIntegrationTest {
@@ -55,32 +49,15 @@ class CoachScheduleHttpTest extends AbstractYogaHttpIntegrationTest {
 
     private static final int SPECIAL_COURSE = 4;
 
-    /** 固定测试时钟的「今天」 */
-    private static final LocalDate TODAY = YogaSecurityTestConfig.FIXED_TODAY;
+    private LocalDate today;
 
     private static final ObjectMapper JSON = new ObjectMapper();
 
     private JdbcTemplate jdbcTemplate;
 
-    @Autowired
-    @Qualifier("businessClock")
-    private Clock productionBusinessClock;
-
-    @Autowired
-    @Qualifier("fixedBusinessClock")
-    private Clock fixedTestClock;
-
-    @Test
-    @DisplayName("业务时区锁定：生产 Clock、固定测试 Clock 与统一常量都使用 Asia/Shanghai")
-    void businessZone_shouldBeShanghai() {
-        assertEquals("Asia/Shanghai", BusinessTimeConfig.BUSINESS_ZONE.getId(), "生产业务时区常量");
-        assertEquals(BusinessTimeConfig.BUSINESS_ZONE, productionBusinessClock.getZone(), "生产 Clock 使用业务时区");
-        assertEquals(BusinessTimeConfig.BUSINESS_ZONE, fixedTestClock.getZone(), "固定测试 Clock 使用同一业务时区");
-        assertEquals(BusinessTimeConfig.BUSINESS_ZONE, YogaSecurityTestConfig.TEST_ZONE, "测试固定时区与生产业务时区一致");
-    }
-
     @BeforeEach
     void setUpData() {
+        today = LocalDate.now();
         YogaSchema.reset(dataSource, "t_store", "t_course", "t_classroom", "t_coach", "t_schedule");
         jdbcTemplate = new JdbcTemplate(dataSource);
         insertStore(STORE_ID, "0001", "徐汇店");
@@ -91,42 +68,42 @@ class CoachScheduleHttpTest extends AbstractYogaHttpIntegrationTest {
         insertCoach(COACH_ID, "林教练");
         insertCoach(OTHER_COACH_ID, "周教练");
 
-        LocalDateTime firstMinute = TODAY.atStartOfDay();
-        // 窗口内：今天 00:00 的场次（固定时钟 10:00 必然已结束）、第 2 天、第 6 天、第 13 天
-        insertSchedule(1101L, STORE_ID, COURSE_ID, GROUP_COURSE, COACH_ID, CLASSROOM_ID, TODAY, firstMinute,
-                firstMinute.plusMinutes(1), 20, 2, 0, 2);
-        insertSchedule(1102L, STORE_ID, COURSE_ID, GROUP_COURSE, COACH_ID, CLASSROOM_ID, TODAY.plusDays(1),
-                TODAY.plusDays(1).atTime(10, 0), TODAY.plusDays(1).atTime(11, 0), 20, 2, 3, 2);
-        insertSchedule(1103L, STORE_ID, COURSE_ID, GROUP_COURSE, COACH_ID, CLASSROOM_ID, TODAY.plusDays(13),
-                TODAY.plusDays(13).atTime(9, 0), TODAY.plusDays(13).atTime(10, 0), 20, 2, 0, 2);
+        LocalDateTime firstMinute = today.atStartOfDay();
+        // 窗口内：今天已结束的场次、第 2 天、第 6 天、第 13 天
+        insertSchedule(1101L, STORE_ID, COURSE_ID, GROUP_COURSE, COACH_ID, CLASSROOM_ID, today, firstMinute,
+                LocalDateTime.now().withNano(0), 20, 2, 0, 2);
+        insertSchedule(1102L, STORE_ID, COURSE_ID, GROUP_COURSE, COACH_ID, CLASSROOM_ID, today.plusDays(1),
+                today.plusDays(1).atTime(10, 0), today.plusDays(1).atTime(11, 0), 20, 2, 3, 2);
+        insertSchedule(1103L, STORE_ID, COURSE_ID, GROUP_COURSE, COACH_ID, CLASSROOM_ID, today.plusDays(13),
+                today.plusDays(13).atTime(9, 0), today.plusDays(13).atTime(10, 0), 20, 2, 0, 2);
         // 窗口外：第 14 天、昨天
-        insertSchedule(1104L, STORE_ID, COURSE_ID, GROUP_COURSE, COACH_ID, CLASSROOM_ID, TODAY.plusDays(14),
-                TODAY.plusDays(14).atTime(9, 0), TODAY.plusDays(14).atTime(10, 0), 20, 2, 0, 2);
-        insertSchedule(1105L, STORE_ID, COURSE_ID, GROUP_COURSE, COACH_ID, CLASSROOM_ID, TODAY.minusDays(1),
-                TODAY.minusDays(1).atTime(9, 0), TODAY.minusDays(1).atTime(10, 0), 20, 2, 0, 2);
+        insertSchedule(1104L, STORE_ID, COURSE_ID, GROUP_COURSE, COACH_ID, CLASSROOM_ID, today.plusDays(14),
+                today.plusDays(14).atTime(9, 0), today.plusDays(14).atTime(10, 0), 20, 2, 0, 2);
+        insertSchedule(1105L, STORE_ID, COURSE_ID, GROUP_COURSE, COACH_ID, CLASSROOM_ID, today.minusDays(1),
+                today.minusDays(1).atTime(9, 0), today.minusDays(1).atTime(10, 0), 20, 2, 0, 2);
         // 窗口内：已取消、待上架
-        insertSchedule(1106L, STORE_ID, COURSE_ID, GROUP_COURSE, COACH_ID, CLASSROOM_ID, TODAY.plusDays(2),
-                TODAY.plusDays(2).atTime(16, 0), TODAY.plusDays(2).atTime(17, 0), 10, 2, 0, 3);
-        insertSchedule(1107L, STORE_ID, COURSE_ID, GROUP_COURSE, COACH_ID, CLASSROOM_ID, TODAY.plusDays(3),
-                TODAY.plusDays(3).atTime(15, 0), TODAY.plusDays(3).atTime(16, 0), 10, 2, 0, 1);
+        insertSchedule(1106L, STORE_ID, COURSE_ID, GROUP_COURSE, COACH_ID, CLASSROOM_ID, today.plusDays(2),
+                today.plusDays(2).atTime(16, 0), today.plusDays(2).atTime(17, 0), 10, 2, 0, 3);
+        insertSchedule(1107L, STORE_ID, COURSE_ID, GROUP_COURSE, COACH_ID, CLASSROOM_ID, today.plusDays(3),
+                today.plusDays(3).atTime(15, 0), today.plusDays(3).atTime(16, 0), 10, 2, 0, 1);
         // 课种快照：课程当前课种与排课快照方向相反，用于证明筛选与展示都取快照列
-        insertSchedule(1108L, STORE_ID, COURSE_ID, SPECIAL_COURSE, COACH_ID, CLASSROOM_ID, TODAY.plusDays(4),
-                TODAY.plusDays(4).atTime(15, 0), TODAY.plusDays(4).atTime(16, 0), 8, 2, 0, 2);
-        insertSchedule(1114L, STORE_ID, OTHER_COURSE_ID, GROUP_COURSE, COACH_ID, CLASSROOM_ID, TODAY.plusDays(7),
-                TODAY.plusDays(7).atTime(10, 0), TODAY.plusDays(7).atTime(11, 0), 20, 2, 0, 2);
+        insertSchedule(1108L, STORE_ID, COURSE_ID, SPECIAL_COURSE, COACH_ID, CLASSROOM_ID, today.plusDays(4),
+                today.plusDays(4).atTime(15, 0), today.plusDays(4).atTime(16, 0), 8, 2, 0, 2);
+        insertSchedule(1114L, STORE_ID, OTHER_COURSE_ID, GROUP_COURSE, COACH_ID, CLASSROOM_ID, today.plusDays(7),
+                today.plusDays(7).atTime(10, 0), today.plusDays(7).atTime(11, 0), 20, 2, 0, 2);
         // 窗口内但不同教练 / 不同门店
-        insertSchedule(1109L, STORE_ID, COURSE_ID, GROUP_COURSE, OTHER_COACH_ID, CLASSROOM_ID, TODAY.plusDays(5),
-                TODAY.plusDays(5).atTime(11, 0), TODAY.plusDays(5).atTime(12, 0), 20, 2, 0, 2);
-        insertSchedule(1110L, OTHER_STORE_ID, COURSE_ID, GROUP_COURSE, COACH_ID, CLASSROOM_ID, TODAY.plusDays(5),
-                TODAY.plusDays(5).atTime(12, 0), TODAY.plusDays(5).atTime(13, 0), 20, 2, 0, 2);
+        insertSchedule(1109L, STORE_ID, COURSE_ID, GROUP_COURSE, OTHER_COACH_ID, CLASSROOM_ID, today.plusDays(5),
+                today.plusDays(5).atTime(11, 0), today.plusDays(5).atTime(12, 0), 20, 2, 0, 2);
+        insertSchedule(1110L, OTHER_STORE_ID, COURSE_ID, GROUP_COURSE, COACH_ID, CLASSROOM_ID, today.plusDays(5),
+                today.plusDays(5).atTime(12, 0), today.plusDays(5).atTime(13, 0), 20, 2, 0, 2);
         // 窗口内满员：剩余名额 0，不可约
-        insertSchedule(1111L, STORE_ID, COURSE_ID, GROUP_COURSE, COACH_ID, CLASSROOM_ID, TODAY.plusDays(5),
-                TODAY.plusDays(5).atTime(13, 0), TODAY.plusDays(5).atTime(14, 0), 5, 2, 5, 2);
+        insertSchedule(1111L, STORE_ID, COURSE_ID, GROUP_COURSE, COACH_ID, CLASSROOM_ID, today.plusDays(5),
+                today.plusDays(5).atTime(13, 0), today.plusDays(5).atTime(14, 0), 5, 2, 5, 2);
         // 窗口内同一开始时间的两场：验证 id ASC 稳定排序
-        insertSchedule(1113L, STORE_ID, COURSE_ID, GROUP_COURSE, COACH_ID, CLASSROOM_ID, TODAY.plusDays(6),
-                TODAY.plusDays(6).atTime(10, 0), TODAY.plusDays(6).atTime(11, 0), 20, 2, 0, 2);
-        insertSchedule(1112L, STORE_ID, COURSE_ID, GROUP_COURSE, COACH_ID, CLASSROOM_ID, TODAY.plusDays(6),
-                TODAY.plusDays(6).atTime(10, 0), TODAY.plusDays(6).atTime(11, 0), 20, 2, 0, 2);
+        insertSchedule(1113L, STORE_ID, COURSE_ID, GROUP_COURSE, COACH_ID, CLASSROOM_ID, today.plusDays(6),
+                today.plusDays(6).atTime(10, 0), today.plusDays(6).atTime(11, 0), 20, 2, 0, 2);
+        insertSchedule(1112L, STORE_ID, COURSE_ID, GROUP_COURSE, COACH_ID, CLASSROOM_ID, today.plusDays(6),
+                today.plusDays(6).atTime(10, 0), today.plusDays(6).atTime(11, 0), 20, 2, 0, 2);
     }
 
     @Test
@@ -139,7 +116,7 @@ class CoachScheduleHttpTest extends AbstractYogaHttpIntegrationTest {
         JsonNode rows = root.get("rows");
         assertIds(rows, 1101L, 1102L, 1106L, 1111L, 1112L, 1113L, 1114L, 1103L);
 
-        assertEquals("已结束", rows.get(0).get("statusText").asText(), "固定时钟 10:00 时今天 00:00 的场次已结束");
+        assertEquals("已结束", rows.get(0).get("statusText").asText(), "今天已结束的场次仍可浏览");
         assertFalse(rows.get(0).get("bookable").asBoolean());
         assertEquals("可约", rows.get(1).get("statusText").asText());
         assertTrue(rows.get(1).get("bookable").asBoolean());
@@ -154,8 +131,8 @@ class CoachScheduleHttpTest extends AbstractYogaHttpIntegrationTest {
         assertEquals("瑜伽团课大教室", rows.get(1).get("classroomName").asText());
         assertEquals(GROUP_COURSE, rows.get(1).get("courseType").asInt(), "课种取排课快照");
         assertEquals("团课", rows.get(1).get("courseTypeName").asText());
-        assertEquals(TODAY.plusDays(1).toString(), rows.get(1).get("scheduleDate").asText());
-        assertTrue(rows.get(1).get("startTime").asText().startsWith(TODAY.plusDays(1).toString()));
+        assertEquals(today.plusDays(1).toString(), rows.get(1).get("scheduleDate").asText());
+        assertTrue(rows.get(1).get("startTime").asText().startsWith(today.plusDays(1).toString()));
         // 1114：课程当前课种是特色课，排课快照是团课 → 必须出现在团课查询里，且课种按快照展示
         assertEquals("空中瑜伽", rows.get(6).get("courseName").asText());
         assertEquals(GROUP_COURSE, rows.get(6).get("courseType").asInt(), "展示取快照而非课程当前课种");
@@ -235,7 +212,7 @@ class CoachScheduleHttpTest extends AbstractYogaHttpIntegrationTest {
     void existingPublicScheduleEndpoint_shouldKeepBehavior() throws Exception {
         MvcResult result = mockMvc
                 .perform(get("/api/schedules").param("storeId", String.valueOf(STORE_ID))
-                        .param("courseType", String.valueOf(GROUP_COURSE)).param("date", TODAY.toString()))
+                        .param("courseType", String.valueOf(GROUP_COURSE)).param("date", today.toString()))
                 .andExpect(status().isOk()).andReturn();
         JsonNode root = JSON.readTree(new String(result.getResponse().getContentAsByteArray(), StandardCharsets.UTF_8));
         assertEquals(200, root.get("code").asInt());

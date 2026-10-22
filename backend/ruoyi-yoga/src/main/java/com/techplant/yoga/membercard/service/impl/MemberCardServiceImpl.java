@@ -150,7 +150,7 @@ public class MemberCardServiceImpl implements MemberCardService {
                 : MemberCardTypeEnum.ANNUAL_PERIOD_COUNT;
 
         // 有效期起为开卡日 00:00:00，止为「起始日 + 有效天数 - 1 天」的 23:59:59，含首尾日
-        LocalDateTime activateTime = LocalDateTime.now(CardNoGenerator.CARD_ZONE);
+        LocalDateTime activateTime = LocalDateTime.now();
         LocalDateTime validStartTime = activateTime.toLocalDate().atStartOfDay();
         LocalDateTime validEndTime = validStartTime.toLocalDate().plusDays(cardType.validDays(validPeriodCount) - 1L)
                 .atTime(23, 59, 59);
@@ -175,8 +175,7 @@ public class MemberCardServiceImpl implements MemberCardService {
         }
 
         // 停卡只写停卡时间与原因，剩余次数与有效期原样保留
-        if (memberCardDao.stop(cardId, LocalDateTime.now(CardNoGenerator.CARD_ZONE), stopReason,
-                CurrentUserUtils.getUserIdOrNull()) != 1) {
+        if (memberCardDao.stop(cardId, LocalDateTime.now(), stopReason, CurrentUserUtils.getUserIdOrNull()) != 1) {
             throw new ServiceException("会员卡状态已变更，请刷新后重试", CONFLICT);
         }
         return detailOf(requireCard(cardId));
@@ -238,7 +237,7 @@ public class MemberCardServiceImpl implements MemberCardService {
         if (card.getStopTime() != null) {
             throw new ServiceException("会员卡已停卡，不能预约", CONFLICT);
         }
-        LocalDateTime now = LocalDateTime.now(CardNoGenerator.CARD_ZONE);
+        LocalDateTime now = LocalDateTime.now();
         if (card.getValidStartTime() == null || card.getValidEndTime() == null || now.isBefore(card.getValidStartTime())
                 || now.isAfter(card.getValidEndTime())) {
             throw new ServiceException("会员卡已过期，不能预约", CONFLICT);
@@ -268,7 +267,7 @@ public class MemberCardServiceImpl implements MemberCardService {
         }
         Map<Long, String> memberNames = loadMemberNames(cards);
         Map<Long, StoreSummaryVO> stores = loadStoreSummaries(cards);
-        LocalDate today = LocalDate.now(CardNoGenerator.CARD_ZONE);
+        LocalDate today = LocalDate.now();
         for (MemberCardDO card : cards) {
             rows.add(MemberCardConverter.toListItemVO(card, memberNames.get(card.getMemberId()),
                     storeNoOf(stores, card.getOpenStoreId()), storeNameOf(stores, card.getOpenStoreId()),
@@ -284,7 +283,7 @@ public class MemberCardServiceImpl implements MemberCardService {
         Map<Long, StoreSummaryVO> stores = loadStoreSummaries(cards);
         return MemberCardConverter.toDetailVO(card, memberNames.get(card.getMemberId()),
                 storeNoOf(stores, card.getOpenStoreId()), storeNameOf(stores, card.getOpenStoreId()),
-                storeNameOf(stores, card.getStoreId()), remainingDays(card, LocalDate.now(CardNoGenerator.CARD_ZONE)));
+                storeNameOf(stores, card.getStoreId()), remainingDays(card, LocalDate.now()));
     }
 
     /**
@@ -301,7 +300,7 @@ public class MemberCardServiceImpl implements MemberCardService {
             addIfPresent(storeIds, card.getStoreId());
         }
         Map<Long, StoreSummaryVO> stores = indexStores(storeService.summaries(storeIds));
-        LocalDateTime now = LocalDateTime.now(CardNoGenerator.CARD_ZONE);
+        LocalDateTime now = LocalDateTime.now();
         LocalDate today = now.toLocalDate();
         for (MemberCardDO card : cards) {
             rows.add(MemberCardConverter.toPublicItemVO(card, publicStatus(card, now),

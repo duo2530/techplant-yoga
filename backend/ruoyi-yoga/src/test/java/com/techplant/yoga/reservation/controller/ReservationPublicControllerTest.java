@@ -11,7 +11,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -34,7 +33,6 @@ import com.techplant.yoga.classroom.dao.ClassroomDaoImpl;
 import com.techplant.yoga.classroom.service.impl.ClassroomServiceImpl;
 import com.techplant.yoga.coach.dao.CoachDaoImpl;
 import com.techplant.yoga.coach.service.impl.CoachServiceImpl;
-import com.techplant.yoga.common.config.BusinessTimeConfig;
 import com.techplant.yoga.common.config.JacksonConfig;
 import com.techplant.yoga.common.testcontainers.AbstractYogaIntegrationTest;
 import com.techplant.yoga.common.testcontainers.YogaMyBatisTestConfig;
@@ -67,17 +65,15 @@ import com.techplant.yoga.store.service.impl.StoreServiceImpl;
  * <p>覆盖统一响应、参数校验、ID 字符串化与时间格式；会员鉴权链与 Redis 不在本测试范围内，
  * 测试直接往登录上下文写会员主体。</p>
  */
-@ContextConfiguration(classes = {YogaMyBatisTestConfig.class, BusinessTimeConfig.class, StoreDaoImpl.class,
-    StoreRegionDictDaoImpl.class, StoreServiceImpl.class, ClassroomDaoImpl.class, ClassroomServiceImpl.class,
-    CoachDaoImpl.class, CoachServiceImpl.class, CourseDaoImpl.class, CourseServiceImpl.class, MemberDaoImpl.class,
+@ContextConfiguration(classes = {YogaMyBatisTestConfig.class, StoreDaoImpl.class, StoreRegionDictDaoImpl.class,
+    StoreServiceImpl.class, ClassroomDaoImpl.class, ClassroomServiceImpl.class, CoachDaoImpl.class,
+    CoachServiceImpl.class, CourseDaoImpl.class, CourseServiceImpl.class, MemberDaoImpl.class,
     MemberLevelDictDaoImpl.class, MemberServiceImpl.class, MemberCardDaoImpl.class, MemberCardTransactionDaoImpl.class,
     MemberCardTransactionServiceImpl.class, CardNoGenerator.class, MemberCardServiceImpl.class, ScheduleDaoImpl.class,
     ScheduleBookingServiceImpl.class, ScheduleServiceImpl.class, ReservationDaoImpl.class,
     ReservationServiceImpl.class})
 @DisplayName("ReservationPublicController 接口测试（MockMvc：统一响应 / 参数校验 / ID 字符串化 / 时间格式）")
 class ReservationPublicControllerTest extends AbstractYogaIntegrationTest {
-    private static final ZoneId BUSINESS_ZONE = ZoneId.of("Asia/Shanghai");
-
     private static final Long STORE_ID = 1000L;
 
     private static final Long COURSE_ID = 3000L;
@@ -180,8 +176,7 @@ class ReservationPublicControllerTest extends AbstractYogaIntegrationTest {
                 .andExpect(jsonPath("$.rows[0].courseTypeName").value("团课"))
                 .andExpect(jsonPath("$.rows[0].coachName").value("林教练"))
                 .andExpect(jsonPath("$.rows[0].storeAddress").value("漕溪北路 88 号"))
-                .andExpect(
-                        jsonPath("$.rows[0].scheduleDate").value(LocalDate.now(BUSINESS_ZONE).plusDays(1).toString()))
+                .andExpect(jsonPath("$.rows[0].scheduleDate").value(LocalDate.now().plusDays(1).toString()))
                 .andExpect(jsonPath("$.rows[0].startTime").value(scheduleStartTime()
                         .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))))
                 .andExpect(jsonPath("$.rows[0].status").value(1))
@@ -266,7 +261,7 @@ class ReservationPublicControllerTest extends AbstractYogaIntegrationTest {
                 + " create_time, update_by, update_time) VALUES (?, '13800138000', NULL, '8000', '张小明', 0, 0, 1,"
                 + " NOW(), 1, NOW())", MEMBER_ID);
 
-        LocalDateTime now = LocalDateTime.now(BUSINESS_ZONE);
+        LocalDateTime now = LocalDateTime.now();
         jdbcTemplate.update("INSERT INTO t_member_card (id, member_id, open_store_id, card_no, card_name, card_type,"
                 + " course_scope, store_id, purchase_times, gift_times, remaining_times, valid_period_unit,"
                 + " valid_period_count, valid_start_time, valid_end_time, activate_time, stop_time, stop_reason,"
@@ -274,7 +269,7 @@ class ReservationPublicControllerTest extends AbstractYogaIntegrationTest {
                 + " 1, 1, ?, 12, 0, 12, 1, 12, ?, ?, ?, NULL, NULL, 1, NOW(), 1, NOW())", TIMES_CARD_ID, MEMBER_ID,
                 STORE_ID, STORE_ID, now.minusDays(1), now.plusDays(300), now.minusDays(1));
 
-        LocalDate tomorrow = LocalDate.now(BUSINESS_ZONE).plusDays(1);
+        LocalDate tomorrow = LocalDate.now().plusDays(1);
         insertSchedule(SCHEDULE_ID, tomorrow.atTime(10, 0), tomorrow.atTime(11, 0));
         insertSchedule(SCHEDULE_TOO_EARLY_ID, now.plusMinutes(40), now.plusMinutes(100));
     }

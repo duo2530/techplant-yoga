@@ -82,7 +82,7 @@ public interface ScheduleService {
     PublicScheduleDetailVO publicDetail(Long scheduleId);
 
     /**
-     * 教练页排课列表：窗口固定为业务时区今天起 14 天（含今天），
+     * 教练页排课列表：窗口固定为今天起 14 天（含今天），
      * 复用公开可见性、卡片装配与 {@code bookable} 推导，按 {@code start_time ASC, id ASC} 分页
      *
      * @param coachId 教练ID

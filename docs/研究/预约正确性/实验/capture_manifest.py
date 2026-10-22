@@ -1,6 +1,6 @@
 """Capture source hashes and symbol locations without reading runtime secrets."""
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime
 from pathlib import Path
 import argparse
 import hashlib
@@ -57,7 +57,7 @@ def main():
         items.append({"path": relative, "sha256": hashlib.sha256(raw).hexdigest(), "locations": lines})
     def git(*args):
         return subprocess.check_output(["git", "-c", "core.quotepath=false", *args], cwd=root).decode("utf-8").strip()
-    report = {"captured_at": datetime.now(timezone(timedelta(hours=8))).isoformat(),
+    report = {"captured_at": datetime.now().astimezone().isoformat(),
               "git_head": git("rev-parse", "HEAD"), "working_tree": git("status", "--short"),
               "observation": "working tree, including changes predating this research", "sources": items}
     target = Path(__file__).with_name("source-manifest.json")

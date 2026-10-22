@@ -18,7 +18,6 @@ public final class YogaMySqlContainer {
 
     private static final String PASSWORD = "yoga";
 
-    /** 容器与 JDBC 驱动取同一个时区偏移：SQL 的 {@code NOW()} 与 Java 写入的时间才能直接比较。 */
     private static final String TIME_ZONE_OFFSET = currentOffset();
 
     private static final String URL_PARAMETERS = "?useUnicode=true&characterEncoding=utf8"
@@ -26,7 +25,7 @@ public final class YogaMySqlContainer {
             + TIME_ZONE_OFFSET.replace("+", "%2B");
 
     private static final MySQLContainer<?> CONTAINER = new MySQLContainer<>(IMAGE).withDatabaseName(DATABASE)
-            .withUsername(USERNAME).withPassword(PASSWORD).withCommand("--default-time-zone=" + TIME_ZONE_OFFSET);
+            .withUsername(USERNAME).withPassword(PASSWORD).withEnv("TZ", ZoneId.systemDefault().getId());
 
     static {
         CONTAINER.start();

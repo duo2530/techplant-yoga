@@ -184,7 +184,7 @@ class MemberCardServiceImplTest extends AbstractYogaIntegrationTest {
     @Test
     @DisplayName("发卡：同一开卡门店当前时间片已有发卡 → 409 卡号冲突，不覆盖旧卡")
     void create_withCardNoConflict_shouldReportConflict() {
-        LocalDateTime now = LocalDateTime.now(CardNoGenerator.CARD_ZONE);
+        LocalDateTime now = LocalDateTime.now();
         // 覆盖当前秒与后两秒：服务端在真正生成卡号时读时间，落在这个区间内即冲突
         for (int offset = 0; offset < 3; offset++) {
             insertCard(3000L + offset, cardNoGenerator.generate(OPEN_STORE_NO, now.plusSeconds(offset)));
@@ -205,7 +205,7 @@ class MemberCardServiceImplTest extends AbstractYogaIntegrationTest {
 
         MemberCardDetailVO detail = memberCardService.activate(cardId);
 
-        LocalDate today = LocalDate.now(CardNoGenerator.CARD_ZONE);
+        LocalDate today = LocalDate.now();
         assertEquals(Integer.valueOf(1), memberCardDao.selectById(cardId).getValidPeriodUnit(), "次数卡单位是月");
         assertEquals(today.atStartOfDay(), detail.getValidStartTime());
         assertEquals(today.plusDays(359).atTime(23, 59, 59), detail.getValidEndTime(), "12 个月 = 360 天，含首尾日");
@@ -224,7 +224,7 @@ class MemberCardServiceImplTest extends AbstractYogaIntegrationTest {
 
         MemberCardDetailVO detail = memberCardService.activate(cardId);
 
-        LocalDate today = LocalDate.now(CardNoGenerator.CARD_ZONE);
+        LocalDate today = LocalDate.now();
         assertEquals(Integer.valueOf(2), memberCardDao.selectById(cardId).getValidPeriodUnit(), "年卡单位是年");
         assertEquals(today.atStartOfDay(), detail.getValidStartTime());
         assertEquals(today.plusDays(364).atTime(23, 59, 59), detail.getValidEndTime());
@@ -361,7 +361,7 @@ class MemberCardServiceImplTest extends AbstractYogaIntegrationTest {
         assertNotNull(cardNo);
         assertEquals(18, cardNo.length(), "卡号共 18 位：" + cardNo);
         assertTrue(cardNo.matches("\\d{18}"), "卡号必须是 18 位数字：" + cardNo);
-        String today = LocalDate.now(CardNoGenerator.CARD_ZONE).toString().replace("-", "");
+        String today = LocalDate.now().toString().replace("-", "");
         assertEquals(today, cardNo.substring(0, 8), "卡号前 8 位是发卡日期");
         assertEquals(OPEN_STORE_NO, cardNo.substring(8, 12), "卡号第 9~12 位是开卡门店编号");
         assertTrue(Integer.parseInt(cardNo.substring(12, 14)) <= 23, "卡号时间是 24 小时制：" + cardNo.substring(12));

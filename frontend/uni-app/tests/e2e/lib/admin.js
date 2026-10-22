@@ -52,7 +52,7 @@ function formatDateTime(date) {
   return formatDate(date) + ' ' + pad2(date.getHours()) + ':' + pad2(date.getMinutes()) + ':' + pad2(date.getSeconds())
 }
 
-/** 未来第 dayOffset 天的指定时刻（服务端业务时区与本机一致时可直接使用） */
+/** 未来第 dayOffset 天的指定时刻 */
 function futureDateTime(dayOffset, hour, minute) {
   const date = new Date()
   date.setHours(0, 0, 0, 0)

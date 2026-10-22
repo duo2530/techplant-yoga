@@ -1,9 +1,5 @@
 package com.techplant.yoga.common.testcontainers;
 
-import java.time.Clock;
-import java.time.Instant;
-import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.List;
 import java.util.TimeZone;
 import javax.sql.DataSource;
@@ -78,15 +74,6 @@ import com.techplant.yoga.common.config.JacksonConfig;
     SysPermissionService.class, PermissionService.class, SysUserServiceImpl.class, SysRoleServiceImpl.class,
     SysMenuServiceImpl.class, SysDeptServiceImpl.class, SysConfigServiceImpl.class, SysPostServiceImpl.class})
 public class YogaSecurityTestConfig implements WebMvcConfigurer {
-    /** 固定测试时钟的时区；夹具与断言由固定 Instant 推导，不依赖运行时刻 */
-    public static final ZoneId TEST_ZONE = ZoneId.of("Asia/Shanghai");
-
-    /** 固定测试日期：2026-10-20 */
-    public static final LocalDate FIXED_TODAY = LocalDate.of(2026, 10, 20);
-
-    /** 固定测试时刻：2026-10-20 10:00（业务时区） */
-    public static final Instant FIXED_INSTANT = FIXED_TODAY.atTime(10, 0).atZone(TEST_ZONE).toInstant();
-
     /** 管理端安全链依赖的若依基础表：上下文创建前建好表结构，数据由各用例准备。 */
     private static final String[] SYS_TABLES = {"sys_user", "sys_role", "sys_menu", "sys_role_menu", "sys_user_role",
         "sys_post", "sys_user_post", "sys_config", "sys_dept", "sys_dict_type", "sys_dict_data", "sys_role_dept"};
@@ -127,13 +114,6 @@ public class YogaSecurityTestConfig implements WebMvcConfigurer {
     @Bean
     public static PropertySourcesPlaceholderConfigurer propertySourcesPlaceholderConfigurer() {
         return new PropertySourcesPlaceholderConfigurer();
-    }
-
-    /** 固定业务时钟：HTTP 用例的「今天」与可约判定完全可复现 */
-    @Bean
-    @Primary
-    public Clock fixedBusinessClock() {
-        return Clock.fixed(FIXED_INSTANT, TEST_ZONE);
     }
 
     /** 若依用户服务需要 Bean Validation；MVC 自带的校验器仍在，这里显式标为优先 */

@@ -245,7 +245,7 @@ class MemberCardPublicControllerTest extends AbstractYogaIntegrationTest {
      * 1105 正常年卡、1106 停卡年卡、1107 未开卡次数卡、1108 适用门店已删除、1109 未开卡即停卡。</p>
      */
     private void insertCards() {
-        LocalDateTime now = LocalDateTime.now(CardNoGenerator.CARD_ZONE);
+        LocalDateTime now = LocalDateTime.now();
         LocalDate today = now.toLocalDate();
 
         // 1101 年卡：未开卡

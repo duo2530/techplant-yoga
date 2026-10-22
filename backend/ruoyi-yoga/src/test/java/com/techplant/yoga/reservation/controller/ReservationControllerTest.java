@@ -6,7 +6,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -24,7 +23,6 @@ import com.techplant.yoga.classroom.dao.ClassroomDaoImpl;
 import com.techplant.yoga.classroom.service.impl.ClassroomServiceImpl;
 import com.techplant.yoga.coach.dao.CoachDaoImpl;
 import com.techplant.yoga.coach.service.impl.CoachServiceImpl;
-import com.techplant.yoga.common.config.BusinessTimeConfig;
 import com.techplant.yoga.common.config.JacksonConfig;
 import com.techplant.yoga.common.testcontainers.AbstractYogaIntegrationTest;
 import com.techplant.yoga.common.testcontainers.YogaMyBatisTestConfig;
@@ -54,17 +52,15 @@ import com.techplant.yoga.store.service.impl.StoreServiceImpl;
  *
  * <p>覆盖统一响应、参数校验、ID 字符串化与时间格式；管理端鉴权链不在本测试范围内。</p>
  */
-@ContextConfiguration(classes = {YogaMyBatisTestConfig.class, BusinessTimeConfig.class, StoreDaoImpl.class,
-    StoreRegionDictDaoImpl.class, StoreServiceImpl.class, ClassroomDaoImpl.class, ClassroomServiceImpl.class,
-    CoachDaoImpl.class, CoachServiceImpl.class, CourseDaoImpl.class, CourseServiceImpl.class, MemberDaoImpl.class,
+@ContextConfiguration(classes = {YogaMyBatisTestConfig.class, StoreDaoImpl.class, StoreRegionDictDaoImpl.class,
+    StoreServiceImpl.class, ClassroomDaoImpl.class, ClassroomServiceImpl.class, CoachDaoImpl.class,
+    CoachServiceImpl.class, CourseDaoImpl.class, CourseServiceImpl.class, MemberDaoImpl.class,
     MemberLevelDictDaoImpl.class, MemberServiceImpl.class, MemberCardDaoImpl.class, MemberCardTransactionDaoImpl.class,
     MemberCardTransactionServiceImpl.class, CardNoGenerator.class, MemberCardServiceImpl.class, ScheduleDaoImpl.class,
     ScheduleBookingServiceImpl.class, ScheduleServiceImpl.class, ReservationDaoImpl.class,
     ReservationServiceImpl.class})
 @DisplayName("ReservationController 接口测试（MockMvc：管理端列表字段 / 参数校验 / ID 字符串化 / 时间格式）")
 class ReservationControllerTest extends AbstractYogaIntegrationTest {
-    private static final ZoneId BUSINESS_ZONE = ZoneId.of("Asia/Shanghai");
-
     private static final Long STORE_ID = 1000L;
 
     private static final Long COURSE_ID = 3000L;
@@ -192,7 +188,7 @@ class ReservationControllerTest extends AbstractYogaIntegrationTest {
     }
 
     private LocalDate tomorrow() {
-        return LocalDate.now(BUSINESS_ZONE).plusDays(1);
+        return LocalDate.now().plusDays(1);
     }
 
     private String cardNo() {
@@ -216,7 +212,7 @@ class ReservationControllerTest extends AbstractYogaIntegrationTest {
                 + " create_time, update_by, update_time) VALUES (?, '13800138000', NULL, '8000', '张小明', 0, 0, 1,"
                 + " NOW(), 1, NOW())", MEMBER_ID);
 
-        LocalDateTime now = LocalDateTime.now(BUSINESS_ZONE);
+        LocalDateTime now = LocalDateTime.now();
         jdbcTemplate.update("INSERT INTO t_member_card (id, member_id, open_store_id, card_no, card_name, card_type,"
                 + " course_scope, store_id, purchase_times, gift_times, remaining_times, valid_period_unit,"
                 + " valid_period_count, valid_start_time, valid_end_time, activate_time, stop_time, stop_reason,"

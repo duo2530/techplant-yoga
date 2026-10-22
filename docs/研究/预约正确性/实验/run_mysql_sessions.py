@@ -1,7 +1,7 @@
 """Run isolated MySQL mechanism experiments through persistent CLI sessions."""
 
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime, timedelta, timezone
+from datetime import datetime
 from pathlib import Path
 from queue import Queue, Empty
 from threading import Thread
@@ -92,14 +92,14 @@ def wait_for_lock(observer, future):
 def run():
     name = "yoga-research-" + uuid.uuid4().hex[:10]
     transcript, checks, sessions = [], {}, []
-    report = {"started_at": datetime.now(timezone(timedelta(hours=8))).isoformat(),
+    report = {"started_at": datetime.now().astimezone().isoformat(),
               "image": IMAGE, "container": name, "transcript": transcript, "checks": checks,
               "runner_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest()}
     created = False
     try:
         report["docker_version"] = docker("info", "--format", "{{.ServerVersion}}")
         docker("run", "--name", name, "--rm", "-d", "-e", "MYSQL_ROOT_PASSWORD=research-only",
-               "-e", "MYSQL_DATABASE=booking_research", IMAGE, "--default-time-zone=+08:00", timeout=60)
+               "-e", "MYSQL_DATABASE=booking_research", IMAGE, timeout=60)
         created = True
         deadline = time.monotonic() + 50
         while True:
@@ -209,7 +209,7 @@ def run():
         if created:
             docker("stop", "--time", "5", name)
             report["container_removed"] = True
-        report["finished_at"] = datetime.now(timezone(timedelta(hours=8))).isoformat()
+        report["finished_at"] = datetime.now().astimezone().isoformat()
         Path(__file__).with_name("mysql-results.json").write_text(
             json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(json.dumps({k: v for k, v in report.items() if k != "transcript"}, ensure_ascii=False, indent=2))

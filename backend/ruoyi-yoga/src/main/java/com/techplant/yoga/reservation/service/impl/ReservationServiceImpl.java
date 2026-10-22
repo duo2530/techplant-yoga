@@ -4,7 +4,6 @@ import lombok.RequiredArgsConstructor;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -66,9 +65,6 @@ public class ReservationServiceImpl implements ReservationService {
     private static final int PARAM_ERROR = 400;
 
     private static final int INTERNAL_ERROR = 500;
-
-    /** 预约业务时区 */
-    private static final ZoneId BUSINESS_ZONE = ZoneId.of("Asia/Shanghai");
 
     /** 可预约窗口：今天起 14 天内（含今天） */
     private static final int SCHEDULE_WINDOW_DAYS = 14;
@@ -143,7 +139,7 @@ public class ReservationServiceImpl implements ReservationService {
             throw new ServiceException("您已预约该课程", CONFLICT);
         }
 
-        LocalDateTime reservationTime = LocalDateTime.now(BUSINESS_ZONE);
+        LocalDateTime reservationTime = LocalDateTime.now();
         ReservationDO reservation = ReservationConverter.toDO(dto, memberId, schedule, reservationTime);
         try {
             if (reservationDao.insert(reservation) != 1 || reservation.getId() == null) {
@@ -183,7 +179,7 @@ public class ReservationServiceImpl implements ReservationService {
         if (schedule == null || ScheduleStatusEnum.of(schedule.getStatus()) != ScheduleStatusEnum.PUBLISHED) {
             throw new ServiceException("排课已取消或已结束，不能取消预约", CONFLICT);
         }
-        LocalDateTime now = LocalDateTime.now(BUSINESS_ZONE);
+        LocalDateTime now = LocalDateTime.now();
         if (reservation.getStartTime() == null
                 || now.isAfter(reservation.getStartTime().minusMinutes(CANCEL_DEADLINE_MINUTES))) {
             throw new ServiceException("已超过取消截止时间，不能取消预约", CONFLICT);
@@ -221,7 +217,7 @@ public class ReservationServiceImpl implements ReservationService {
         if (reservation.getStartTime() == null || reservation.getEndTime() == null) {
             throw new ServiceException("排课数据异常，不能签到", CONFLICT);
         }
-        LocalDateTime now = LocalDateTime.now(BUSINESS_ZONE);
+        LocalDateTime now = LocalDateTime.now();
         if (now.isBefore(reservation.getStartTime().minusMinutes(CHECK_IN_OPEN_MINUTES))) {
             throw new ServiceException("未到签到时间", CONFLICT);
         }
@@ -289,7 +285,7 @@ public class ReservationServiceImpl implements ReservationService {
         Map<Long, MemberCardSummaryVO> cards = indexCardSummaries(reservationCardIds(records));
         Map<Long, Integer> deductTimes = memberCardTransactionService.deductedTimesOf(reservationIds(records));
 
-        LocalDateTime now = LocalDateTime.now(BUSINESS_ZONE);
+        LocalDateTime now = LocalDateTime.now();
         List<ReservationAdminItemVO> list = new ArrayList<ReservationAdminItemVO>(records.size());
         for (ReservationDO reservation : records) {
             ScheduleBookingSnapshot schedule = schedules.get(reservation.getScheduleId());
@@ -374,7 +370,7 @@ public class ReservationServiceImpl implements ReservationService {
         if (status == ScheduleStatusEnum.CANCELLED) {
             throw new ServiceException("排课已取消，不能预约", CONFLICT);
         }
-        LocalDateTime now = LocalDateTime.now(BUSINESS_ZONE);
+        LocalDateTime now = LocalDateTime.now();
         if (schedule.getStartTime() == null || !schedule.getStartTime().isAfter(now)) {
             throw new ServiceException("排课已开始或已结束，不能预约", CONFLICT);
         }
