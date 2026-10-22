@@ -138,9 +138,8 @@
           <view
             v-for="item in schedules"
             :key="item.id"
-            class="sched-card press"
+            class="sched-card"
             :class="{ 'sched-card--off': !item.bookable }"
-            @tap="goDetail(item)"
           >
             <image
               v-if="item.courseCoverUrl && !coverFailed[item.id]"
@@ -463,13 +462,6 @@ function onCoverError(scheduleId) {
 }
 
 /* ---------------- 交互 ---------------- */
-
-function goDetail(item) {
-  if (!item || !item.id) {
-    return
-  }
-  uni.navigateTo({ url: '/pages/detail/index?scheduleId=' + encodeURIComponent(item.id) })
-}
 
 function goHome() {
   uni.switchTab({ url: '/pages/home/index' })
