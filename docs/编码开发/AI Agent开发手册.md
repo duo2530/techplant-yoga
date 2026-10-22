@@ -23,7 +23,7 @@ Java 源码统一使用 UTF-8、LF、4 空格缩进、左大括号同行，续�
 [eclipse-formatter.xml](../../tools/java-style/eclipse-formatter.xml)。包名、import 和包含 URL 的行不检查行宽；
 不可自动换行的长字符串或注释需要手动拆分。
 
-在仓库根目录启用提交钩子（每个克隆执行一次）：
+在仓库根目录启用 Git 钩子（每个克隆执行一次，同时启用 `pre-commit` 和 `pre-push`）：
 
 ```powershell
 git config core.hooksPath .githooks
@@ -32,7 +32,7 @@ git config core.hooksPath .githooks
 macOS / Linux 还需确保钩子可执行：
 
 ```bash
-chmod +x .githooks/pre-commit
+chmod +x .githooks/pre-commit .githooks/pre-push
 ```
 
 提交时自动格式化暂存的后端 Java 源码（包含测试源码），检查通过后重新暂存格式化结果。

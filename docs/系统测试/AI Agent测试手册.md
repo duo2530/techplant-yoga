@@ -13,6 +13,30 @@
 - 需要防止回归的行为通过测试约束，不依赖源码注释提醒。全量接口 mock、编译和静态检查不能替代集成测试或端到端测试。
 - 微信授权、平台 API 等小程序能力仍需开发者工具或真机验证，H5 浏览器测试不能代替这些检查。
 
+## 开发与推送时机
+
+- 每个功能实现或缺陷修复完成后，必须新增或更新对应的集成测试，并实际执行受影响的测试；涉及公共配置、身份隔离、事务或跨模块调用链时，同时运行相关回归测试。不得把测试编写和首次执行推迟到 push 前。
+- 涉及前端行为时，按本手册的前端测试策略补充并运行对应的 Playwright 端到端测试。
+- 对应测试通过后才可报告功能完成；失败时修复并重新执行。环境不可用时报告阻塞原因和未验证范围，不得报告已完成验证。
+- 每次 `git push` 前，由仓库的 [pre-push](../../.githooks/pre-push) 钩子重新执行全量后端集成测试，不按本次改动文件筛选，也不复用此前测试通过的结果；仅修改文档或前端时同样执行。
+- 本手册的“全量集成测试”指 `ruoyi-yoga` 中的全部后端集成测试及其 Maven 依赖模块测试，不包含 Playwright 端到端测试和真机验收。前端测试仍按改动范围执行。
+
+### push 前自动检查
+
+使用 Git `pre-push` 作为统一入口，终端、IDE 和 Agent 发起的正常 Git 推送共用同一检查。钩子启用方式见[开发手册](../编码开发/AI%20Agent开发手册.md)；新克隆需要单独启用。
+
+钩子在仓库根目录执行以下命令，使用 `clean` 清除旧测试产物，并显式关闭跳过测试和忽略失败的选项：
+
+```powershell
+mvn -B -f backend/pom.xml -pl ruoyi-yoga -am clean test -DskipTests=false -Dmaven.test.skip=false -Dmaven.test.failure.ignore=false
+```
+
+Maven、JDK 或 Docker 不可用、测试失败或构建失败时，钩子以非零退出码阻止推送；修复后重新 push 会重新执行全量测试。测试命令不接收 Git 传给钩子的标准输入。
+
+钩子验证的是当前工作区。推送前应提交或清理相关改动，并推送当前检出的提交；推送其他提交时，应先检出该提交再执行验证，避免把工作区测试结果当成其他提交的验证结果。
+
+本地 Git hook 可被 `--no-verify` 或修改 Git 配置绕过，不能充当服务端强制门禁。项目约定不绕过检查；若需强制所有推送或合并均通过验证，应在 CI 和分支保护中增加相同检查。
+
 ## 后端集成测试
 
 ### 环境与运行
@@ -26,6 +50,15 @@ mvn -f backend/pom.xml -pl ruoyi-yoga -am test
 ```
 
 删除或重命名测试、调整测试资源后，使用 `clean test` 排除旧产物影响。测试报告位于 `backend/ruoyi-yoga/target/surefire-reports/`，确认实际执行的用例、失败和跳过情况。
+
+功能完成后可指定对应的测试类或方法，例如：
+
+```powershell
+mvn -f backend/pom.xml -pl ruoyi-yoga -am test '-Dtest=ReservationServiceImplTest,ReservationControllerTest' -Dsurefire.failIfNoSpecifiedTests=false
+mvn -f backend/pom.xml -pl ruoyi-yoga -am test '-Dtest=ReservationServiceImplTest#方法名' -Dsurefire.failIfNoSpecifiedTests=false
+```
+
+将示例替换为实际受影响的测试类或方法。`surefire.failIfNoSpecifiedTests=false` 用于允许依赖模块没有匹配的测试；必须检查业务模块报告，确认指定用例确实执行，不能仅凭 Maven 成功退出判断通过。push 前的全量命令不使用 `-Dtest` 筛选。
 
 ### 配置与数据
 

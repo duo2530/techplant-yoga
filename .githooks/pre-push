@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+set -e
+
+root=$(git rev-parse --show-toplevel)
+cd "$root"
+
+echo 'TechPlant: running all backend integration tests before push.'
+exec mvn -B -f backend/pom.xml -pl ruoyi-yoga -am clean test \
+    -DskipTests=false -Dmaven.test.skip=false -Dmaven.test.failure.ignore=false </dev/null
