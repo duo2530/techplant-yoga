@@ -12,6 +12,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.techplant.yoga.course.enums.CourseTypeEnum;
 import com.techplant.yoga.schedule.domain.ScheduleDO;
 import com.techplant.yoga.schedule.enums.ScheduleStatusEnum;
 import com.techplant.yoga.schedule.mapper.ScheduleMapper;
@@ -73,6 +74,21 @@ public class ScheduleDaoImpl implements ScheduleDao {
         wrapper.orderByAsc(ScheduleDO::getStartTime);
         wrapper.orderByAsc(ScheduleDO::getId);
         return scheduleMapper.selectPage(new Page<ScheduleDO>(pageNum, pageSize), wrapper);
+    }
+
+    @Override
+    public List<ScheduleDO> selectTodayBookable(Long storeId, LocalDate today, LocalDateTime now, int limit) {
+        LambdaQueryWrapper<ScheduleDO> wrapper = Wrappers.<ScheduleDO>lambdaQuery();
+        wrapper.eq(ScheduleDO::getStoreId, storeId);
+        wrapper.eq(ScheduleDO::getCourseType, CourseTypeEnum.GROUP.getCode());
+        wrapper.eq(ScheduleDO::getScheduleDate, today);
+        wrapper.eq(ScheduleDO::getStatus, ScheduleStatusEnum.PUBLISHED.getCode());
+        wrapper.gt(ScheduleDO::getStartTime, now);
+        wrapper.apply("booked_persons < max_persons");
+        wrapper.orderByAsc(ScheduleDO::getStartTime);
+        wrapper.orderByAsc(ScheduleDO::getId);
+        wrapper.last("LIMIT " + limit);
+        return scheduleMapper.selectList(wrapper);
     }
 
     @Override

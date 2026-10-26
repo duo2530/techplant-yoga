@@ -44,6 +44,7 @@ import com.techplant.yoga.schedule.service.ScheduleService;
 import com.techplant.yoga.schedule.vo.PublicScheduleDetailVO;
 import com.techplant.yoga.schedule.vo.ScheduleCardVO;
 import com.techplant.yoga.schedule.vo.ScheduleDetailVO;
+import com.techplant.yoga.schedule.vo.ScheduleHomeItemVO;
 import com.techplant.yoga.schedule.vo.ScheduleListItemVO;
 import com.techplant.yoga.store.service.StoreService;
 import com.techplant.yoga.store.vo.StoreSummaryVO;
@@ -65,6 +66,9 @@ public class ScheduleServiceImpl implements ScheduleService {
 
     /** 排课窗口：今天起 14 天内（含今天） */
     private static final int SCHEDULE_WINDOW_DAYS = 14;
+
+    /** 首页今日可约团课最多展示条数 */
+    private static final int HOME_BOOKABLE_LIMIT = 2;
 
     /** 用户端日期参数格式（严格 yyyy-MM-dd） */
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ISO_LOCAL_DATE;
@@ -318,6 +322,32 @@ public class ScheduleServiceImpl implements ScheduleService {
         List<ScheduleCardVO> list = assembleCards(page.getRecords(), Collections.singletonList(query.getStoreId()),
                 LocalDateTime.now());
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), list);
+    }
+
+    @Override
+    public List<ScheduleHomeItemVO> publicTodayBookable(Long storeId) {
+        if (storeId == null) {
+            throw new ServiceException("门店ID不能为空", PARAM_ERROR);
+        }
+        // 门店不存在或已删除 → 404「门店不存在或已被删除」
+        storeService.getById(storeId);
+
+        LocalDateTime now = LocalDateTime.now();
+        List<ScheduleDO> records = scheduleDao.selectTodayBookable(storeId, now.toLocalDate(), now,
+                HOME_BOOKABLE_LIMIT);
+        Map<Long, String> courseNames = courseNameMap(distinctIds(records, ScheduleDO::getCourseId));
+        Map<Long, String> coachNames = coachNameMap(distinctIds(records, ScheduleDO::getCoachId));
+        Map<Long, String> classroomNames = classroomNameMap(distinctIds(records, ScheduleDO::getClassroomId));
+
+        List<ScheduleHomeItemVO> list = new ArrayList<ScheduleHomeItemVO>(records.size());
+        for (ScheduleDO schedule : records) {
+            ScheduleHomeItemVO vo = ScheduleConverter.toHomeItemVO(schedule);
+            vo.setCourseName(nameOf(courseNames, schedule.getCourseId()));
+            vo.setCoachName(nameOf(coachNames, schedule.getCoachId()));
+            vo.setClassroomName(nameOf(classroomNames, schedule.getClassroomId()));
+            list.add(vo);
+        }
+        return list;
     }
 
     /** 用户端排课详情：未删除且 {@code status <> 1} 才可见， 否则**一律按不存在返回 404**（不区分「不存在」与「不可见」） */

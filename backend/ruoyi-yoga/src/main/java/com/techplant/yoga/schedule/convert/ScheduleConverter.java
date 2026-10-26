@@ -11,6 +11,7 @@ import com.techplant.yoga.schedule.vo.PublicScheduleDetailVO;
 import com.techplant.yoga.schedule.vo.ScheduleBookingSnapshot;
 import com.techplant.yoga.schedule.vo.ScheduleCardVO;
 import com.techplant.yoga.schedule.vo.ScheduleDetailVO;
+import com.techplant.yoga.schedule.vo.ScheduleHomeItemVO;
 import com.techplant.yoga.schedule.vo.ScheduleListItemVO;
 
 /** 排课对象转换。 */
@@ -85,6 +86,17 @@ public final class ScheduleConverter {
     public static ScheduleCardVO toCardVO(ScheduleDO source, LocalDateTime now) {
         ScheduleCardVO vo = new ScheduleCardVO();
         fillCardFields(vo, source, now);
+        return vo;
+    }
+
+    /** DO → 首页今日可约团课卡片（课程、教练、教室名称由 service 补齐） */
+    public static ScheduleHomeItemVO toHomeItemVO(ScheduleDO source) {
+        ScheduleHomeItemVO vo = new ScheduleHomeItemVO();
+        vo.setId(source.getId());
+        vo.setStartTime(source.getStartTime());
+        vo.setEndTime(source.getEndTime());
+        vo.setBookedPersons(source.getBookedPersons() == null ? 0 : source.getBookedPersons());
+        vo.setMaxPersons(source.getMaxPersons());
         return vo;
     }
 

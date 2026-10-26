@@ -31,6 +31,14 @@ public interface ScheduleDao {
     IPage<ScheduleDO> selectPublicCoachPage(Long coachId, Long storeId, Integer courseType, LocalDate startDate,
             LocalDate endDate, int pageNum, int pageSize);
 
+    /**
+     * 首页今日可约团课：门店 ＋ 团课快照 ＋ 当日 ＋ 已上架 ＋ 未开始 ＋ 仍有名额，按开始时间升序取前 N 条
+     *
+     * @param now   判定「未开始」的基准时间
+     * @param limit 最多返回条数
+     */
+    List<ScheduleDO> selectTodayBookable(Long storeId, LocalDate today, LocalDateTime now, int limit);
+
     /** 按主键查（管理端，物理删除后查不到） */
     ScheduleDO selectById(Long id);
 

@@ -7,6 +7,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import com.ruoyi.common.annotation.Anonymous;
 import com.ruoyi.common.constant.HttpStatus;
@@ -42,6 +43,13 @@ public class SchedulePublicController extends BaseController {
         dataTable.setRows(page.getList());
         dataTable.setTotal(page.getTotal() == null ? 0L : page.getTotal());
         return dataTable;
+    }
+
+    /** 首页今日可约团课：当前门店今天仍可约的团课，最多 2 条 */
+    @ApiOperation("查询首页今日可约团课")
+    @GetMapping("/today-bookable")
+    public AjaxResult todayBookable(@RequestParam("storeId") Long storeId) {
+        return AjaxResult.success(scheduleService.publicTodayBookable(storeId));
     }
 
     /** 排课详情（课程详情页）：未删除且 status<>1 才可见，否则一律 404 */

@@ -1,6 +1,7 @@
 package com.techplant.yoga.schedule.service;
 
 import com.techplant.yoga.common.response.PageResult;
+import java.util.List;
 import com.techplant.yoga.schedule.dto.ScheduleCreateDTO;
 import com.techplant.yoga.schedule.dto.ScheduleUpdateDTO;
 import com.techplant.yoga.schedule.query.CoachScheduleQuery;
@@ -9,6 +10,7 @@ import com.techplant.yoga.schedule.query.ScheduleQuery;
 import com.techplant.yoga.schedule.vo.PublicScheduleDetailVO;
 import com.techplant.yoga.schedule.vo.ScheduleCardVO;
 import com.techplant.yoga.schedule.vo.ScheduleDetailVO;
+import com.techplant.yoga.schedule.vo.ScheduleHomeItemVO;
 import com.techplant.yoga.schedule.vo.ScheduleListItemVO;
 
 /** 排课业务服务。 */
@@ -90,4 +92,12 @@ public interface ScheduleService {
      * @return 当前门店该教练所选课种的排课卡片
      */
     PageResult<ScheduleCardVO> publicPageByCoach(Long coachId, CoachScheduleQuery query);
+
+    /**
+     * 首页今日可约团课：当前门店今天已上架、未开始且仍有名额的团课，按开始时间升序，最多 2 条
+     *
+     * @param storeId 当前门店ID
+     * @return 首页卡片；无符合条件的场次返回空列表
+     */
+    List<ScheduleHomeItemVO> publicTodayBookable(Long storeId);
 }
