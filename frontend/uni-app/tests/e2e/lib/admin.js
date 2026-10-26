@@ -302,7 +302,8 @@ async function createAdminFixture() {
    * @param {Object} options coachId、storeId、courseId、classroomId、dayOffset、hour、minute、duration、publish
    */
   async function createSchedule(options) {
-    const start = futureDateTime(options.dayOffset || 1, options.hour === undefined ? 9 : options.hour,
+    const start = futureDateTime(options.dayOffset === undefined ? 1 : options.dayOffset,
+      options.hour === undefined ? 9 : options.hour,
       options.minute === undefined ? 0 : options.minute)
     const end = new Date(start.getTime() + (options.duration || 60) * 60000)
     const startText = formatDateTime(start)

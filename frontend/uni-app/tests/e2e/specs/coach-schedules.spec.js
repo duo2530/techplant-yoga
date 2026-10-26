@@ -543,7 +543,7 @@ module.exports = {
       }
     },
     {
-      name: '返回刷新：从课程详情返回后重新拉当前课种第一页，课种 Tab 保持不变',
+      name: '返回刷新：离开页面再返回后重新拉当前课种第一页，课种 Tab 保持不变',
       async run(ctx)
       {
         const fixture = await createAdminFixture()
@@ -578,7 +578,7 @@ module.exports = {
           await ctx.page.waitForTimeout(400)
           assert.equal(scheduleRequests(ctx, 1).length, firstType1Requests, '首屏展示后不重复请求排课')
 
-          // 页面已打开后通过管理端新增一场团课，进入课程详情再返回应看到刷新后的列表
+          // 页面已打开后通过管理端新增一场团课，离开页面再返回应看到刷新后的列表
           await fixture.createSchedule({
             coachId: assets.coach.id,
             storeId: assets.store.id,
@@ -589,18 +589,14 @@ module.exports = {
             minute: 0,
             duration: 60
           })
-          await ctx.page.locator('.sched-card').first().click()
-          await ctx.page.waitForFunction(() => location.hash.includes('pages/detail/index'),
-            null, { timeout: 20000 })
-          await ctx.page.waitForSelector('.detail__body', { timeout: 20000 })
-          await ctx.page.goBack()
+          await leaveAndGoBack(ctx)
 
           await waitSchedCards(ctx, 2)
           assert.ok(scheduleRequests(ctx, 1).length > firstType1Requests,
-            '从详情返回后必须重新请求当前课种第一页')
+            '返回后必须重新请求当前课种第一页')
           assert.equal(await activeTabText(ctx), '团课', '返回后课种 Tab 保持为团课')
 
-          // 切到精品课后再进入详情返回：刷新当前课种且 Tab 仍保持精品课
+          // 切到精品课后再离开返回：刷新当前课种且 Tab 仍保持精品课
           await clickTab(ctx, '精品课')
           await ctx.page.waitForFunction((name) =>
           {
@@ -609,12 +605,7 @@ module.exports = {
           }, assets.courses[1].name, { timeout: 20000 })
           const firstType2Requests = scheduleRequests(ctx, 2).length
 
-          await ctx.page.locator('.sched-card').first().click()
-          await ctx.page.waitForFunction(() => location.hash.includes('pages/detail/index'),
-            null, { timeout: 20000 })
-          await ctx.page.waitForSelector('.detail__body', { timeout: 20000 })
-          await ctx.page.goBack()
-
+          await leaveAndGoBack(ctx)
           await ctx.page.waitForFunction((name) =>
           {
             const node = document.querySelector('.sched-card__name')
@@ -634,14 +625,14 @@ module.exports = {
       }
     },
     {
-      name: '排课卡进入课程详情：按 scheduleId 打开既有详情页，游客可浏览',
+      name: '排课卡不可点击：点击后停留在约教练页，不进入课程详情',
       async run(ctx)
       {
         const fixture = await createAdminFixture()
         try
         {
           const assets = await prepareCoachAssets(fixture, [1])
-          const scheduleId = await fixture.createSchedule({
+          await fixture.createSchedule({
             coachId: assets.coach.id,
             storeId: assets.store.id,
             courseId: assets.courses[0].id,
@@ -654,19 +645,15 @@ module.exports = {
 
           await openCoach(ctx, assets.coach.id)
           await waitSchedCards(ctx, 1)
+          const hashBefore = await ctx.page.evaluate(() => location.hash)
           await ctx.page.locator('.sched-card').first().click()
+          await ctx.page.waitForTimeout(800)
 
-          await ctx.page.waitForFunction((id) =>
-          {
-            const hash = location.hash
-            return hash.includes('pages/detail/index') && hash.includes('scheduleId=' + id)
-          }, scheduleId, { timeout: 20000 })
-          await ctx.page.waitForSelector('.detail__body', { timeout: 20000 })
-          assert.ok((await ctx.page.locator('.card__title').innerText()).includes(assets.courses[0].name),
-            '课程详情展示对应排课的课程名')
-          assert.equal(await ctx.page.locator('.bar__btn').count(), 1, '游客浏览详情仍显示预约操作条')
-          assert.ok((await ctx.page.locator('.bar__btn').innerText()).includes('立即预约'),
-            '未结束场次保留既有预约入口')
+          assert.equal(await ctx.page.evaluate(() => location.hash), hashBefore, '点击排课卡不应触发页面跳转')
+          assert.ok(!(await ctx.page.evaluate(() => location.hash)).includes('pages/detail/index'),
+            '不应进入课程详情页')
+          assert.equal(await ctx.page.locator('.detail__body').count(), 0, '页面上不应出现课程详情内容')
+          assert.equal(await ctx.page.locator('.sched-card.press').count(), 0, '排课卡不带点击反馈样式')
         }
         finally
         {
@@ -675,6 +662,14 @@ module.exports = {
       }
     }
   ]
+}
+
+/** 离开约教练页再返回，触发页面 onHide／onShow */
+async function leaveAndGoBack(ctx)
+{
+  await ctx.page.goto(ctx.h5Base + '/#/pages/messages/index', { waitUntil: 'load' })
+  await ctx.page.waitForSelector('uni-page-body', { timeout: 20000 })
+  await ctx.page.goBack()
 }
 
 function urlHasPage(route, pageNum)

@@ -35,6 +35,63 @@
       <ys-empty title="暂无可选门店" subtitle="请稍后重新进入" padding-top="120" />
     </view>
 
+    <!-- ================= 今日可约团课 =================
+         数据来自 GET /api/schedules/today-bookable：当前门店今天未开始且有名额的团课，后端最多返回 2 条。
+         没有当前门店时不请求，直接显示空态；加载与失败状态只影响本栏目。 -->
+    <view v-if="hasStore" class="home-today">
+      <view class="home-today__head">
+        <ys-section-head title="今日可约团课" more-text="查看全部" @more="openBooking" />
+      </view>
+
+      <view v-if="todayLoading && !todayList.length" class="home-today__state">
+        <text class="home-today__state-text">加载中…</text>
+      </view>
+
+      <view v-else-if="todayError && !todayList.length" class="home-today__state">
+        <text class="home-today__state-text">今日可约团课加载失败</text>
+        <view class="home-today__retry press" @tap="loadToday">
+          <text class="home-today__retry-text">重试</text>
+        </view>
+      </view>
+
+      <view v-else-if="!todayList.length" class="home-today__empty">
+        <text class="home-today__state-text">今日暂无可约课程</text>
+      </view>
+
+      <view v-else class="home-today__list">
+        <view v-for="item in todayList" :key="item.id" class="today-item">
+          <view class="today-item__time">
+            <text class="today-item__clock">{{ clockOf(item.startTime) }}</text>
+            <text class="today-item__label">开课</text>
+          </view>
+          <view class="today-item__main">
+            <text class="today-item__name">{{ item.courseName }}</text>
+            <view class="today-item__meta">
+              <view class="today-item__cell">
+                <uni-icons type="person" size="14" color="#4799EF" />
+                <text class="today-item__text">{{ item.coachName }}</text>
+              </view>
+              <view class="today-item__cell">
+                <uni-icons type="location" size="14" color="#4799EF" />
+                <text class="today-item__text">{{ item.classroomName }}</text>
+              </view>
+              <view class="today-item__cell">
+                <uni-icons type="loop" size="14" color="#4799EF" />
+                <text class="today-item__text">{{ durationOf(item) }}分钟</text>
+              </view>
+              <view class="today-item__cell">
+                <uni-icons type="staff" size="14" color="#4799EF" />
+                <text class="today-item__text">{{ item.bookedPersons }}/{{ item.maxPersons }}人</text>
+              </view>
+            </view>
+          </view>
+          <view class="today-item__go press" @tap="openSchedule(item)">
+            <text class="today-item__go-text">去预约</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
     <!-- ================= 金牌教练 =================
          平台级数据来自 GET /api/coaches/featured：一次展示全部金牌，不截断、不设「更多教练」入口。
          加载／空／失败状态与门店卡、换店互相独立；没有可选门店时列表照常展示。 -->
@@ -165,6 +222,7 @@ import { ref, computed } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { listStores, getCurrentStoreId, getCachedStore, saveCurrentStore } from '@/api/store'
 import { getFeaturedCoaches } from '@/api/coach'
+import { listTodayBookable } from '@/api/schedule'
 
 /** 首页（W5） */
 
@@ -174,6 +232,13 @@ const PICKER_PAGE_SIZE = 10
 const store = ref({})
 /** 是否已完成首次加载（用它区分「加载中」与「真的没有门店」） */
 const loaded = ref(false)
+
+/* ---------------- 今日可约团课状态 ---------------- */
+const todayList = ref([])
+const todayLoading = ref(false)
+const todayError = ref(false)
+/** 请求序号：换店或回到首页触发的新请求覆盖旧响应 */
+let todayRequestSeq = 0
 
 /* ---------------- 金牌教练状态 ---------------- */
 const coaches = ref([])
@@ -231,6 +296,73 @@ async function loadCurrentStore() {
   }
 }
 
+/** 加载当前门店的今日可约团课；没有当前门店时清空并不请求 */
+async function loadToday() {
+  const seq = ++todayRequestSeq
+  const storeId = store.value && store.value.id ? String(store.value.id) : ''
+  if (!storeId) {
+    todayList.value = []
+    todayError.value = false
+    todayLoading.value = false
+    return
+  }
+  todayLoading.value = true
+  todayError.value = false
+  try {
+    const list = await listTodayBookable(storeId)
+    if (seq !== todayRequestSeq) {
+      return
+    }
+    todayList.value = list
+  } catch (error) {
+    if (seq !== todayRequestSeq) {
+      return
+    }
+    todayError.value = true
+    todayList.value = []
+  } finally {
+    if (seq === todayRequestSeq) {
+      todayLoading.value = false
+    }
+  }
+}
+
+/** 开课时间只展示时分 */
+function clockOf(startTime) {
+  return String(startTime || '').slice(11, 16)
+}
+
+/** 课程时长（分钟）：结束时间减开始时间 */
+function durationOf(item) {
+  const start = parseTime(item.startTime)
+  const end = parseTime(item.endTime)
+  if (start === null || end === null || end <= start) {
+    return 0
+  }
+  return Math.round((end - start) / 60000)
+}
+
+/** 'yyyy-MM-dd HH:mm:ss' → 毫秒；小程序的 Date 不接受带空格的字符串，按分段构造 */
+function parseTime(text) {
+  const match = /^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})$/.exec(String(text || ''))
+  if (!match) {
+    return null
+  }
+  return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]),
+    Number(match[4]), Number(match[5]), Number(match[6])).getTime()
+}
+
+function openBooking() {
+  uni.switchTab({ url: '/pages/booking/index' })
+}
+
+function openSchedule(item) {
+  if (!item || !item.id) {
+    return
+  }
+  uni.navigateTo({ url: '/pages/detail/index?scheduleId=' + encodeURIComponent(item.id) })
+}
+
 /** 加载金牌教练：门店为空也照常请求，失败只影响本栏目 */
 async function loadCoaches() {
   const seq = ++coachRequestSeq
@@ -255,10 +387,11 @@ async function loadCoaches() {
   }
 }
 
-onShow(() => {
+onShow(async () => {
   // 每次回到首页都校准一次：从「换店」或别处返回时保证门店卡与金牌列表是最新的
-  loadCurrentStore()
   loadCoaches()
+  await loadCurrentStore()
+  loadToday()
 })
 
 /* ---------------- 换店 ---------------- */
@@ -366,6 +499,7 @@ function pickStore(item) {
   loaded.value = true
   pickerVisible.value = false
   uni.showToast({ title: '已切换门店', icon: 'none' })
+  loadToday()
 }
 
 /* ---------------- 金牌教练 ---------------- */
@@ -469,6 +603,146 @@ function onAvatarError(coachId) {
 
 .home__empty {
   padding-top: 40rpx;
+}
+
+/* ---------------- 今日可约团课 ---------------- */
+.home-today {
+  margin-top: 42rpx;
+  padding: 0 $ys-gap;
+
+  &__head {
+    padding: 0 3rpx 22rpx;
+  }
+
+  &__state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40rpx 0 10rpx;
+  }
+
+  &__empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 85rpx;
+    border: 1px solid $ys-line;
+    border-radius: $ys-radius-sm;
+  }
+
+  &__state-text {
+    font-size: 25rpx;
+    line-height: 1.4;
+    color: $ys-text-sub;
+  }
+
+  &__retry {
+    margin-top: 20rpx;
+    padding: 10rpx 34rpx;
+    border-radius: 999px;
+    background: $ys-brand-pale;
+  }
+
+  &__retry-text {
+    font-size: 25rpx;
+    line-height: 1.4;
+    color: $ys-brand;
+  }
+
+  &__list {
+    display: flex;
+    flex-direction: column;
+    border-radius: $ys-radius-lg;
+    background: #fff;
+    box-shadow: $ys-card-shadow;
+  }
+}
+
+.today-item {
+  display: flex;
+  align-items: center;
+  padding: 28rpx 24rpx;
+
+  & + & {
+    border-top: 1px solid $ys-line;
+  }
+
+  &__time {
+    flex: none;
+    width: 130rpx;
+    display: flex;
+    flex-direction: column;
+  }
+
+  &__clock {
+    font-size: 38rpx;
+    font-weight: 600;
+    line-height: 1.2;
+    color: $ys-title;
+  }
+
+  &__label {
+    margin-top: 6rpx;
+    font-size: 23rpx;
+    line-height: 1.3;
+    color: $ys-text-sub;
+  }
+
+  &__main {
+    flex: 1;
+    min-width: 0;
+    margin-left: 12rpx;
+    display: flex;
+    flex-direction: column;
+  }
+
+  &__name {
+    overflow: hidden;
+    font-size: 33rpx;
+    font-weight: 600;
+    line-height: 1.3;
+    color: $ys-title;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__meta {
+    display: flex;
+    flex-wrap: wrap;
+    margin-top: 10rpx;
+  }
+
+  &__cell {
+    display: flex;
+    align-items: center;
+    width: 50%;
+    min-width: 0;
+    margin-top: 8rpx;
+  }
+
+  &__text {
+    overflow: hidden;
+    margin-left: 6rpx;
+    font-size: 25rpx;
+    line-height: 1.3;
+    color: $ys-text-card;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__go {
+    flex: none;
+    margin-left: 12rpx;
+    padding: 14rpx 28rpx;
+    border-radius: 999px;
+    background: $ys-brand;
+  }
+
+  &__go-text {
+    font-size: 27rpx;
+    line-height: 1.2;
+    color: #fff;
+  }
 }
 
 /* ---------------- 金牌教练 ---------------- */

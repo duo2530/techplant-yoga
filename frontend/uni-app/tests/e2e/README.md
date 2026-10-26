@@ -92,7 +92,7 @@ node run.js --only=首页金牌教练
 | `specs/booking.spec.js` | 预约提交与成功页跳转、取消预约、筛选过期响应隔离、签到窗口自动启用；后两项通过响应拦截构造时序 |
 | `specs/home-coaches.spec.js` | 金牌教练全量展示与排序、资料占位、加载与异常状态、门店独立性、首页刷新及卡片导航 |
 | `specs/coach-page.spec.js` | 教练资料与相册预览、参数与资源错误、失败重试、无门店场景及取消金牌后访问 |
-| `specs/coach-schedules.spec.js` | 课种筛选、卡片字段、分页重试、过期响应隔离、页面返回刷新及课程详情导航 |
+| `specs/coach-schedules.spec.js` | 课种筛选、卡片字段、分页重试、过期响应隔离、页面返回刷新及排课卡不可点击 |
 
 具体断言与夹具清理逻辑见对应测试文件。
 
