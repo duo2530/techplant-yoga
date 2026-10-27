@@ -108,7 +108,7 @@ try {
     if (@($pending | Where-Object { $_.Name -eq 'backend' }).Count -gt 0) {
         Push-Location (Join-Path $root 'backend')
         try {
-            & mvn.cmd '-DskipTests' package
+            & mvn.cmd '-DskipTests' clean package
             if ($LASTEXITCODE -ne 0) { throw 'Backend build failed.' }
         } finally { Pop-Location }
     }
