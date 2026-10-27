@@ -110,6 +110,41 @@ export function listTodayBookable(storeId) {
 }
 
 /**
+ * 首页热门课程 —— GET /api/schedules/hot
+ *
+ * 后端返回当前门店近期预约人数最多的可约排课，最多 4 条；无场次时 data 为空数组。
+ * 响应格式异常不能伪装成空列表，交给首页显示失败并可重试。
+ *
+ * @param {string} storeId 当前门店 ID
+ * @returns {Promise<Array>}
+ */
+export function listHotCourses(storeId) {
+  return request(Object.assign({}, PUBLIC_REQUEST, {
+    url: '/api/schedules/hot',
+    method: 'get',
+    params: { storeId: toId(storeId) }
+  })).then((res) => {
+    if (!res || !Array.isArray(res.data)) {
+      return Promise.reject(new Error('热门课程接口返回格式异常'))
+    }
+    return res.data.map((row) => {
+      const item = row || {}
+      return {
+        id: toId(item.id),
+        courseName: toText(item.courseName),
+        courseCoverUrl: toImageUrl(item.courseCoverUrl),
+        courseType: item.courseType,
+        courseTypeName: toText(item.courseTypeName),
+        difficulty: toNum(item.difficulty),
+        coachName: toText(item.coachName),
+        startTime: toText(item.startTime),
+        endTime: toText(item.endTime)
+      }
+    })
+  })
+}
+
+/**
  * 课程详情（排课详情）—— GET /api/schedules/{scheduleId}
  *
  * 排课不存在 / 已删除 / 处于「待上架」时后端一律返回 404（同一个响应），

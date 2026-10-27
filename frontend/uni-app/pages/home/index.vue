@@ -92,6 +92,79 @@
       </view>
     </view>
 
+    <!-- ================= 热门课程 =================
+         数据来自 GET /api/schedules/hot：当前门店近期预约人数最多的可约排课，后端最多返回 4 条。
+         每页两张卡片横向滑动；没有当前门店时不请求，加载与失败状态只影响本栏目。 -->
+    <view v-if="hasStore" class="home-hot">
+      <view class="home-hot__head">
+        <ys-section-head title="热门课程" more-text="更多课程" @more="openBooking" />
+      </view>
+
+      <view v-if="hotLoading && !hotList.length" class="home-hot__state">
+        <text class="home-hot__state-text">加载中…</text>
+      </view>
+
+      <view v-else-if="hotError && !hotList.length" class="home-hot__state">
+        <text class="home-hot__state-text">热门课程加载失败</text>
+        <view class="home-hot__retry press" @tap="loadHot">
+          <text class="home-hot__retry-text">重试</text>
+        </view>
+      </view>
+
+      <view v-else-if="!hotList.length" class="home-hot__empty">
+        <image class="home-hot__empty-img" src="/static/images/home/empty-hot-course.png" mode="aspectFit" />
+        <text class="home-hot__state-text">暂无热门课程</text>
+      </view>
+
+      <view v-else>
+        <swiper class="home-hot__swiper" :current="hotPage" @change="onHotChange">
+          <swiper-item v-for="(page, pageIndex) in hotPages" :key="pageIndex">
+            <view class="home-hot__row">
+              <view v-for="item in page" :key="item.id" class="hot-card press" @tap="openSchedule(item)">
+                <view class="hot-card__cover-box">
+                  <image class="hot-card__cover" :src="hotCoverOf(item)" mode="aspectFill" />
+                  <text class="hot-card__tag">{{ item.courseTypeName }}</text>
+                </view>
+                <view class="hot-card__body">
+                  <text class="hot-card__name">{{ item.courseName }}</text>
+                  <view class="hot-card__meta">
+                    <view class="hot-card__cell">
+                      <uni-icons type="person" size="14" color="#627984" />
+                      <text class="hot-card__text">{{ item.coachName }}</text>
+                    </view>
+                    <view class="hot-card__cell hot-card__cell--end">
+                      <uni-icons type="loop" size="14" color="#627984" />
+                      <text class="hot-card__text">{{ durationOf(item) }}分钟</text>
+                    </view>
+                  </view>
+                  <view v-if="item.difficulty" class="hot-card__level">
+                    <text class="hot-card__level-label">难度</text>
+                    <uni-icons
+                      v-for="star in 5"
+                      :key="star"
+                      class="hot-card__star"
+                      type="star-filled"
+                      size="13"
+                      :color="star <= item.difficulty ? '#4799EF' : '#D9E3EC'"
+                    />
+                  </view>
+                </view>
+              </view>
+              <view v-if="page.length < HOT_PAGE_SIZE" class="hot-card hot-card--blank" />
+            </view>
+          </swiper-item>
+        </swiper>
+        <view v-if="hotPages.length > 1" class="home-hot__dots">
+          <view
+            v-for="(page, pageIndex) in hotPages"
+            :key="pageIndex"
+            class="home-hot__dot"
+            :class="{ 'home-hot__dot--on': pageIndex === hotPage }"
+          />
+        </view>
+      </view>
+    </view>
+
     <!-- ================= 金牌教练 =================
          平台级数据来自 GET /api/coaches/featured：一次展示全部金牌，不截断、不设「更多教练」入口。
          加载／空／失败状态与门店卡、换店互相独立；没有可选门店时列表照常展示。 -->
@@ -222,9 +295,12 @@ import { ref, computed } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { listStores, getCurrentStoreId, getCachedStore, saveCurrentStore } from '@/api/store'
 import { getFeaturedCoaches } from '@/api/coach'
-import { listTodayBookable } from '@/api/schedule'
+import { listTodayBookable, listHotCourses } from '@/api/schedule'
 
 /** 首页（W5） */
+
+/** 热门课程每页卡片数 */
+const HOT_PAGE_SIZE = 2
 
 /** 换店弹层每页条数（接口 pageSize 上限 100） */
 const PICKER_PAGE_SIZE = 10
@@ -239,6 +315,14 @@ const todayLoading = ref(false)
 const todayError = ref(false)
 /** 请求序号：换店或回到首页触发的新请求覆盖旧响应 */
 let todayRequestSeq = 0
+
+/* ---------------- 热门课程状态 ---------------- */
+const hotList = ref([])
+const hotLoading = ref(false)
+const hotError = ref(false)
+const hotPage = ref(0)
+/** 请求序号：换店或回到首页触发的新请求覆盖旧响应 */
+let hotRequestSeq = 0
 
 /* ---------------- 金牌教练状态 ---------------- */
 const coaches = ref([])
@@ -262,6 +346,15 @@ const pickerFinished = ref(false)
 const pickerEmpty = ref(false)
 
 const hasStore = computed(() => !!store.value.name)
+
+/** 热门课程按每页两张分页 */
+const hotPages = computed(() => {
+  const pages = []
+  for (let i = 0; i < hotList.value.length; i += HOT_PAGE_SIZE) {
+    pages.push(hotList.value.slice(i, i + HOT_PAGE_SIZE))
+  }
+  return pages
+})
 
 /**
  * 门店头图：有 imageUrl 用后端的，没配图时用原型里的门店头图占位（不是造数据，只是兜底视觉）
@@ -325,6 +418,48 @@ async function loadToday() {
       todayLoading.value = false
     }
   }
+}
+
+/** 加载当前门店的热门课程；没有当前门店时清空并不请求 */
+async function loadHot() {
+  const seq = ++hotRequestSeq
+  const storeId = store.value && store.value.id ? String(store.value.id) : ''
+  if (!storeId) {
+    hotList.value = []
+    hotError.value = false
+    hotLoading.value = false
+    hotPage.value = 0
+    return
+  }
+  hotLoading.value = true
+  hotError.value = false
+  try {
+    const list = await listHotCourses(storeId)
+    if (seq !== hotRequestSeq) {
+      return
+    }
+    hotList.value = list
+    hotPage.value = 0
+  } catch (error) {
+    if (seq !== hotRequestSeq) {
+      return
+    }
+    hotError.value = true
+    hotList.value = []
+    hotPage.value = 0
+  } finally {
+    if (seq === hotRequestSeq) {
+      hotLoading.value = false
+    }
+  }
+}
+
+function onHotChange(event) {
+  hotPage.value = event.detail.current
+}
+
+function hotCoverOf(item) {
+  return item.courseCoverUrl || '/static/images/booking/cover-1.jpg'
 }
 
 /** 开课时间只展示时分 */
@@ -392,6 +527,7 @@ onShow(async () => {
   loadCoaches()
   await loadCurrentStore()
   loadToday()
+  loadHot()
 })
 
 /* ---------------- 换店 ---------------- */
@@ -500,6 +636,7 @@ function pickStore(item) {
   pickerVisible.value = false
   uni.showToast({ title: '已切换门店', icon: 'none' })
   loadToday()
+  loadHot()
 }
 
 /* ---------------- 金牌教练 ---------------- */
@@ -742,6 +879,191 @@ function onAvatarError(coachId) {
     font-size: 27rpx;
     line-height: 1.2;
     color: #fff;
+  }
+}
+
+/* ---------------- 热门课程 ---------------- */
+.home-hot {
+  margin-top: 42rpx;
+  padding: 0 $ys-gap;
+
+  &__head {
+    padding: 0 3rpx 22rpx;
+  }
+
+  &__state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40rpx 0 10rpx;
+  }
+
+  &__empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40rpx 0 10rpx;
+  }
+
+  &__empty-img {
+    width: 112rpx;
+    height: 60rpx;
+    margin-right: 25rpx;
+  }
+
+  &__state-text {
+    font-size: 25rpx;
+    line-height: 1.4;
+    color: $ys-text-sub;
+  }
+
+  &__retry {
+    margin-top: 20rpx;
+    padding: 10rpx 34rpx;
+    border-radius: 999px;
+    background: $ys-brand-pale;
+  }
+
+  &__retry-text {
+    font-size: 25rpx;
+    line-height: 1.4;
+    color: $ys-brand;
+  }
+
+  &__swiper {
+    height: 560rpx;
+  }
+
+  &__row {
+    display: flex;
+    height: 100%;
+    padding: 4rpx 4rpx 0;
+    box-sizing: border-box;
+  }
+
+  &__dots {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 16rpx;
+  }
+
+  &__dot {
+    width: 12rpx;
+    height: 12rpx;
+    margin: 0 6rpx;
+    border-radius: 6rpx;
+    background: $ys-line;
+
+    &--on {
+      width: 36rpx;
+      background: $ys-brand;
+    }
+  }
+}
+
+.hot-card {
+  flex: 1;
+  min-width: 0;
+  height: 520rpx;
+  overflow: hidden;
+  border-radius: $ys-radius-lg;
+  background: #fff;
+  box-shadow: $ys-card-shadow;
+
+  & + & {
+    margin-left: 20rpx;
+  }
+
+  &--blank {
+    visibility: hidden;
+    box-shadow: none;
+  }
+
+  &__cover-box {
+    position: relative;
+    height: 290rpx;
+  }
+
+  &__cover {
+    display: block;
+    width: 100%;
+    height: 100%;
+    background: $ys-line;
+  }
+
+  &__tag {
+    position: absolute;
+    top: 16rpx;
+    left: 16rpx;
+    padding: 6rpx 16rpx;
+    border-radius: 999px;
+    background: $ys-brand;
+    font-size: 23rpx;
+    line-height: 1.3;
+    color: #fff;
+  }
+
+  &__body {
+    padding: 22rpx 24rpx 0;
+  }
+
+  &__name {
+    display: block;
+    overflow: hidden;
+    font-size: 33rpx;
+    font-weight: 600;
+    line-height: 1.3;
+    color: $ys-title;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 28rpx;
+  }
+
+  &__cell {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+
+    &--end {
+      flex: none;
+      margin-left: 8rpx;
+    }
+  }
+
+  &__text {
+    overflow: hidden;
+    margin-left: 6rpx;
+    font-size: 25rpx;
+    line-height: 1.3;
+    color: $ys-text-sub;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__level {
+    display: flex;
+    align-items: center;
+    margin-top: 18rpx;
+    padding-top: 16rpx;
+    border-top: 1px solid $ys-line;
+  }
+
+  &__level-label {
+    margin-right: 12rpx;
+    font-size: 25rpx;
+    line-height: 1.3;
+    color: $ys-text-sub;
+  }
+
+  &__star {
+    margin-right: 6rpx;
   }
 }
 

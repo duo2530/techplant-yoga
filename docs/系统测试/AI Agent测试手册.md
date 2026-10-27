@@ -81,7 +81,7 @@ mvn -f backend/pom.xml -pl ruoyi-yoga -am test '-Dtest=ReservationServiceImplTes
 
 ### Playwright
 
-用户端 H5 套件覆盖会员卡、预约、首页金牌教练及约教练页。测试数据通过隔离后端的真实接口准备与清理；运行命令、环境变量、覆盖范围及失败产物见[用户端套件 README](../../frontend/uni-app/tests/e2e/README.md)。
+用户端 H5 套件覆盖会员卡、预约、首页今日可约团课、热门课程、金牌教练及约教练页。测试数据通过隔离后端的真实接口准备与清理；运行命令、环境变量、覆盖范围及失败产物见[用户端套件 README](../../frontend/uni-app/tests/e2e/README.md)。
 
 管理端已接入最小 Playwright 套件，位于 `frontend/pc/tests/e2e`：独立 `package.json` ＋ `playwright-core`（使用系统已安装的 Edge／Chrome），托管 `npm run build:prod` 的 `frontend/pc/dist` 产物，并把 `/prod-api/**` 代理到隔离后端。运行方式：
 

@@ -2,8 +2,8 @@ const fs = require('fs')
 const path = require('path')
 const { config } = require('./config')
 const { SkipError } = require('./assert')
-const { apiMemberCards, apiReservations, apiCancelReservation, apiSchedules, seedSession, clearSession } =
-  require('./session')
+const { apiMemberCards, apiReservations, apiCancelReservation, apiCreateReservation, apiSchedules, seedSession,
+  clearSession } = require('./session')
 
 /**
  * 用例执行器。
@@ -133,6 +133,12 @@ async function createHelper({ browser, h5Base, memberSession, caseName, runId })
     cancelReservation(reservationId)
     {
       return apiCancelReservation(memberSession.token, reservationId)
+    },
+
+    /** 直接用接口预约一节排课，用于准备热门课程的预约量 */
+    createReservation(params)
+    {
+      return apiCreateReservation(memberSession.token, params)
     },
 
     /** 记录到的预约接口请求，用于断言页面确实调用了预约接口 */

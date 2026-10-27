@@ -72,6 +72,27 @@ async function apiCancelReservation(token, reservationId)
   return body
 }
 
+/** 会员用指定会员卡预约一节排课（用例准备热门课程的预约量） */
+async function apiCreateReservation(token, params)
+{
+  const response = await fetch(`${config.apiBase}/api/reservations`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      requestId: crypto.randomUUID(),
+      scheduleId: String(params.scheduleId),
+      memberCardId: String(params.memberCardId),
+      persons: params.persons || 1
+    })
+  })
+  const body = await response.json()
+  if (body.code !== 200)
+  {
+    throw new Error(`预约失败：${JSON.stringify(body)}`)
+  }
+  return body
+}
+
 /** 免登录查询排课列表，用作预约流程的期望值来源 */
 async function apiSchedules(params = {})
 {
@@ -126,6 +147,7 @@ module.exports = {
   apiMemberCards,
   apiReservations,
   apiCancelReservation,
+  apiCreateReservation,
   apiSchedules,
   seedSession,
   clearSession
