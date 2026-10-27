@@ -11,6 +11,7 @@ import com.techplant.yoga.schedule.vo.PublicScheduleDetailVO;
 import com.techplant.yoga.schedule.vo.ScheduleCardVO;
 import com.techplant.yoga.schedule.vo.ScheduleDetailVO;
 import com.techplant.yoga.schedule.vo.ScheduleHomeItemVO;
+import com.techplant.yoga.schedule.vo.ScheduleHotItemVO;
 import com.techplant.yoga.schedule.vo.ScheduleListItemVO;
 
 /** 排课业务服务。 */
@@ -100,4 +101,13 @@ public interface ScheduleService {
      * @return 首页卡片；无符合条件的场次返回空列表
      */
     List<ScheduleHomeItemVO> publicTodayBookable(Long storeId);
+
+    /**
+     * 首页热门课程：当前门店今天起 14 天内已上架、未开始、已有预约且仍有名额的非私教排课，
+     * 按已预约人数降序、开始时间升序，最多 4 条
+     *
+     * @param storeId 当前门店ID
+     * @return 首页卡片；无符合条件的场次返回空列表
+     */
+    List<ScheduleHotItemVO> publicHot(Long storeId);
 }

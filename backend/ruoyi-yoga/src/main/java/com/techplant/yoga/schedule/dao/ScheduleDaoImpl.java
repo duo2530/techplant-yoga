@@ -92,6 +92,24 @@ public class ScheduleDaoImpl implements ScheduleDao {
     }
 
     @Override
+    public List<ScheduleDO> selectHot(Long storeId, LocalDate startDate, LocalDate endDate, LocalDateTime now,
+            int limit) {
+        LambdaQueryWrapper<ScheduleDO> wrapper = Wrappers.<ScheduleDO>lambdaQuery();
+        wrapper.eq(ScheduleDO::getStoreId, storeId);
+        wrapper.ne(ScheduleDO::getCourseType, CourseTypeEnum.PERSONAL.getCode());
+        wrapper.between(ScheduleDO::getScheduleDate, startDate, endDate);
+        wrapper.eq(ScheduleDO::getStatus, ScheduleStatusEnum.PUBLISHED.getCode());
+        wrapper.gt(ScheduleDO::getStartTime, now);
+        wrapper.gt(ScheduleDO::getBookedPersons, 0);
+        wrapper.apply("booked_persons < max_persons");
+        wrapper.orderByDesc(ScheduleDO::getBookedPersons);
+        wrapper.orderByAsc(ScheduleDO::getStartTime);
+        wrapper.orderByAsc(ScheduleDO::getId);
+        wrapper.last("LIMIT " + limit);
+        return scheduleMapper.selectList(wrapper);
+    }
+
+    @Override
     public ScheduleDO selectById(Long id) {
         return scheduleMapper.selectById(id);
     }

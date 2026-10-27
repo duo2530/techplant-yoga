@@ -45,6 +45,7 @@ import com.techplant.yoga.schedule.vo.PublicScheduleDetailVO;
 import com.techplant.yoga.schedule.vo.ScheduleCardVO;
 import com.techplant.yoga.schedule.vo.ScheduleDetailVO;
 import com.techplant.yoga.schedule.vo.ScheduleHomeItemVO;
+import com.techplant.yoga.schedule.vo.ScheduleHotItemVO;
 import com.techplant.yoga.schedule.vo.ScheduleListItemVO;
 import com.techplant.yoga.store.service.StoreService;
 import com.techplant.yoga.store.vo.StoreSummaryVO;
@@ -69,6 +70,9 @@ public class ScheduleServiceImpl implements ScheduleService {
 
     /** 首页今日可约团课最多展示条数 */
     private static final int HOME_BOOKABLE_LIMIT = 2;
+
+    /** 首页热门课程最多展示条数 */
+    private static final int HOME_HOT_LIMIT = 4;
 
     /** 用户端日期参数格式（严格 yyyy-MM-dd） */
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ISO_LOCAL_DATE;
@@ -345,6 +349,36 @@ public class ScheduleServiceImpl implements ScheduleService {
             vo.setCourseName(nameOf(courseNames, schedule.getCourseId()));
             vo.setCoachName(nameOf(coachNames, schedule.getCoachId()));
             vo.setClassroomName(nameOf(classroomNames, schedule.getClassroomId()));
+            list.add(vo);
+        }
+        return list;
+    }
+
+    @Override
+    public List<ScheduleHotItemVO> publicHot(Long storeId) {
+        if (storeId == null) {
+            throw new ServiceException("门店ID不能为空", PARAM_ERROR);
+        }
+        storeService.getById(storeId);
+
+        LocalDateTime now = LocalDateTime.now();
+        LocalDate today = now.toLocalDate();
+        List<ScheduleDO> records = scheduleDao.selectHot(storeId, today, today.plusDays(SCHEDULE_WINDOW_DAYS - 1L), now,
+                HOME_HOT_LIMIT);
+        Map<Long, CourseSummaryVO> courses = courseSummaryMap(distinctIds(records, ScheduleDO::getCourseId));
+        Map<Long, String> coachNames = coachNameMap(distinctIds(records, ScheduleDO::getCoachId));
+
+        List<ScheduleHotItemVO> list = new ArrayList<ScheduleHotItemVO>(records.size());
+        for (ScheduleDO schedule : records) {
+            ScheduleHotItemVO vo = ScheduleConverter.toHotItemVO(schedule);
+            CourseSummaryVO course = courses.get(schedule.getCourseId());
+            vo.setCourseName(course == null ? "" : text(course.getName()));
+            if (course != null) {
+                String coverUrl = course.getCoverUrl();
+                vo.setCourseCoverUrl(coverUrl == null || coverUrl.trim().isEmpty() ? null : coverUrl);
+                vo.setDifficulty(course.getDifficulty());
+            }
+            vo.setCoachName(nameOf(coachNames, schedule.getCoachId()));
             list.add(vo);
         }
         return list;

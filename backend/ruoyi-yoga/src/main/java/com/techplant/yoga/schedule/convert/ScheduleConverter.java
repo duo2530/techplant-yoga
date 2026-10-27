@@ -12,6 +12,7 @@ import com.techplant.yoga.schedule.vo.ScheduleBookingSnapshot;
 import com.techplant.yoga.schedule.vo.ScheduleCardVO;
 import com.techplant.yoga.schedule.vo.ScheduleDetailVO;
 import com.techplant.yoga.schedule.vo.ScheduleHomeItemVO;
+import com.techplant.yoga.schedule.vo.ScheduleHotItemVO;
 import com.techplant.yoga.schedule.vo.ScheduleListItemVO;
 
 /** 排课对象转换。 */
@@ -97,6 +98,17 @@ public final class ScheduleConverter {
         vo.setEndTime(source.getEndTime());
         vo.setBookedPersons(source.getBookedPersons() == null ? 0 : source.getBookedPersons());
         vo.setMaxPersons(source.getMaxPersons());
+        return vo;
+    }
+
+    /** DO → 首页热门课程卡片（课程名称、封面、难度和教练姓名由 service 补齐） */
+    public static ScheduleHotItemVO toHotItemVO(ScheduleDO source) {
+        ScheduleHotItemVO vo = new ScheduleHotItemVO();
+        vo.setId(source.getId());
+        vo.setCourseType(source.getCourseType());
+        vo.setCourseTypeName(emptyIfNull(CourseTypeEnum.nameOf(source.getCourseType())));
+        vo.setStartTime(source.getStartTime());
+        vo.setEndTime(source.getEndTime());
         return vo;
     }
 

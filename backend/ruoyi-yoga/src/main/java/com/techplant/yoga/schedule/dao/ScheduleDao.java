@@ -39,6 +39,17 @@ public interface ScheduleDao {
      */
     List<ScheduleDO> selectTodayBookable(Long storeId, LocalDate today, LocalDateTime now, int limit);
 
+    /**
+     * 首页热门课程：门店 ＋ 非私教课 ＋ 日期窗口 ＋ 已上架 ＋ 未开始 ＋ 已有预约且仍有名额，
+     * 按已预约人数降序、开始时间升序取前 N 条
+     *
+     * @param startDate 窗口首日（含）
+     * @param endDate   窗口末日（含）
+     * @param now       判定「未开始」的基准时间
+     * @param limit     最多返回条数
+     */
+    List<ScheduleDO> selectHot(Long storeId, LocalDate startDate, LocalDate endDate, LocalDateTime now, int limit);
+
     /** 按主键查（管理端，物理删除后查不到） */
     ScheduleDO selectById(Long id);
 

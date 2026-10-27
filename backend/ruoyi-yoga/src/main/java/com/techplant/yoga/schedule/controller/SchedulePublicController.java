@@ -52,6 +52,13 @@ public class SchedulePublicController extends BaseController {
         return AjaxResult.success(scheduleService.publicTodayBookable(storeId));
     }
 
+    /** 首页热门课程：当前门店近期预约人数最多的可约排课，最多 4 条 */
+    @ApiOperation("查询首页热门课程")
+    @GetMapping("/hot")
+    public AjaxResult hot(@RequestParam("storeId") Long storeId) {
+        return AjaxResult.success(scheduleService.publicHot(storeId));
+    }
+
     /** 排课详情（课程详情页）：未删除且 status<>1 才可见，否则一律 404 */
     @ApiOperation("查询排课详情（课程详情页）")
     @GetMapping("/{scheduleId}")
