@@ -12,3 +12,8 @@ docs/原型/_工具/对比/
 *.xmind
 /.env
 /.agents/skills/plantuml-salt-wireframe/
+
+# java-style 工具的 IDE 项目文件
+/tools/java-style/.project
+/tools/java-style/.classpath
+/tools/java-style/.settings/
