@@ -1,7 +1,9 @@
 // 应用全局配置
 export default {
-  /** 后端接口地址。 */
-  baseUrl: 'http://localhost:8080',
+  /** 后端接口地址；设置 VITE_API_BASE_URL 时以其为准，空串表示与页面同源。 */
+  baseUrl: typeof import.meta.env.VITE_API_BASE_URL === 'string'
+    ? import.meta.env.VITE_API_BASE_URL
+    : 'http://localhost:8080',
 
   // 应用信息
   appInfo: {

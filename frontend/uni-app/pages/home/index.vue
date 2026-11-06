@@ -18,14 +18,10 @@
           </view>
         </view>
 
-        <view v-if="store.regionName" class="store__meta">
-          <uni-icons class="store__icon" type="location" size="13" color="#5B7C8D" />
-          <text class="store__region">{{ store.regionName }}</text>
-        </view>
-
-        <view v-if="store.address" class="store__meta store__meta--addr">
-          <uni-icons class="store__icon" type="map-pin" size="13" color="#5B7C8D" />
-          <text class="store__addr">{{ store.address }}</text>
+        <view v-if="store.regionName || store.address" class="store__meta">
+          <uni-icons class="store__icon" type="location" size="12" color="#5B7C8D" />
+          <text v-if="store.regionName" class="store__region">{{ store.regionName }}</text>
+          <text v-if="store.address" class="store__addr">{{ store.address }}</text>
         </view>
       </view>
     </view>
@@ -190,6 +186,7 @@
 
       <view v-else class="home-coaches__list">
         <view v-for="coach in coaches" :key="coach.id" class="home-coach press" @tap="openCoach(coach)">
+          <image class="home-coach__decor" src="/static/images/home/coach1-photo.jpg" mode="aspectFill" />
           <image
             v-if="coach.avatarUrl && !avatarFailed[coach.id]"
             class="home-coach__avatar"
@@ -203,6 +200,7 @@
           <view class="home-coach__main">
             <text class="home-coach__name">{{ coach.name }}</text>
             <text class="home-coach__intro">{{ coach.intro || '暂无介绍' }}</text>
+            <text class="home-coach__link" decode>查看课程 {{ '>' }}</text>
           </view>
         </view>
       </view>
@@ -357,9 +355,9 @@ const hotPages = computed(() => {
 })
 
 /**
- * 门店头图：有 imageUrl 用后端的，没配图时用原型里的门店头图占位（不是造数据，只是兜底视觉）
+ * 门店头图：未配置 imageUrl 时使用本地门店实景图
  */
-const storeImage = computed(() => store.value.imageUrl || '/static/images/home/store-hero.jpg')
+const storeImage = computed(() => store.value.imageUrl || '/static/images/store/photo-3.jpg')
 
 /** 加载当前门店 */
 async function loadCurrentStore() {
@@ -660,61 +658,62 @@ function onAvatarError(coachId) {
   background: #fff;
 }
 
-/* ---------------- 门店卡 ---------------- */
+/* ---------------- 门店卡：头图上叠半透明信息浮层 ---------------- */
 .store {
+  position: relative;
   margin: 24rpx $ys-gap 0;
+  height: 320rpx;
   border-radius: $ys-radius-lg;
-  background: #fff;
+  background: $ys-line;
   box-shadow: $ys-card-shadow;
   overflow: hidden;
 
   &__hero {
     display: block;
     width: 100%;
-    height: 280rpx;
-    background: $ys-line;
+    height: 100%;
   }
 
   &__body {
-    padding: 26rpx 25rpx 28rpx;
+    position: absolute;
+    left: 15rpx;
+    bottom: 14rpx;
+    box-sizing: border-box;
+    max-width: calc(100% - 30rpx);
+    padding: 18rpx 18rpx 18rpx 20rpx;
+    border-radius: 19rpx;
+    background: rgba(236, 234, 228, 0.9);
   }
 
   &__row {
     display: flex;
     align-items: center;
-    justify-content: space-between;
   }
 
   &__name {
-    flex: 1;
-    font-size: 33rpx;
-    font-weight: 600;
+    overflow: hidden;
+    font-size: 25rpx;
     line-height: 1.2;
     color: $ys-title;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   &__change {
     flex: none;
     margin-left: 15rpx;
-    padding: 4rpx 15rpx;
-    border-radius: 999px;
-    background: $ys-brand-soft;
   }
 
   &__change-text {
-    font-size: 23rpx;
-    line-height: 1.4;
-    color: $ys-brand-link;
+    font-size: 20rpx;
+    line-height: 1.2;
+    color: #0288d1;
   }
 
   &__meta {
     display: flex;
     align-items: center;
-    margin-top: 18rpx;
-
-    &--addr {
-      margin-top: 12rpx;
-    }
+    margin-top: 14rpx;
   }
 
   &__icon {
@@ -723,18 +722,21 @@ function onAvatarError(coachId) {
   }
 
   &__region {
+    flex: none;
     margin-left: 8rpx;
-    font-size: 25rpx;
-    line-height: 1.3;
+    font-size: 20rpx;
+    line-height: 1.2;
     color: $ys-text-sub;
   }
 
   &__addr {
+    overflow: hidden;
     margin-left: 8rpx;
-    flex: 1;
-    font-size: 25rpx;
-    line-height: 1.3;
-    color: $ys-ink-2;
+    font-size: 20rpx;
+    line-height: 1.2;
+    color: $ys-text-sub;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 }
 
@@ -1105,23 +1107,35 @@ function onAvatarError(coachId) {
   &__list {
     display: flex;
     flex-direction: column;
-    gap: 20rpx;
+    gap: 18rpx;
   }
 }
 
 .home-coach {
+  position: relative;
   display: flex;
   align-items: center;
-  padding: 22rpx 24rpx;
+  height: 208rpx;
+  padding: 0 22rpx;
+  overflow: hidden;
   background: #fff;
-  border-radius: $ys-radius-lg;
+  border-radius: $ys-radius-md;
   box-shadow: $ys-card-shadow;
 
+  &__decor {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 276rpx;
+    height: 100%;
+  }
+
   &__avatar {
+    position: relative;
     flex: none;
-    width: 112rpx;
-    height: 112rpx;
-    border-radius: $ys-radius-md;
+    width: 152rpx;
+    height: 152rpx;
+    border-radius: 15rpx;
     background: $ys-line;
 
     &--empty {
@@ -1133,18 +1147,20 @@ function onAvatarError(coachId) {
   }
 
   &__main {
+    position: relative;
     flex: 1;
     min-width: 0;
-    margin-left: 24rpx;
+    margin-left: 25rpx;
+    padding-right: 120rpx;
     display: flex;
     flex-direction: column;
   }
 
   &__name {
     overflow: hidden;
-    font-size: 31rpx;
+    font-size: 29rpx;
     font-weight: 600;
-    line-height: 1.3;
+    line-height: 1.2;
     color: $ys-title;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -1152,12 +1168,19 @@ function onAvatarError(coachId) {
 
   &__intro {
     overflow: hidden;
-    margin-top: 10rpx;
-    font-size: 25rpx;
-    line-height: 1.4;
-    color: $ys-ink-3;
+    margin-top: 16rpx;
+    font-size: 22rpx;
+    line-height: 1.3;
+    color: #999;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  &__link {
+    margin-top: 14rpx;
+    font-size: 22rpx;
+    line-height: 1.2;
+    color: #0288d1;
   }
 }
 
