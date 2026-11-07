@@ -51,9 +51,12 @@ public class ReservationPublicItemVO {
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime endTime;
 
-    @ApiModelProperty(value = "预约状态：1已预约 2已取消 3已签到", example = "1")
+    @ApiModelProperty(value = "预约状态：1已预约 2已取消 3已签到 4排队中 5排队失败", example = "1")
     private Integer status;
 
     @ApiModelProperty(value = "预约状态文案", example = "已预约")
     private String statusText;
+
+    @ApiModelProperty(value = "排队名次，从 1 开始；仅排队中返回，其余为空", example = "2")
+    private Integer queuePosition;
 }

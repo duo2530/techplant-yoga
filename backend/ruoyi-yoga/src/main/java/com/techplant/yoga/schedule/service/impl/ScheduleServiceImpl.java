@@ -30,6 +30,7 @@ import com.techplant.yoga.common.util.CurrentUserUtils;
 import com.techplant.yoga.course.enums.CourseTypeEnum;
 import com.techplant.yoga.course.service.CourseService;
 import com.techplant.yoga.course.vo.CourseSummaryVO;
+import com.techplant.yoga.reservation.enums.ReservationStatusEnum;
 import com.techplant.yoga.reservation.service.ReservationService;
 import com.techplant.yoga.schedule.convert.ScheduleConverter;
 import com.techplant.yoga.schedule.dao.ScheduleDao;
@@ -421,6 +422,8 @@ public class ScheduleServiceImpl implements ScheduleService {
         vo.setStoreAddress(storeAddressOf(schedule.getStoreId()));
         vo.setBookable(isBookable(schedule, now));
         vo.setBookers(reservationService.bookerDisplayNames(schedule.getId()));
+        vo.setQueueCount(reservationService.queueCount(schedule.getId()));
+        vo.setQueueable(isQueueable(schedule, now));
         return vo;
     }
 
@@ -593,10 +596,24 @@ public class ScheduleServiceImpl implements ScheduleService {
      * <p>只表示排课本身可约，不代表当前会员已满足卡资格。</p>
      */
     private boolean isBookable(ScheduleDO schedule, LocalDateTime now) {
+        return remainingPlaces(schedule) > 0 && isOpenForSignUp(schedule, now);
+    }
+
+    /** 用户端是否可排队：满员、未过排队截止，其余条件与可约一致；会员资格在提交排队时校验 */
+    private boolean isQueueable(ScheduleDO schedule, LocalDateTime now) {
+        return remainingPlaces(schedule) == 0 && isOpenForSignUp(schedule, now)
+                && !ReservationStatusEnum.isPastChangeDeadline(schedule.getStartTime(), now);
+    }
+
+    private int remainingPlaces(ScheduleDO schedule) {
         int bookedPersons = schedule.getBookedPersons() == null ? 0 : schedule.getBookedPersons();
-        int remainingPlaces = ScheduleConverter.remainingPlaces(schedule.getMaxPersons(), bookedPersons);
+        return ScheduleConverter.remainingPlaces(schedule.getMaxPersons(), bookedPersons);
+    }
+
+    /** 已上架、尚未开始且上课日期落在今天起 14 天内（含今天），不看名额 */
+    private boolean isOpenForSignUp(ScheduleDO schedule, LocalDateTime now) {
         if (!ScheduleStatusEnum.isBookable(schedule.getStatus(), schedule.getStartTime(), schedule.getEndTime(),
-                remainingPlaces, now)) {
+                Integer.MAX_VALUE, now)) {
             return false;
         }
         LocalDate scheduleDate = schedule.getScheduleDate() != null

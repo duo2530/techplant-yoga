@@ -35,9 +35,9 @@ public class ReservationAdminQuery {
     @ApiModelProperty(value = "会员ID（雪花ID，字符串）", example = "1856739201475235902")
     private Long memberId;
 
-    @ApiModelProperty(value = "预约状态：1已预约 2已取消 3已签到", example = "1")
-    @Min(value = 1, message = "预约状态取值为 1、2 或 3")
-    @Max(value = 3, message = "预约状态取值为 1、2 或 3")
+    @ApiModelProperty(value = "预约状态：1已预约 2已取消 3已签到 4排队中 5排队失败", example = "1")
+    @Min(value = 1, message = "预约状态取值为 1～5")
+    @Max(value = 5, message = "预约状态取值为 1～5")
     private Integer status;
 
     @ApiModelProperty(value = "关联会员卡类型：1次数卡 2年卡", example = "1")

@@ -191,7 +191,7 @@ class ReservationPublicControllerTest extends AbstractYogaIntegrationTest {
 
         mockMvc.perform(get("/api/reservations").param("pageNum", "1").param("pageSize", "10").param("status", "9"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.code").value(400))
-                .andExpect(jsonPath("$.msg").value("预约状态取值为 1、2 或 3"));
+                .andExpect(jsonPath("$.msg").value("预约状态取值为 1～5"));
     }
 
     @Test
@@ -215,6 +215,36 @@ class ReservationPublicControllerTest extends AbstractYogaIntegrationTest {
 
         mockMvc.perform(put("/api/reservations/999999/cancel")).andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(404)).andExpect(jsonPath("$.msg").value("预约不存在或已被删除"));
+    }
+
+    @Test
+    @DisplayName("加入排队：满员时返回「排队成功」，我的预约显示排队中与名次；有空位或人数不为 1 时拒绝")
+    void joinQueue_shouldReturnBusinessMessages() throws Exception {
+        mockMvc.perform(post("/api/reservations/queue").contentType(MediaType.APPLICATION_JSON)
+                .content(body(REQUEST_ID, SCHEDULE_ID, TIMES_CARD_ID, 1))).andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(409)).andExpect(jsonPath("$.msg").value("课程还有空位，请直接预约"));
+
+        jdbcTemplate.update("UPDATE t_schedule SET booked_persons = max_persons WHERE id = ?", SCHEDULE_ID);
+        mockMvc.perform(post("/api/reservations/queue").contentType(MediaType.APPLICATION_JSON)
+                .content(body(REQUEST_ID, SCHEDULE_ID, TIMES_CARD_ID, 2))).andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(400)).andExpect(jsonPath("$.msg").value("排队人数只能为 1"));
+        mockMvc.perform(post("/api/reservations/queue").contentType(MediaType.APPLICATION_JSON)
+                .content(body(REQUEST_ID, SCHEDULE_ID, TIMES_CARD_ID, 1))).andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200)).andExpect(jsonPath("$.msg").value("排队成功"))
+                .andExpect(jsonPath("$.data").doesNotExist());
+
+        mockMvc.perform(get("/api/reservations").param("pageNum", "1").param("pageSize", "10").param("status", "4"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.total").value(1))
+                .andExpect(jsonPath("$.rows[0].status").value(4))
+                .andExpect(jsonPath("$.rows[0].statusText").value("排队中"))
+                .andExpect(jsonPath("$.rows[0].queuePosition").value(1));
+        assertEquals(Integer.valueOf(12),
+                intOf("SELECT remaining_times FROM t_member_card WHERE id = ?", TIMES_CARD_ID));
+
+        Long queuedId = jdbcTemplate.queryForObject("SELECT MAX(id) FROM t_reservation", Long.class);
+        mockMvc.perform(put("/api/reservations/" + queuedId + "/cancel")).andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200)).andExpect(jsonPath("$.msg").value("取消预约成功"));
+        assertEquals(Integer.valueOf(2), intOf("SELECT status FROM t_reservation WHERE id = ?", queuedId));
     }
 
     private void createReservation() throws Exception {

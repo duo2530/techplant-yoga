@@ -89,7 +89,7 @@ public class ReservationAdminItemVO {
     @ApiModelProperty(value = "原实际扣次；无扣次流水为 0", example = "2")
     private Integer deductTimes;
 
-    @ApiModelProperty(value = "预约状态：1已预约 2已取消 3已签到", example = "1")
+    @ApiModelProperty(value = "预约状态：1已预约 2已取消 3已签到 4排队中 5排队失败", example = "1")
     private Integer status;
 
     @ApiModelProperty(value = "预约状态文案", example = "已预约")

@@ -32,8 +32,20 @@
             <if test="query.memberId != null">
                 AND r.member_id = #{query.memberId}
             </if>
+            <!-- 状态按展示口径筛选：排课不再上架或已过补位截止的排队中（4）归入排队失败（5） -->
             <if test="query.status != null">
-                AND r.status = #{query.status}
+                <choose>
+                    <when test="query.status == 4">
+                        AND r.status = 4 AND r.start_time &gt;= #{queueDeadline} AND s.status = 2
+                    </when>
+                    <when test="query.status == 5">
+                        AND (r.status = 5 OR (r.status = 4
+                            AND (r.start_time &lt; #{queueDeadline} OR s.id IS NULL OR s.status &lt;&gt; 2)))
+                    </when>
+                    <otherwise>
+                        AND r.status = #{query.status}
+                    </otherwise>
+                </choose>
             </if>
             <if test="startTime != null">
                 AND r.start_time &gt;= #{startTime}

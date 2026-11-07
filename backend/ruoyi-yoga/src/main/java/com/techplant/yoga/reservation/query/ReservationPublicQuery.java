@@ -22,9 +22,9 @@ public class ReservationPublicQuery {
     /** 每页条数上限 */
     public static final int MAX_PAGE_SIZE = 100;
 
-    @ApiModelProperty(value = "预约状态：1已预约 2已取消 3已签到；不传为全部", example = "1")
-    @Min(value = 1, message = "预约状态取值为 1、2 或 3")
-    @Max(value = 3, message = "预约状态取值为 1、2 或 3")
+    @ApiModelProperty(value = "预约状态：1已预约 2已取消 3已签到 4排队中 5排队失败；不传为全部", example = "1")
+    @Min(value = 1, message = "预约状态取值为 1～5")
+    @Max(value = 5, message = "预约状态取值为 1～5")
     private Integer status;
 
     @ApiModelProperty(value = "关联会员卡类型：1次数卡 2年卡；不传为全部", example = "1")

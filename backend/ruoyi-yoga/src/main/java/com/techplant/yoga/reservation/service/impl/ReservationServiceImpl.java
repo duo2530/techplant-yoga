@@ -61,6 +61,8 @@ public class ReservationServiceImpl implements ReservationService {
     /** 业务冲突：名额、次数、时间、重复预约与状态流转 */
     private static final int CONFLICT = 409;
 
+    private static final String STATUS_RANGE_MESSAGE = "预约状态取值为 1～5";
+
     /** 参数校验失败 */
     private static final int PARAM_ERROR = 400;
 
@@ -68,9 +70,6 @@ public class ReservationServiceImpl implements ReservationService {
 
     /** 可预约窗口：今天起 14 天内（含今天） */
     private static final int SCHEDULE_WINDOW_DAYS = 14;
-
-    /** 取消截止：课程开始前 2 小时 */
-    private static final long CANCEL_DEADLINE_MINUTES = 120L;
 
     /** 签到窗口：课程开始前 30 分钟 */
     private static final long CHECK_IN_OPEN_MINUTES = 30L;
@@ -100,10 +99,24 @@ public class ReservationServiceImpl implements ReservationService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void create(Long memberId, ReservationCreateDTO dto) {
+        submit(memberId, dto, ReservationStatusEnum.RESERVED);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void joinQueue(Long memberId, ReservationCreateDTO dto) {
+        submit(memberId, dto, ReservationStatusEnum.QUEUED);
+    }
+
+    /** 预约与排队共用的提交流程：{@code target} 为已预约时占位扣次，为排队中时只校验卡资格 */
+    private void submit(Long memberId, ReservationCreateDTO dto, ReservationStatusEnum target) {
         String requestId = requireRequestId(dto.getRequestId());
         Long scheduleId = requirePositiveId(dto.getScheduleId(), "排课ID");
         Long memberCardId = requirePositiveId(dto.getMemberCardId(), "会员卡ID");
         Integer persons = requirePersons(dto.getPersons());
+        if (target == ReservationStatusEnum.QUEUED && persons != 1) {
+            throw new ServiceException("排队人数只能为 1", PARAM_ERROR);
+        }
 
         // 幂等：同一个 requestId 且参数一致直接按成功返回
         ReservationDO submitted = reservationDao.selectByMemberAndRequestId(memberId, requestId);
@@ -112,7 +125,7 @@ public class ReservationServiceImpl implements ReservationService {
             return;
         }
 
-        // 锁顺序：排课 → 会员 → 会员卡
+        // 锁顺序：排课 → 会员 → 预约 → 会员卡
         ScheduleBookingSnapshot schedule = scheduleBookingService.lockForBooking(scheduleId);
         if (schedule == null) {
             throw new ServiceException("排课不存在或已被删除", NOT_FOUND);
@@ -128,22 +141,29 @@ public class ReservationServiceImpl implements ReservationService {
             return;
         }
 
-        validateSchedule(schedule, persons);
-        MemberCardBookingSnapshot card = memberCardService.lockBookableCard(memberCardId, memberId,
-                schedule.getCourseType(), schedule.getStoreId(), schedule.getStartTime(), schedule.getEndTime());
+        LocalDateTime now = LocalDateTime.now();
+        validateSchedule(schedule, now);
+        ReservationDO open = reservationDao.selectOpenByMemberAndSchedule(memberId, scheduleId);
+        if (open != null) {
+            throw new ServiceException(ReservationStatusEnum.QUEUED.getCode().equals(open.getStatus())
+                    ? "您已在排队中"
+                    : "您已预约该课程", CONFLICT);
+        }
+        if (target == ReservationStatusEnum.QUEUED) {
+            validateQueueable(schedule, now);
+        } else if (persons > remainingPlaces(schedule)) {
+            throw new ServiceException("剩余名额不足，不能预约", CONFLICT);
+        }
+        MemberCardBookingSnapshot card = lockBookableCard(memberCardId, memberId, schedule);
         validateCardLimit(card, persons);
         if (courseService.getSummary(schedule.getCourseId()) == null) {
             throw new ServiceException("课程不存在或已被删除", NOT_FOUND);
         }
-        if (reservationDao.existsActiveByMemberAndSchedule(memberId, scheduleId)) {
-            throw new ServiceException("您已预约该课程", CONFLICT);
-        }
 
-        LocalDateTime reservationTime = LocalDateTime.now();
-        ReservationDO reservation = ReservationConverter.toDO(dto, memberId, schedule, reservationTime);
+        ReservationDO reservation = ReservationConverter.toDO(dto, memberId, schedule, target, now);
         try {
             if (reservationDao.insert(reservation) != 1 || reservation.getId() == null) {
-                throw new ServiceException("预约失败，请稍后重试", INTERNAL_ERROR);
+                throw new ServiceException("提交失败，请稍后重试", INTERNAL_ERROR);
             }
         } catch (DuplicateKeyException e) {
             ReservationDO duplicated = reservationDao.selectByMemberAndRequestIdForUpdate(memberId, requestId);
@@ -153,12 +173,9 @@ public class ReservationServiceImpl implements ReservationService {
             requireSameRequest(duplicated, scheduleId, memberCardId, persons);
             return;
         }
-
-        int bookedPersons = bookedPersons(schedule) + persons;
-        if (scheduleBookingService.updateBookingCount(scheduleId, bookedPersons) != 1) {
-            throw new ServiceException("剩余名额不足，预约失败", CONFLICT);
+        if (target == ReservationStatusEnum.RESERVED) {
+            occupy(schedule, reservation, card);
         }
-        deductTimesIfNeeded(reservation, card);
     }
 
     @Override
@@ -167,25 +184,34 @@ public class ReservationServiceImpl implements ReservationService {
         Long id = requirePositiveId(reservationId, "预约ID");
         ReservationDO preview = requireOwnedReservation(id, memberId);
 
-        // 锁顺序：排课 → 预约 → 会员卡
+        // 锁顺序：排课 → 预约 → 会员卡；补位时再按排队顺序锁排队记录与其会员卡
         ScheduleBookingSnapshot schedule = scheduleBookingService.lockForBooking(preview.getScheduleId());
         ReservationDO reservation = requireOwnedReservationForUpdate(id, memberId);
-        if (ReservationStatusEnum.CANCELLED.getCode().equals(reservation.getStatus())) {
+        ReservationStatusEnum status = ReservationStatusEnum.of(reservation.getStatus());
+        if (status == ReservationStatusEnum.CANCELLED) {
             return;
         }
-        if (ReservationStatusEnum.CHECKED_IN.getCode().equals(reservation.getStatus())) {
+        if (status == ReservationStatusEnum.CHECKED_IN) {
             throw new ServiceException("已签到的预约不能取消", CONFLICT);
+        }
+        if (status == null || !status.canTransitionTo(ReservationStatusEnum.CANCELLED)) {
+            throw new ServiceException("排队已失败，无需取消", CONFLICT);
         }
         if (schedule == null || ScheduleStatusEnum.of(schedule.getStatus()) != ScheduleStatusEnum.PUBLISHED) {
             throw new ServiceException("排课已取消或已结束，不能取消预约", CONFLICT);
         }
         LocalDateTime now = LocalDateTime.now();
-        if (reservation.getStartTime() == null
-                || now.isAfter(reservation.getStartTime().minusMinutes(CANCEL_DEADLINE_MINUTES))) {
+        if (status == ReservationStatusEnum.QUEUED) {
+            if (reservationDao.cancel(id, status.getCode(), now, ReservationCancelReasonEnum.MEMBER.getCode()) != 1) {
+                throw new ServiceException("预约状态已变更，请刷新后重试", CONFLICT);
+            }
+            return;
+        }
+        if (ReservationStatusEnum.isPastChangeDeadline(reservation.getStartTime(), now)) {
             throw new ServiceException("已超过取消截止时间，不能取消预约", CONFLICT);
         }
 
-        if (reservationDao.cancel(id, now, ReservationCancelReasonEnum.MEMBER.getCode()) != 1) {
+        if (reservationDao.cancel(id, status.getCode(), now, ReservationCancelReasonEnum.MEMBER.getCode()) != 1) {
             throw new ServiceException("预约状态已变更，请刷新后重试", CONFLICT);
         }
         int bookedPersons = Math.max(bookedPersons(schedule) - reservation.getPersons(), 0);
@@ -193,6 +219,61 @@ public class ReservationServiceImpl implements ReservationService {
             throw new ServiceException("名额释放失败，请稍后重试", CONFLICT);
         }
         refundTimesIfNeeded(reservation);
+        schedule.setBookedPersons(bookedPersons);
+        promoteQueued(schedule);
+    }
+
+    /**
+     * 补位：持有排课行锁时按排队顺序把排队记录转为已预约并扣次，直到名额占满或无人排队
+     *
+     * <p>轮到的会员卡已不可用或次数不足时，该记录置为排队失败并继续下一位。</p>
+     */
+    private void promoteQueued(ScheduleBookingSnapshot schedule) {
+        while (remainingPlaces(schedule) > 0) {
+            ReservationDO next = reservationDao.selectFirstQueuedForUpdate(schedule.getId());
+            if (next == null) {
+                return;
+            }
+            MemberCardBookingSnapshot card = lockCardForPromotion(next, schedule);
+            if (card == null) {
+                if (reservationDao.markQueueFailed(next.getId()) != 1) {
+                    throw new ServiceException("排队状态已变更，请稍后重试", CONFLICT);
+                }
+                continue;
+            }
+            if (reservationDao.promote(next.getId(), LocalDateTime.now()) != 1) {
+                throw new ServiceException("排队状态已变更，请稍后重试", CONFLICT);
+            }
+            occupy(schedule, next, card);
+        }
+    }
+
+    /** 补位时锁卡并校验资格：卡不可用、次数不足、已删除或不属于本人都返回 {@code null} */
+    private MemberCardBookingSnapshot lockCardForPromotion(ReservationDO queued, ScheduleBookingSnapshot schedule) {
+        try {
+            MemberCardBookingSnapshot card = lockBookableCard(queued.getMemberCardId(), queued.getMemberId(),
+                    schedule);
+            validateCardLimit(card, queued.getPersons());
+            return card;
+        } catch (ServiceException e) {
+            return null;
+        }
+    }
+
+    /** 占位并扣次：写入后的人数超过最大人数时拒绝 */
+    private void occupy(ScheduleBookingSnapshot schedule, ReservationDO reservation, MemberCardBookingSnapshot card) {
+        int bookedPersons = bookedPersons(schedule) + reservation.getPersons();
+        if (scheduleBookingService.updateBookingCount(schedule.getId(), bookedPersons) != 1) {
+            throw new ServiceException("剩余名额不足，预约失败", CONFLICT);
+        }
+        schedule.setBookedPersons(bookedPersons);
+        deductTimesIfNeeded(reservation, card);
+    }
+
+    private MemberCardBookingSnapshot lockBookableCard(Long memberCardId, Long memberId,
+            ScheduleBookingSnapshot schedule) {
+        return memberCardService.lockBookableCard(memberCardId, memberId, schedule.getCourseType(),
+                schedule.getStoreId(), schedule.getStartTime(), schedule.getEndTime());
     }
 
     @Override
@@ -204,12 +285,15 @@ public class ReservationServiceImpl implements ReservationService {
         // 锁顺序：排课 → 预约
         ScheduleBookingSnapshot schedule = scheduleBookingService.lockForBooking(preview.getScheduleId());
         ReservationDO reservation = requireOwnedReservationForUpdate(id, memberId);
-        if (ReservationStatusEnum.CHECKED_IN.getCode().equals(reservation.getStatus())
-                || reservation.getCheckInTime() != null) {
+        ReservationStatusEnum status = ReservationStatusEnum.of(reservation.getStatus());
+        if (status == ReservationStatusEnum.CHECKED_IN || reservation.getCheckInTime() != null) {
             return;
         }
-        if (ReservationStatusEnum.CANCELLED.getCode().equals(reservation.getStatus())) {
+        if (status == ReservationStatusEnum.CANCELLED) {
             throw new ServiceException("已取消的预约不能签到", CONFLICT);
+        }
+        if (status == null || !status.canTransitionTo(ReservationStatusEnum.CHECKED_IN)) {
+            throw new ServiceException("未预约成功，不能签到", CONFLICT);
         }
         if (schedule == null || ScheduleStatusEnum.of(schedule.getStatus()) != ScheduleStatusEnum.PUBLISHED) {
             throw new ServiceException("排课已取消，不能签到", CONFLICT);
@@ -232,7 +316,7 @@ public class ReservationServiceImpl implements ReservationService {
     @Override
     public PageResult<ReservationPublicItemVO> pageForMember(Long memberId, ReservationPublicQuery query) {
         if (query.getStatus() != null && ReservationStatusEnum.of(query.getStatus()) == null) {
-            throw new ServiceException("预约状态取值为 1、2 或 3", PARAM_ERROR);
+            throw new ServiceException(STATUS_RANGE_MESSAGE, PARAM_ERROR);
         }
         if (query.getCardType() != null && MemberCardTypeEnum.of(query.getCardType()) == null) {
             throw new ServiceException("卡类型取值为 1 或 2", PARAM_ERROR);
@@ -253,15 +337,16 @@ public class ReservationServiceImpl implements ReservationService {
         Map<Long, String> coachNames = indexCoachNames(scheduleCoachIds(schedules.values()));
         Map<Long, String> storeAddresses = indexStoreAddresses(scheduleStoreIds(schedules.values()));
 
+        LocalDateTime now = LocalDateTime.now();
         List<ReservationPublicItemVO> list = new ArrayList<ReservationPublicItemVO>(records.size());
         for (ReservationDO reservation : records) {
             ScheduleBookingSnapshot schedule = schedules.get(reservation.getScheduleId());
             CourseSummaryVO course = schedule == null ? null : courses.get(schedule.getCourseId());
-            list.add(ReservationConverter.toPublicItemVO(reservation, schedule == null ? null : schedule.getCourseId(),
-                    schedule == null ? null : schedule.getCourseType(), course == null ? null : course.getName(),
-                    course == null ? null : course.getCoverUrl(),
+            list.add(ReservationConverter.toPublicItemVO(reservation, schedule,
+                    course == null ? null : course.getName(), course == null ? null : course.getCoverUrl(),
                     schedule == null ? null : coachNames.get(schedule.getCoachId()),
-                    schedule == null ? null : storeAddresses.get(schedule.getStoreId())));
+                    schedule == null ? null : storeAddresses.get(schedule.getStoreId()), queuePosition(reservation),
+                    now));
         }
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), list);
     }
@@ -303,7 +388,7 @@ public class ReservationServiceImpl implements ReservationService {
     /** 管理端筛选校验：状态与卡类型取值、日期范围与 ID 格式 */
     private void validateAdminQuery(ReservationAdminQuery query) {
         if (query.getStatus() != null && ReservationStatusEnum.of(query.getStatus()) == null) {
-            throw new ServiceException("预约状态取值为 1、2 或 3", PARAM_ERROR);
+            throw new ServiceException(STATUS_RANGE_MESSAGE, PARAM_ERROR);
         }
         if (query.getCardType() != null && MemberCardTypeEnum.of(query.getCardType()) == null) {
             throw new ServiceException("卡类型取值为 1 或 2", PARAM_ERROR);
@@ -332,7 +417,7 @@ public class ReservationServiceImpl implements ReservationService {
             return bookers;
         }
         Set<Long> memberIds = new LinkedHashSet<Long>();
-        for (ReservationDO reservation : reservationDao.selectActiveBySchedule(scheduleId)) {
+        for (ReservationDO reservation : reservationDao.selectSeatedBySchedule(scheduleId)) {
             if (reservation.getMemberId() != null) {
                 memberIds.add(reservation.getMemberId());
             }
@@ -353,6 +438,20 @@ public class ReservationServiceImpl implements ReservationService {
         return bookers;
     }
 
+    @Override
+    public int queueCount(Long scheduleId) {
+        return scheduleId == null ? 0 : (int) reservationDao.countQueued(scheduleId);
+    }
+
+    /** 排队中记录的名次（从 1 开始）；其余状态返回 {@code null} */
+    private Integer queuePosition(ReservationDO reservation) {
+        if (!ReservationStatusEnum.QUEUED.getCode().equals(reservation.getStatus())) {
+            return null;
+        }
+        return (int) reservationDao.countQueuedBefore(reservation.getScheduleId(), reservation.getReservationTime(),
+                reservation.getId()) + 1;
+    }
+
     /** 姓名脱敏：保留首字符，其余替换为一个「*」；单字符姓名返回「*」，姓名缺失返回空字符串 */
     private String maskName(String name) {
         if (name == null || name.isEmpty()) {
@@ -361,8 +460,8 @@ public class ReservationServiceImpl implements ReservationService {
         return name.length() == 1 ? "*" : name.charAt(0) + "*";
     }
 
-    /** 排课校验：待上架按不存在处理，已取消与已开始、超出窗口、名额不足都拒绝预约 */
-    private void validateSchedule(ScheduleBookingSnapshot schedule, Integer persons) {
+    /** 排课校验：待上架按不存在处理，已取消与已开始、超出窗口都拒绝预约与排队 */
+    private void validateSchedule(ScheduleBookingSnapshot schedule, LocalDateTime now) {
         ScheduleStatusEnum status = ScheduleStatusEnum.of(schedule.getStatus());
         if (status == null || status == ScheduleStatusEnum.PENDING) {
             throw new ServiceException("排课不存在或已被删除", NOT_FOUND);
@@ -370,7 +469,6 @@ public class ReservationServiceImpl implements ReservationService {
         if (status == ScheduleStatusEnum.CANCELLED) {
             throw new ServiceException("排课已取消，不能预约", CONFLICT);
         }
-        LocalDateTime now = LocalDateTime.now();
         if (schedule.getStartTime() == null || !schedule.getStartTime().isAfter(now)) {
             throw new ServiceException("排课已开始或已结束，不能预约", CONFLICT);
         }
@@ -381,10 +479,21 @@ public class ReservationServiceImpl implements ReservationService {
         if (schedule.getMaxPersons() == null) {
             throw new ServiceException("排课最大人数缺失，不能预约", INTERNAL_ERROR);
         }
-        int remainingPlaces = Math.max(schedule.getMaxPersons() - bookedPersons(schedule), 0);
-        if (persons > remainingPlaces) {
-            throw new ServiceException("剩余名额不足，不能预约", CONFLICT);
+    }
+
+    /** 排队校验：只有满员且未过补位截止才能排队 */
+    private void validateQueueable(ScheduleBookingSnapshot schedule, LocalDateTime now) {
+        if (remainingPlaces(schedule) > 0) {
+            throw new ServiceException("课程还有空位，请直接预约", CONFLICT);
         }
+        if (ReservationStatusEnum.isPastChangeDeadline(schedule.getStartTime(), now)) {
+            throw new ServiceException("已超过排队截止时间，不能排队", CONFLICT);
+        }
+    }
+
+    private int remainingPlaces(ScheduleBookingSnapshot schedule) {
+        int maxPersons = schedule.getMaxPersons() == null ? 0 : schedule.getMaxPersons();
+        return Math.max(maxPersons - bookedPersons(schedule), 0);
     }
 
     /** 会员卡与人数校验：年卡固定 1 人，次数卡人数不得超过剩余次数 */

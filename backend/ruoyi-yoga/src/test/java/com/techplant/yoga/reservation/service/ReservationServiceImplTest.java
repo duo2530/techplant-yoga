@@ -20,6 +20,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -120,6 +121,10 @@ class ReservationServiceImplTest extends AbstractYogaIntegrationTest {
     private static final Long PERSONAL_CARD_ID = 7006L;
 
     private static final Long OTHER_MEMBER_CARD_ID = 7007L;
+
+    private static final Long THIRD_MEMBER_CARD_ID = 7008L;
+
+    private static final Long FOURTH_MEMBER_CARD_ID = 7009L;
 
     private static final Long SCHEDULE_ID = 8000L;
 
@@ -415,7 +420,7 @@ class ReservationServiceImplTest extends AbstractYogaIntegrationTest {
         assertTrue(empty.getList().isEmpty());
         assertEquals(Long.valueOf(3), empty.getTotal());
 
-        assertMessage(400, "预约状态取值为 1、2 或 3", () -> reservationService.pageForMember(MEMBER_ID, query(9, null)));
+        assertMessage(400, "预约状态取值为 1～5", () -> reservationService.pageForMember(MEMBER_ID, query(9, null)));
         assertMessage(400, "卡类型取值为 1 或 2", () -> reservationService.pageForMember(MEMBER_ID, query(null, 9)));
     }
 
@@ -500,7 +505,7 @@ class ReservationServiceImplTest extends AbstractYogaIntegrationTest {
                 throw new IllegalStateException("独立连接写入预约失败", e);
             }
 
-            assertTrue(reservationDao.existsActiveByMemberAndSchedule(MEMBER_ID, SCHEDULE_OVERLAP_ID),
+            assertNotNull(reservationDao.selectOpenByMemberAndSchedule(MEMBER_ID, SCHEDULE_OVERLAP_ID),
                     "重复预约检查必须看到并发提交的预约");
             assertNotNull(reservationDao.selectByMemberAndRequestIdForUpdate(MEMBER_ID, OTHER_REQUEST_ID),
                     "幂等复查必须看到并发提交的同键预约");
@@ -724,17 +729,22 @@ class ReservationServiceImplTest extends AbstractYogaIntegrationTest {
         assertEquals(0,
                 countOf("SELECT COUNT(*) FROM t_schedule s WHERE s.booked_persons <>"
                         + " (SELECT COALESCE(SUM(r.persons), 0) FROM t_reservation r"
-                        + " WHERE r.schedule_id = s.id AND r.status <> 2)"),
+                        + " WHERE r.schedule_id = s.id AND r.status IN (1, 3))"),
                 "排课占位应等于有效预约人数");
         assertEquals(0, countOf("SELECT COUNT(*) FROM t_member_card WHERE remaining_times < 0"));
         assertEquals(0, countOf(
                 "SELECT COUNT(*) FROM t_member_card_transaction" + " WHERE after_times <> before_times + change_times"),
                 "流水余额应守恒");
         assertEquals(0,
-                countOf("SELECT COUNT(*) FROM t_reservation r WHERE NOT EXISTS"
-                        + " (SELECT 1 FROM t_member_card_transaction t WHERE t.reservation_id = r.id"
-                        + " AND t.change_type = 1 AND t.change_times = -r.persons)"),
-                "次数卡预约应有对应扣次流水");
+                countOf("SELECT COUNT(*) FROM t_reservation r WHERE (r.status IN (1, 3) OR EXISTS"
+                        + " (SELECT 1 FROM t_member_card_transaction x WHERE x.reservation_id = r.id"
+                        + " AND x.change_type = 2)) AND NOT EXISTS (SELECT 1 FROM t_member_card_transaction t"
+                        + " WHERE t.reservation_id = r.id AND t.change_type = 1 AND t.change_times = -r.persons)"),
+                "占过名额的次数卡预约应有对应扣次流水");
+        assertEquals(0,
+                countOf("SELECT COUNT(*) FROM t_reservation r WHERE r.status IN (4, 5) AND EXISTS"
+                        + " (SELECT 1 FROM t_member_card_transaction t WHERE t.reservation_id = r.id)"),
+                "排队中与排队失败不应有次数流水");
     }
 
     /** 首个操作完成但尚未提交时，让第二个事务建立快照，再释放首个事务。 */
@@ -810,6 +820,297 @@ class ReservationServiceImplTest extends AbstractYogaIntegrationTest {
                 return e.getCode() + ":" + e.getMessage();
             }
         };
+    }
+
+    // ------------------------------------------------------------------
+    // 排队与补位
+    // ------------------------------------------------------------------
+
+    @Test
+    @DisplayName("加入排队：有空位时拒绝；满员后排队不占位、不扣次，同一 requestId 重试幂等")
+    void joinQueue_onlyWhenFull_shouldNotOccupyOrDeduct() {
+        assertMessage(409, "课程还有空位，请直接预约", () -> joinQueue(MEMBER_ID, REQUEST_ID, SCHEDULE_FULL_ID,
+                TIMES_CARD_ID, 1));
+        createForMember(OTHER_MEMBER_ID, OTHER_REQUEST_ID, SCHEDULE_FULL_ID, OTHER_MEMBER_CARD_ID, 1);
+
+        joinQueue(MEMBER_ID, REQUEST_ID, SCHEDULE_FULL_ID, TIMES_CARD_ID, 1);
+        joinQueue(MEMBER_ID, REQUEST_ID, SCHEDULE_FULL_ID, TIMES_CARD_ID, 1);
+
+        assertEquals(1, countOf("SELECT COUNT(*) FROM t_reservation WHERE member_id = ? AND status = 4", MEMBER_ID),
+                "同一 requestId 只写一条排队记录");
+        assertEquals(Integer.valueOf(1), intOf("SELECT booked_persons FROM t_schedule WHERE id = ?", SCHEDULE_FULL_ID),
+                "排队不占名额");
+        assertEquals(Integer.valueOf(12),
+                intOf("SELECT remaining_times FROM t_member_card WHERE id = ?", TIMES_CARD_ID), "排队不扣次");
+        assertEquals(0, countOf("SELECT COUNT(*) FROM t_member_card_transaction WHERE member_id = ?", MEMBER_ID));
+        assertEquals(Integer.valueOf(1), scheduleService.publicDetail(SCHEDULE_FULL_ID).getQueueCount(),
+                "排课详情返回排队人数");
+        assertAccountingConsistent();
+    }
+
+    @Test
+    @DisplayName("加入排队：人数不为 1、重复排队、排队中直接预约、已预约再排队、卡不可用与超过截止都拒绝")
+    void joinQueue_withIllegalRequest_shouldReject() {
+        createForMember(OTHER_MEMBER_ID, OTHER_REQUEST_ID, SCHEDULE_FULL_ID, OTHER_MEMBER_CARD_ID, 1);
+
+        assertMessage(400, "排队人数只能为 1", () -> joinQueue(MEMBER_ID, REQUEST_ID, SCHEDULE_FULL_ID,
+                TIMES_CARD_ID, 2));
+        assertMessage(409, "会员卡已停卡，不能预约", () -> joinQueue(MEMBER_ID, REQUEST_ID, SCHEDULE_FULL_ID,
+                STOPPED_CARD_ID, 1));
+        jdbcTemplate.update("UPDATE t_member_card SET remaining_times = 0 WHERE id = ?", TIMES_CARD_ID);
+        assertMessage(409, "会员卡剩余次数不足", () -> joinQueue(MEMBER_ID, REQUEST_ID, SCHEDULE_FULL_ID,
+                TIMES_CARD_ID, 1));
+        jdbcTemplate.update("UPDATE t_member_card SET remaining_times = 12 WHERE id = ?", TIMES_CARD_ID);
+
+        joinQueue(MEMBER_ID, REQUEST_ID, SCHEDULE_FULL_ID, TIMES_CARD_ID, 1);
+        assertMessage(409, "您已在排队中", () -> joinQueue(MEMBER_ID, SECOND_REQUEST_ID, SCHEDULE_FULL_ID,
+                YEAR_CARD_ID, 1));
+        assertMessage(409, "您已在排队中", () -> create(SECOND_REQUEST_ID, SCHEDULE_FULL_ID, TIMES_CARD_ID, 1));
+        assertMessage(409, "您已预约该课程", () -> joinQueue(OTHER_MEMBER_ID, THIRD_REQUEST_ID, SCHEDULE_FULL_ID,
+                OTHER_MEMBER_CARD_ID, 1));
+
+        jdbcTemplate.update("UPDATE t_schedule SET booked_persons = max_persons WHERE id = ?",
+                SCHEDULE_CANCEL_WINDOW_ID);
+        assertMessage(409, "已超过排队截止时间，不能排队", () -> joinQueue(MEMBER_ID, FOURTH_REQUEST_ID,
+                SCHEDULE_CANCEL_WINDOW_ID, TIMES_CARD_ID, 1));
+        assertEquals(1, countOf("SELECT COUNT(*) FROM t_reservation WHERE status = 4"));
+    }
+
+    @Test
+    @DisplayName("取消预约补位：最早排队的会员转为已预约并扣次、写扣次流水，后面的会员排队名次前移")
+    void cancel_shouldPromoteEarliestQueued() {
+        createForMember(OTHER_MEMBER_ID, OTHER_REQUEST_ID, SCHEDULE_FULL_ID, OTHER_MEMBER_CARD_ID, 1);
+        Long seatId = reservationId();
+        insertQueueCard(THIRD_MEMBER_CARD_ID, THIRD_MEMBER_ID);
+        joinQueue(MEMBER_ID, REQUEST_ID, SCHEDULE_FULL_ID, TIMES_CARD_ID, 1);
+        Long firstQueuedId = reservationId();
+        joinQueue(THIRD_MEMBER_ID, THIRD_REQUEST_ID, SCHEDULE_FULL_ID, THIRD_MEMBER_CARD_ID, 1);
+        Long secondQueuedId = reservationId();
+        assertEquals(Integer.valueOf(2), queuedItem(THIRD_MEMBER_ID).getQueuePosition(), "第二位排队名次为 2");
+
+        reservationService.cancel(OTHER_MEMBER_ID, seatId);
+
+        assertEquals(Integer.valueOf(1), intOf("SELECT status FROM t_reservation WHERE id = ?", firstQueuedId),
+                "最早排队的会员转为已预约");
+        assertEquals(Integer.valueOf(4), intOf("SELECT status FROM t_reservation WHERE id = ?", secondQueuedId));
+        assertEquals(Integer.valueOf(1), intOf("SELECT booked_persons FROM t_schedule WHERE id = ?", SCHEDULE_FULL_ID));
+        assertEquals(Integer.valueOf(11),
+                intOf("SELECT remaining_times FROM t_member_card WHERE id = ?", TIMES_CARD_ID), "补位时扣次");
+        assertEquals(Integer.valueOf(11), intOf("SELECT after_times FROM t_member_card_transaction"
+                + " WHERE reservation_id = ? AND change_type = 1", firstQueuedId), "补位写入扣次流水");
+        assertEquals(Integer.valueOf(12),
+                intOf("SELECT remaining_times FROM t_member_card WHERE id = ?", THIRD_MEMBER_CARD_ID));
+        assertEquals(Integer.valueOf(1), queuedItem(THIRD_MEMBER_ID).getQueuePosition(), "前一位补位后名次前移");
+        assertEquals(Arrays.asList("张*"), reservationService.bookerDisplayNames(SCHEDULE_FULL_ID));
+
+        ReservationPublicItemVO promoted = reservationService.pageForMember(MEMBER_ID, query(1, null)).getList().get(0);
+        assertEquals("已预约", promoted.getStatusText());
+        assertNull(promoted.getQueuePosition());
+        assertAccountingConsistent();
+    }
+
+    @Test
+    @DisplayName("补位跳过：轮到的会员卡次数不足时置为排队失败，继续补位下一位")
+    void cancel_withUnusableQueuedCard_shouldSkipToNext() {
+        createForMember(OTHER_MEMBER_ID, OTHER_REQUEST_ID, SCHEDULE_FULL_ID, OTHER_MEMBER_CARD_ID, 1);
+        Long seatId = reservationId();
+        insertQueueCard(THIRD_MEMBER_CARD_ID, THIRD_MEMBER_ID);
+        joinQueue(MEMBER_ID, REQUEST_ID, SCHEDULE_FULL_ID, TIMES_CARD_ID, 1);
+        Long skippedId = reservationId();
+        joinQueue(THIRD_MEMBER_ID, THIRD_REQUEST_ID, SCHEDULE_FULL_ID, THIRD_MEMBER_CARD_ID, 1);
+        Long promotedId = reservationId();
+        jdbcTemplate.update("UPDATE t_member_card SET remaining_times = 0 WHERE id = ?", TIMES_CARD_ID);
+
+        reservationService.cancel(OTHER_MEMBER_ID, seatId);
+
+        assertEquals(Integer.valueOf(5), intOf("SELECT status FROM t_reservation WHERE id = ?", skippedId),
+                "卡不可用的排队记录置为排队失败");
+        assertEquals(Integer.valueOf(1), intOf("SELECT status FROM t_reservation WHERE id = ?", promotedId),
+                "下一位补位成功");
+        assertEquals(Integer.valueOf(0),
+                intOf("SELECT remaining_times FROM t_member_card WHERE id = ?", TIMES_CARD_ID));
+        assertEquals(0, countOf("SELECT COUNT(*) FROM t_member_card_transaction WHERE reservation_id = ?", skippedId));
+        assertEquals(Integer.valueOf(11),
+                intOf("SELECT remaining_times FROM t_member_card WHERE id = ?", THIRD_MEMBER_CARD_ID));
+        assertEquals(Integer.valueOf(1), intOf("SELECT booked_persons FROM t_schedule WHERE id = ?", SCHEDULE_FULL_ID));
+        assertMessage(409, "排队已失败，无需取消", () -> reservationService.cancel(MEMBER_ID, skippedId));
+        assertAccountingConsistent();
+    }
+
+    @Test
+    @DisplayName("取消排队：不改名额与会员卡，重复取消幂等，不能签到，取消后可重新排队")
+    void cancel_queued_shouldNotTouchSeatsOrCard() {
+        createForMember(OTHER_MEMBER_ID, OTHER_REQUEST_ID, SCHEDULE_FULL_ID, OTHER_MEMBER_CARD_ID, 1);
+        joinQueue(MEMBER_ID, REQUEST_ID, SCHEDULE_FULL_ID, TIMES_CARD_ID, 1);
+        Long queuedId = reservationId();
+        assertMessage(409, "未预约成功，不能签到", () -> reservationService.checkIn(MEMBER_ID, queuedId));
+
+        reservationService.cancel(MEMBER_ID, queuedId);
+        reservationService.cancel(MEMBER_ID, queuedId);
+
+        assertEquals(Integer.valueOf(2), intOf("SELECT status FROM t_reservation WHERE id = ?", queuedId));
+        assertEquals(Integer.valueOf(1), intOf("SELECT cancel_reason FROM t_reservation WHERE id = ?", queuedId));
+        assertEquals(Integer.valueOf(1), intOf("SELECT booked_persons FROM t_schedule WHERE id = ?", SCHEDULE_FULL_ID),
+                "取消排队不释放名额");
+        assertEquals(Integer.valueOf(12),
+                intOf("SELECT remaining_times FROM t_member_card WHERE id = ?", TIMES_CARD_ID), "取消排队不返次");
+        assertEquals(0, countOf("SELECT COUNT(*) FROM t_member_card_transaction WHERE reservation_id = ?", queuedId));
+
+        joinQueue(MEMBER_ID, SECOND_REQUEST_ID, SCHEDULE_FULL_ID, TIMES_CARD_ID, 1);
+        assertEquals(1, countOf("SELECT COUNT(*) FROM t_reservation WHERE status = 4"), "取消后可重新排队");
+        assertAccountingConsistent();
+    }
+
+    @Test
+    @DisplayName("排队记录不算有效预约：不进入预约人员名单，不阻止其他会员的重复预约判断")
+    void queued_shouldNotCountAsSeated() {
+        createForMember(OTHER_MEMBER_ID, OTHER_REQUEST_ID, SCHEDULE_FULL_ID, OTHER_MEMBER_CARD_ID, 1);
+        joinQueue(MEMBER_ID, REQUEST_ID, SCHEDULE_FULL_ID, TIMES_CARD_ID, 1);
+
+        assertEquals(Arrays.asList("李*"), reservationService.bookerDisplayNames(SCHEDULE_FULL_ID),
+                "排队会员不出现在预约人员里");
+        PublicScheduleDetailVO detail = scheduleService.publicDetail(SCHEDULE_FULL_ID);
+        assertEquals(Integer.valueOf(1), detail.getBookedPersons());
+        assertEquals(Integer.valueOf(0), detail.getRemainingPlaces());
+        assertTrue(!detail.getBookable());
+        assertTrue(detail.getQueueable(), "满员且未过截止时可排队");
+        assertTrue(!scheduleService.publicDetail(SCHEDULE_ID).getQueueable(), "有空位时不可排队");
+
+        jdbcTemplate.update("UPDATE t_schedule SET booked_persons = max_persons WHERE id = ?",
+                SCHEDULE_CANCEL_WINDOW_ID);
+        assertTrue(!scheduleService.publicDetail(SCHEDULE_CANCEL_WINDOW_ID).getQueueable(), "过了排队截止不可排队");
+    }
+
+    @Test
+    @DisplayName("排队失败的展示推导：排课已取消或过了补位截止的排队中记录显示为排队失败，筛选口径一致")
+    void queued_pastDeadlineOrCancelled_shouldDisplayAsFailed() {
+        LocalDateTime base = LocalDateTime.now().withNano(0);
+        insertReservation(9501L, REQUEST_ID, MEMBER_ID, SCHEDULE_CANCEL_WINDOW_ID, TIMES_CARD_ID, 1, 4,
+                base.minusMinutes(3));
+        insertReservation(9502L, OTHER_REQUEST_ID, MEMBER_ID, SCHEDULE_CANCELLED_ID, TIMES_CARD_ID, 1, 4,
+                base.minusMinutes(2));
+        insertReservation(9503L, SECOND_REQUEST_ID, MEMBER_ID, SCHEDULE_FULL_ID, TIMES_CARD_ID, 1, 4,
+                base.minusMinutes(1));
+        insertReservation(9504L, THIRD_REQUEST_ID, MEMBER_ID, SCHEDULE_SECOND_ID, TIMES_CARD_ID, 1, 5, base);
+
+        List<ReservationPublicItemVO> all = reservationService.pageForMember(MEMBER_ID, query(null, null)).getList();
+        assertEquals(Arrays.asList(5, 4, 5, 5), statuses(all));
+        assertEquals(Arrays.asList("排队失败", "排队中", "排队失败", "排队失败"), statusTexts(all));
+        assertEquals(Integer.valueOf(1), all.get(1).getQueuePosition());
+        assertNull(all.get(2).getQueuePosition(), "排队失败不返回名次");
+
+        assertEquals(Arrays.asList(9503L), ids(reservationService.pageForMember(MEMBER_ID, query(4, null)).getList()));
+        assertEquals(Arrays.asList(9504L, 9502L, 9501L),
+                ids(reservationService.pageForMember(MEMBER_ID, query(5, null)).getList()));
+
+        ReservationAdminQuery failed = adminQuery();
+        failed.setStatus(5);
+        PageResult<ReservationAdminItemVO> adminFailed = reservationService.pageForAdmin(failed);
+        assertEquals(Long.valueOf(3), adminFailed.getTotal());
+        assertTrue(adminFailed.getList().stream().allMatch(item -> "排队失败".equals(item.getStatusText())));
+        ReservationAdminQuery queued = adminQuery();
+        queued.setStatus(4);
+        assertEquals(Long.valueOf(1), reservationService.pageForAdmin(queued).getTotal());
+    }
+
+    @Test
+    @DisplayName("并发取消补位：两位已预约会员同时取消，两位排队会员各补位一次，名额不超卖、不重复扣次")
+    void cancel_concurrently_shouldPromoteEachQueuedOnce() throws Exception {
+        insertQueueCard(THIRD_MEMBER_CARD_ID, THIRD_MEMBER_ID);
+        insertQueueCard(FOURTH_MEMBER_CARD_ID, FOURTH_MEMBER_ID);
+        create(REQUEST_ID, SCHEDULE_ID, TIMES_CARD_ID, 1);
+        Long firstSeat = reservationId();
+        createForMember(OTHER_MEMBER_ID, OTHER_REQUEST_ID, SCHEDULE_ID, OTHER_MEMBER_CARD_ID, 1);
+        Long secondSeat = reservationId();
+        joinQueue(THIRD_MEMBER_ID, THIRD_REQUEST_ID, SCHEDULE_ID, THIRD_MEMBER_CARD_ID, 1);
+        joinQueue(FOURTH_MEMBER_ID, FOURTH_REQUEST_ID, SCHEDULE_ID, FOURTH_MEMBER_CARD_ID, 1);
+
+        List<String> results = runConcurrently(() -> reservationService.cancel(MEMBER_ID, firstSeat),
+                () -> reservationService.cancel(OTHER_MEMBER_ID, secondSeat));
+
+        assertEquals(Arrays.asList(RESULT_OK, RESULT_OK), results);
+        assertEquals(Integer.valueOf(2), intOf("SELECT booked_persons FROM t_schedule WHERE id = ?", SCHEDULE_ID));
+        assertEquals(0, countOf("SELECT COUNT(*) FROM t_reservation WHERE status = 4"));
+        assertEquals(2, countOf("SELECT COUNT(*) FROM t_reservation WHERE status = 1 AND member_id IN (?, ?)",
+                THIRD_MEMBER_ID, FOURTH_MEMBER_ID));
+        assertEquals(Integer.valueOf(22), intOf("SELECT SUM(remaining_times) FROM t_member_card WHERE id IN (?, ?)",
+                THIRD_MEMBER_CARD_ID, FOURTH_MEMBER_CARD_ID), "两位补位会员各扣一次");
+        assertAccountingConsistent();
+    }
+
+    @Test
+    @DisplayName("并发取消与直接预约：释放的名额优先补位排队会员，同时提交的直接预约被拒绝")
+    void cancel_concurrentlyWithDirectBooking_shouldPreferQueue() throws Exception {
+        insertQueueCard(THIRD_MEMBER_CARD_ID, THIRD_MEMBER_ID);
+        insertQueueCard(FOURTH_MEMBER_CARD_ID, FOURTH_MEMBER_ID);
+        createForMember(OTHER_MEMBER_ID, OTHER_REQUEST_ID, SCHEDULE_FULL_ID, OTHER_MEMBER_CARD_ID, 1);
+        Long seatId = reservationId();
+        joinQueue(THIRD_MEMBER_ID, THIRD_REQUEST_ID, SCHEDULE_FULL_ID, THIRD_MEMBER_CARD_ID, 1);
+
+        List<String> results = runConcurrently(() -> reservationService.cancel(OTHER_MEMBER_ID, seatId),
+                () -> createForMember(FOURTH_MEMBER_ID, FOURTH_REQUEST_ID, SCHEDULE_FULL_ID, FOURTH_MEMBER_CARD_ID, 1));
+
+        assertEquals(Arrays.asList(RESULT_OK, "409:剩余名额不足，不能预约"), results);
+        assertEquals(Integer.valueOf(1),
+                intOf("SELECT status FROM t_reservation WHERE member_id = ?", THIRD_MEMBER_ID));
+        assertEquals(0, countOf("SELECT COUNT(*) FROM t_reservation WHERE member_id = ?", FOURTH_MEMBER_ID));
+        assertEquals(Integer.valueOf(1), intOf("SELECT booked_persons FROM t_schedule WHERE id = ?", SCHEDULE_FULL_ID));
+        assertAccountingConsistent();
+    }
+
+    @Test
+    @DisplayName("补位回滚：补位会员的扣次流水写入失败，取消、返次与补位全部回滚")
+    void cancel_whenPromotionLedgerFails_shouldRollbackEverything() {
+        createForMember(OTHER_MEMBER_ID, OTHER_REQUEST_ID, SCHEDULE_FULL_ID, OTHER_MEMBER_CARD_ID, 1);
+        Long seatId = reservationId();
+        joinQueue(MEMBER_ID, REQUEST_ID, SCHEDULE_FULL_ID, TIMES_CARD_ID, 1);
+        Long queuedId = reservationId();
+        jdbcTemplate.execute("ALTER TABLE t_member_card_transaction ADD CONSTRAINT reject_reservation_ledger"
+                + " CHECK (NOT (change_type = 1 AND member_id = " + MEMBER_ID + "))");
+        try {
+            assertThrows(DataAccessException.class, () -> reservationService.cancel(OTHER_MEMBER_ID, seatId));
+        } finally {
+            jdbcTemplate.execute("ALTER TABLE t_member_card_transaction DROP CHECK reject_reservation_ledger");
+        }
+        assertEquals(Integer.valueOf(1), intOf("SELECT status FROM t_reservation WHERE id = ?", seatId));
+        assertEquals(Integer.valueOf(4), intOf("SELECT status FROM t_reservation WHERE id = ?", queuedId));
+        assertEquals(Integer.valueOf(1), intOf("SELECT booked_persons FROM t_schedule WHERE id = ?", SCHEDULE_FULL_ID));
+        assertEquals(Integer.valueOf(11),
+                intOf("SELECT remaining_times FROM t_member_card WHERE id = ?", OTHER_MEMBER_CARD_ID), "返次已回滚");
+        assertEquals(Integer.valueOf(12),
+                intOf("SELECT remaining_times FROM t_member_card WHERE id = ?", TIMES_CARD_ID), "补位扣次已回滚");
+        assertAccountingConsistent();
+    }
+
+    private void joinQueue(Long memberId, String requestId, Long scheduleId, Long memberCardId, Integer persons) {
+        ReservationCreateDTO dto = new ReservationCreateDTO();
+        dto.setRequestId(requestId);
+        dto.setScheduleId(scheduleId);
+        dto.setMemberCardId(memberCardId);
+        dto.setPersons(persons);
+        reservationService.joinQueue(memberId, dto);
+    }
+
+    /** 排队会员的次数卡：团课类、本店、剩余 12 次 */
+    private void insertQueueCard(Long cardId, Long memberId) {
+        LocalDateTime now = LocalDateTime.now();
+        insertCard(cardId, memberId, 1, 1, STORE_ID, 12, now.minusDays(1), now.plusDays(300), now.minusDays(1), null);
+    }
+
+    private ReservationPublicItemVO queuedItem(Long memberId) {
+        return reservationService.pageForMember(memberId, query(4, null)).getList().get(0);
+    }
+
+    private List<Integer> statuses(List<ReservationPublicItemVO> items) {
+        return items.stream().map(ReservationPublicItemVO::getStatus).collect(Collectors.toList());
+    }
+
+    private List<String> statusTexts(List<ReservationPublicItemVO> items) {
+        return items.stream().map(ReservationPublicItemVO::getStatusText).collect(Collectors.toList());
+    }
+
+    private List<Long> ids(List<ReservationPublicItemVO> items) {
+        return items.stream().map(ReservationPublicItemVO::getId).collect(Collectors.toList());
     }
 
     // ------------------------------------------------------------------
@@ -965,7 +1266,7 @@ class ReservationServiceImplTest extends AbstractYogaIntegrationTest {
     void pageForAdmin_withIllegalQuery_shouldFail() {
         ReservationAdminQuery badStatus = adminQuery();
         badStatus.setStatus(9);
-        assertMessage(400, "预约状态取值为 1、2 或 3", () -> reservationService.pageForAdmin(badStatus));
+        assertMessage(400, "预约状态取值为 1～5", () -> reservationService.pageForAdmin(badStatus));
 
         ReservationAdminQuery badCardType = adminQuery();
         badCardType.setCardType(9);
