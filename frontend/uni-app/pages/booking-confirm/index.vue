@@ -53,6 +53,11 @@
           <text class="row__value">{{ timeText }}</text>
         </view>
 
+        <view v-if="queueable" class="row">
+          <text class="row__label">排队</text>
+          <text class="row__value queue-tip">课程已满，当前 {{ queueCount }} 人排队，有人取消时按顺序自动预约并扣次</text>
+        </view>
+
         <view class="row">
           <text class="row__label">人数</text>
           <view class="stepper">
@@ -139,7 +144,7 @@
 
     <!-- 底部固定操作条 -->
     <view v-if="detail" class="bar">
-      <text v-if="!bookable" class="bar__hint">{{ hintText }}</text>
+      <text v-if="!bookable && !queueable" class="bar__hint">{{ hintText }}</text>
       <view class="bar__btn" :class="{ 'bar__btn--off': !canSubmit }" @tap="onSubmit">
         <text>{{ submitText }}</text>
       </view>
@@ -152,7 +157,7 @@ import { computed, ref } from 'vue'
 import { onLoad, onUnload } from '@dcloudio/uni-app'
 import { getScheduleDetail } from '@/api/schedule'
 import { listMemberCards } from '@/api/member'
-import { createReservation, generateRequestId } from '@/api/booking'
+import { createReservation, generateRequestId, joinQueue } from '@/api/booking'
 import { isSessionValid, LOGIN_PAGE } from '@/utils/session'
 
 /** 立即预约页 */
@@ -227,17 +232,22 @@ const durationMinutes = computed(() => {
 
 const bookable = computed(() => !!(detail.value && detail.value.bookable))
 
+/** 满员且可排队：人数固定为 1，提交走加入排队 */
+const queueable = computed(() => !bookable.value && !!(detail.value && detail.value.queueable))
+
+const queueCount = computed(() => Number(detail.value ? detail.value.queueCount : 0) || 0)
+
 const selectedCard = computed(() => {
   return cards.value.find((card) => card.id === selectedCardId.value) || null
 })
 
-/** 年卡一次只供一人，人数上限固定为 1 */
+/** 年卡一次只供一人、排队固定一人，人数上限为 1 */
 const maxPersons = computed(() => {
   const card = selectedCard.value
   if (!card || !card.usable) {
     return 1
   }
-  if (card.cardType === CARD_TYPE_ANNUAL) {
+  if (card.cardType === CARD_TYPE_ANNUAL || queueable.value) {
     return 1
   }
   const places = Number(detail.value ? detail.value.remainingPlaces : 0) || 0
@@ -266,10 +276,13 @@ const submitText = computed(() => {
   if (submitting.value) {
     return '提交中...'
   }
-  return bookable.value ? '立即预约' : '不可预约'
+  if (bookable.value) {
+    return '立即预约'
+  }
+  return queueable.value ? '加入排队' : '不可预约'
 })
 
-const canSubmit = computed(() => bookable.value && !!selectedCard.value && !submitting.value)
+const canSubmit = computed(() => (bookable.value || queueable.value) && !!selectedCard.value && !submitting.value)
 
 function hm(value) {
   const text = String(value || '')
@@ -445,7 +458,7 @@ function goBack() {
 }
 
 async function onSubmit() {
-  if (!bookable.value) {
+  if (!bookable.value && !queueable.value) {
     uni.showToast({ title: hintText.value, icon: 'none' })
     return
   }
@@ -457,6 +470,10 @@ async function onSubmit() {
     return
   }
   submitting.value = true
+  if (queueable.value) {
+    await submitQueue()
+    return
+  }
   try {
     await createReservation({
       requestId: requestId.value,
@@ -478,9 +495,43 @@ async function onSubmit() {
     submitting.value = false
   }
 }
+
+/** 加入排队：成功后提示并跳到我的预约查看排队名次 */
+async function submitQueue() {
+  try {
+    await joinQueue({
+      requestId: requestId.value,
+      scheduleId: scheduleId.value,
+      memberCardId: selectedCardId.value
+    })
+    requestId.value = generateRequestId()
+    uni.showModal({
+      title: '排队成功',
+      content: '有人取消预约时将按排队顺序自动为您预约并扣次，可在「我的预约」查看排队名次',
+      showCancel: false,
+      confirmText: '查看预约',
+      success: () => {
+        uni.switchTab({ url: '/pages/my-bookings/index' })
+      }
+    })
+  } catch (error) {
+    // 失败原因（已有空位 / 已在排队 / 超过排队截止等）已由 utils/request 统一 toast
+  } finally {
+    submitting.value = false
+  }
+}
 </script>
 
 <style lang="scss" scoped>
+.queue-tip {
+  flex: 1;
+  margin-left: 24rpx;
+  text-align: right;
+  font-size: 25rpx;
+  line-height: 1.5;
+  color: #f5a623;
+}
+
 .confirm {
   min-height: 100vh;
   background: $ys-page;

@@ -6,7 +6,7 @@ const { jsonRoute } = require('../lib/runner')
  *
  * 全程连真实后端：可约场次、可用会员卡与预约结果都以同一批接口为期望值来源；
  * 每次运行前先清理该场次遗留的未取消预约，避免上一轮数据让本轮预约冲突。
- * 「筛选切换」与「签到按钮」两类时序用例用响应拦截构造数据。
+ * 「筛选切换」「签到按钮」与排队用例用响应拦截构造数据（种子数据没有满员场次）。
  */
 
 const RESERVATION_API = '**/api/reservations**'
@@ -52,7 +52,60 @@ function reservationRow(options)
     startTime,
     endTime,
     status: options.status,
-    statusText: options.statusText
+    statusText: options.statusText,
+    queuePosition: options.queuePosition === undefined ? null : options.queuePosition
+  }
+}
+
+/** 构造一条满员但可排队的 PublicScheduleDetailVO，用于拦截响应 */
+function fullScheduleDetail(scheduleId)
+{
+  const startTime = localDateTime(26 * 3600000)
+  return {
+    id: String(scheduleId),
+    courseId: '1856739201475235801',
+    courseName: '满员排队团课',
+    courseCoverUrl: null,
+    courseType: COURSE_TYPE_GROUP,
+    courseTypeName: '团课',
+    courseIntro: '',
+    scheduleDate: startTime.slice(0, 10),
+    startTime,
+    endTime: localDateTime(27 * 3600000),
+    coachId: '1856739201475235701',
+    coachName: '林教练',
+    storeId: STORE_ID,
+    storeName: '徐汇店',
+    storeAddress: '漕溪北路 88 号',
+    classroomName: '一号教室',
+    maxPersons: 1,
+    minPersons: 1,
+    bookedPersons: 1,
+    remainingPlaces: 0,
+    queueCount: 2,
+    status: 2,
+    statusText: '已上架',
+    bookable: false,
+    queueable: true,
+    bookers: []
+  }
+}
+
+/** 构造一张适用于团课的可用次数卡 MemberCardVO */
+function usableTimesCard(id)
+{
+  return {
+    id: String(id),
+    cardNo: 'E2EQ' + id,
+    cardName: 'E2E 排队次卡',
+    cardType: 1,
+    cardTypeText: '次数卡',
+    status: 2,
+    statusText: '正常',
+    courseScope: 1,
+    courseScopeName: '团课',
+    storeName: '徐汇店',
+    remainingTimes: 5
   }
 }
 
@@ -272,6 +325,110 @@ module.exports = {
           const button = document.querySelector('.ys-booking__checkin')
           return !!button && !button.classList.contains('ys-booking__checkin--off')
         }, null, { timeout: 40000 })
+      }
+    },
+    {
+      name: '满员排队：详情页「排队」→ 预约页「加入排队」提交排队接口，人数固定 1',
+      async run(ctx)
+      {
+        const scheduleId = '9201'
+        const queueBodies = []
+        await ctx.page.route('**/api/schedules/' + scheduleId,
+          jsonRoute({ code: 200, msg: '查询成功', data: fullScheduleDetail(scheduleId) }))
+        await ctx.page.route('**/api/member-cards**',
+          jsonRoute({ total: 1, rows: [usableTimesCard(9301)], code: 200, msg: '查询成功' }))
+        await ctx.page.route('**/api/reservations/queue', async (route) =>
+        {
+          queueBodies.push(route.request().postDataJSON())
+          await route.fulfill({ status: 200, contentType: 'application/json',
+            body: JSON.stringify({ code: 200, msg: '排队成功' }) })
+        })
+
+        await ctx.openScheduleDetail(scheduleId)
+        const detailButton = ctx.page.locator('.bar__btn')
+        assert.contains((await detailButton.innerText()).trim(), '排队', '满员可排队时详情页按钮文案')
+        assert.ok(!(await detailButton.evaluate((el) => el.classList.contains('bar__btn--off'))),
+          '满员可排队时详情页按钮可点')
+
+        await detailButton.click()
+        await ctx.page.waitForFunction(() => !!document.querySelector('.mcard--on'), null, { timeout: 20000 })
+        assert.contains(ctx.page.url(), 'booking-confirm', '点击排队应进入预约页')
+        assert.contains(await ctx.page.locator('.queue-tip').innerText(), '2 人排队', '预约页展示排队人数')
+        assert.contains((await ctx.page.locator('.bar__btn').innerText()).trim(), '加入排队', '预约页按钮文案')
+
+        await ctx.page.locator('.bar__btn').click()
+        await ctx.page.waitForSelector('.uni-modal__btn_primary', { timeout: 10000 })
+        assert.contains(await ctx.page.locator('.uni-modal').innerText(), '排队成功', '排队成功弹窗')
+        assert.equal(queueBodies.length, 1, '应调用一次加入排队接口')
+        assert.equal(queueBodies[0].scheduleId, scheduleId, '排队请求的排课 ID')
+        assert.equal(queueBodies[0].memberCardId, '9301', '排队请求的会员卡 ID')
+        assert.equal(queueBodies[0].persons, 1, '排队人数固定为 1')
+        assert.ok(!ctx.reservationRequests().some((url) => /\/api\/reservations$/.test(url.split('?')[0])),
+          '满员排队不应调用预约接口')
+      }
+    },
+    {
+      name: '我的预约：排队中显示名次与「取消排队」，排队失败不显示操作',
+      async run(ctx)
+      {
+        const queued = reservationRow({
+          id: 9004,
+          scheduleId: 9104,
+          courseName: '排队中的团课',
+          status: 4,
+          statusText: '排队中',
+          queuePosition: 3,
+          startOffsetMs: 26 * 3600000
+        })
+        const failed = reservationRow({
+          id: 9005,
+          scheduleId: 9105,
+          courseName: '排队失败的团课',
+          status: 5,
+          statusText: '排队失败',
+          startOffsetMs: 27 * 3600000
+        })
+        let rows = [queued, failed]
+        const cancelUrls = []
+
+        await ctx.page.route('**/api/reservations/*/cancel', async (route) =>
+        {
+          cancelUrls.push(route.request().url())
+          rows = [Object.assign({}, queued, { status: 2, statusText: '已取消', queuePosition: null }), failed]
+          await route.fulfill({ status: 200, contentType: 'application/json',
+            body: JSON.stringify({ code: 200, msg: '取消预约成功' }) })
+        })
+        await ctx.openMyBookings({
+          routes: [{
+            match: '**/api/reservations?**',
+            handler: (route) => route.fulfill({ status: 200, contentType: 'application/json',
+              body: JSON.stringify({ total: rows.length, rows, code: 200, msg: '查询成功' }) })
+          }]
+        })
+
+        const tabs = (await ctx.page.locator('.status__text').allInnerTexts()).join(',')
+        assert.contains(tabs, '排队中', '状态 Tab 含排队中')
+        assert.contains(tabs, '排队失败', '状态 Tab 含排队失败')
+
+        const queuedCard = ctx.page.locator('.ys-booking', { hasText: '排队中的团课' })
+        const failedCard = ctx.page.locator('.ys-booking', { hasText: '排队失败的团课' })
+        assert.contains(await queuedCard.innerText(), '第 3 位', '排队中显示名次')
+        assert.equal(await queuedCard.locator('.ys-booking__checkin').count(), 0, '排队中不显示签到')
+        assert.equal(await failedCard.locator('.ys-booking__cancel').count(), 0, '排队失败不显示取消')
+
+        await queuedCard.locator('.ys-booking__cancel').click()
+        await ctx.page.waitForSelector('.uni-modal__btn_primary', { timeout: 10000 })
+        assert.contains(await ctx.page.locator('.uni-modal').innerText(), '取消排队', '确认弹窗标题')
+        await ctx.page.locator('.uni-modal__btn_primary').click()
+
+        await ctx.page.waitForFunction(() =>
+        {
+          const card = Array.from(document.querySelectorAll('.ys-booking'))
+            .find((el) => el.innerText.includes('排队中的团课'))
+          return !!card && card.innerText.includes('已取消')
+        }, null, { timeout: 20000 })
+        assert.equal(cancelUrls.length, 1, '取消排队应调用一次取消接口')
+        assert.contains(cancelUrls[0], '/api/reservations/9004/cancel', '取消接口路径')
       }
     }
   ]

@@ -1,7 +1,7 @@
 import request from '@/utils/request'
 import config from '@/config'
 
-/** 用户端预约接口：我的预约列表、取消、签到与提交预约。 */
+/** 用户端预约接口：我的预约列表、取消（含取消排队）、签到、提交预约与加入排队。 */
 
 const MAX_PAGE_SIZE = 100
 
@@ -10,7 +10,9 @@ const STATUS_TABS = [
   { value: 0, label: '全部' },
   { value: 1, label: '已预约' },
   { value: 2, label: '已取消' },
-  { value: 3, label: '已签到' }
+  { value: 3, label: '已签到' },
+  { value: 4, label: '排队中' },
+  { value: 5, label: '排队失败' }
 ]
 
 /** 卡类型筛选：与后端的 cardType 取值一致 */
@@ -67,11 +69,12 @@ function normalizeBooking(row) {
     startHm: toHm(item.startTime),
     endHm: toHm(item.endTime),
     status: item.status,
-    statusText: toText(item.statusText)
+    statusText: toText(item.statusText),
+    queuePosition: item.queuePosition === null || item.queuePosition === undefined ? null : toNum(item.queuePosition)
   }
 }
 
-/** 状态筛选 Tab（全部 / 已预约 / 已取消 / 已签到） */
+/** 状态筛选 Tab（全部 / 已预约 / 已取消 / 已签到 / 排队中 / 排队失败） */
 export function getBookingStatusTabs() {
   return STATUS_TABS.slice()
 }
@@ -143,6 +146,24 @@ export function createReservation(params = {}) {
       scheduleId: toId(params.scheduleId),
       memberCardId: toId(params.memberCardId),
       persons: toNum(params.persons)
+    }
+  }).then((res) => toText(res && res.msg))
+}
+
+/**
+ * 加入排队 —— POST /api/reservations/queue
+ *
+ * 课程满员时使用，人数固定为 1；requestId 规则与提交预约相同。
+ */
+export function joinQueue(params = {}) {
+  return request({
+    url: '/api/reservations/queue',
+    method: 'post',
+    data: {
+      requestId: toText(params.requestId),
+      scheduleId: toId(params.scheduleId),
+      memberCardId: toId(params.memberCardId),
+      persons: 1
     }
   }).then((res) => toText(res && res.msg))
 }

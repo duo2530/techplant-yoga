@@ -14,6 +14,7 @@
       <view class="ys-booking__line">
         <text class="ys-booking__status" :class="statusClass">{{ item.statusText }}</text>
         <text class="ys-booking__date">{{ item.scheduleDate }}</text>
+        <text v-if="isQueued && item.queuePosition" class="ys-booking__queue">第 {{ item.queuePosition }} 位</text>
       </view>
 
       <text class="ys-booking__line">上课 {{ item.startHm }} - {{ item.endHm }}</text>
@@ -31,6 +32,12 @@
           <text class="ys-booking__checkin-text">签到</text>
         </view>
       </view>
+
+      <view v-else-if="isQueued" class="ys-booking__actions">
+        <view class="ys-booking__cancel press" @tap="onCancel">
+          <text class="ys-booking__cancel-text">取消排队</text>
+        </view>
+      </view>
     </view>
   </view>
 </template>
@@ -42,7 +49,7 @@ import { computed, onMounted, onUnmounted, ref } from 'vue'
  * 我的预约卡片
  *
  * 取数范围是 GET /api/reservations 的 ReservationPublicItemVO；
- * 整卡不响应点击，只有「取消预约」与「签到」两个按钮可交互；
+ * 整卡不响应点击：已预约显示「取消预约」与「签到」，排队中显示「取消排队」；
  * 签到窗口（课前 30 分钟起、课程结束前）按响应式时钟预判，后端签到仍会再校验。
  */
 const props = defineProps({
@@ -74,8 +81,10 @@ onUnmounted(() => {
   }
 })
 
-/** 已预约（1）可取消、可签到；已取消（2）/已签到（3）都不再显示操作 */
+/** 已预约（1）可取消、可签到；排队中（4）可取消排队；其余状态不显示操作 */
 const isBooked = computed(() => Number(props.item.status) === 1)
+
+const isQueued = computed(() => Number(props.item.status) === 4)
 
 /** 到签到窗口才让点：当前时间 >= 开课时间 - 30 分钟，且 < 结束时间 */
 const canCheckIn = computed(() => {
@@ -94,6 +103,9 @@ const statusClass = computed(() => {
   const status = Number(props.item.status)
   if (status === 1) {
     return 'ys-booking__status--active'
+  }
+  if (status === 4) {
+    return 'ys-booking__status--queue'
   }
   if (status === 3) {
     return 'ys-booking__status--done'
@@ -207,6 +219,10 @@ function onCheckIn() {
       color: $ys-ink-3;
     }
 
+    &--queue {
+      color: #f5a623;
+    }
+
     &--cancel {
       color: #e54545;
     }
@@ -217,6 +233,13 @@ function onCheckIn() {
     font-size: 25rpx;
     line-height: 1.4;
     color: $ys-ink-3;
+  }
+
+  &__queue {
+    margin-left: 10rpx;
+    font-size: 25rpx;
+    line-height: 1.4;
+    color: #f5a623;
   }
 
   &__actions {

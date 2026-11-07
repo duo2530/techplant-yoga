@@ -2,13 +2,13 @@
   <!--
     我的预约
 
-    数据：GET /api/reservations（status ＋ cardType ＋ 分页），取消与签到都是真实接口。
+    数据：GET /api/reservations（status ＋ cardType ＋ 分页），取消（含取消排队）与签到都是真实接口。
     状态栏 / 导航栏 / 微信胶囊 / TabBar 由系统绘制，本页只画内容区。
   -->
   <view class="bookings">
     <!-- ===== 上方白色区：状态筛选 Tab + 卡类型筛选 ===== -->
     <view class="head">
-      <!-- 状态筛选 Tab：全部 / 已预约 / 已取消 / 已签到
+      <!-- 状态筛选 Tab：全部 / 已预约 / 已取消 / 已签到 / 排队中 / 排队失败
            选中态 = 文字加深加粗 + 其下蓝色圆角下划线 -->
       <view class="status">
         <view
@@ -233,11 +233,12 @@ onReachBottom(() => {
   loadPage()
 })
 
-/** 「取消预约」→ 确认弹窗 → cancelBooking → toast 后刷新列表 */
+/** 「取消预约」/「取消排队」→ 确认弹窗 → cancelBooking → toast 后刷新列表 */
 function onCancel(item) {
+  const queued = Number(item.status) === 4
   uni.showModal({
-    title: '取消预约',
-    content: '确定要取消「' + item.courseName + '」的预约吗？',
+    title: queued ? '取消排队' : '取消预约',
+    content: '确定要取消「' + item.courseName + '」的' + (queued ? '排队' : '预约') + '吗？',
     confirmText: '确定',
     cancelText: '取消',
     success: async (res) => {
@@ -246,7 +247,7 @@ function onCancel(item) {
       }
       try {
         const message = await cancelBooking(item.id)
-        uni.showToast({ title: message || '取消预约成功' })
+        uni.showToast({ title: queued ? '已取消排队' : message || '取消预约成功' })
         await loadPage(true)
       } catch (requestError) {
         // 失败原因（超过取消截止时间 / 已签到 / 排课已结束）已由 request 统一 toast
@@ -283,7 +284,7 @@ async function onCheckIn(item) {
   display: flex;
   align-items: flex-end;
   height: 100rpx;
-  padding: 0 31rpx;
+  padding: 0 16rpx;
 
   &__item {
     flex: 1;
@@ -293,7 +294,7 @@ async function onCheckIn(item) {
   }
 
   &__text {
-    font-size: 29rpx;
+    font-size: 27rpx;
     line-height: 1;
     color: $ys-ink-3;
 

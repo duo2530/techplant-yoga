@@ -111,8 +111,8 @@
 
     <!-- 底部操作条 -->
     <view v-if="detail" class="bar">
-      <view class="bar__btn" :class="{ 'bar__btn--off': !detail.bookable }" @tap="onBook">
-        <text>{{ detail.bookable ? '立即预约' : '不可预约' }}</text>
+      <view class="bar__btn" :class="{ 'bar__btn--off': !canEnter }" @tap="onBook">
+        <text>{{ barText }}</text>
       </view>
     </view>
   </view>
@@ -231,8 +231,21 @@ function goBack() {
   uni.switchTab({ url: '/pages/booking/index' })
 }
 
+/** 可约进预约页；满员可排队也进同一页，由该页提交排队 */
+const canEnter = computed(() => !!detail.value && (detail.value.bookable || detail.value.queueable))
+
+const barText = computed(() => {
+  if (!detail.value) {
+    return ''
+  }
+  if (detail.value.bookable) {
+    return '立即预约'
+  }
+  return detail.value.queueable ? '排队' : '不可预约'
+})
+
 function onBook() {
-  if (!detail.value || !detail.value.bookable) {
+  if (!canEnter.value) {
     return
   }
   uni.navigateTo({ url: '/pages/booking-confirm/index?scheduleId=' + scheduleId.value })
