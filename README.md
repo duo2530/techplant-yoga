@@ -118,6 +118,14 @@ techplant-yoga/
 | HBuilderX | 最新稳定版，用于编译用户端小程序 |
 | 微信开发者工具 | 最新稳定版，并在「设置 → 安全设置」中开启服务端口 |
 
+**用 Docker 启动 MySQL 与 Redis（可选）**：仓库根目录的 `docker-compose.yml` 提供与 `application*.yml` 默认值一致的 MySQL 8.0（`root`／`123456`，库名 `yoga`）和 Redis 7，首次启动会按顺序自动导入下面三个 SQL 脚本，可跳过第 1 步：
+
+```powershell
+docker compose up -d --wait   # 启动依赖
+start.bat                     # 构建并启动后端 8080、管理端 80、用户端 H5 9090
+docker compose down -v        # 停止并删除数据卷，下次启动重新初始化
+```
+
 ### 1. 把三个 SQL 脚本导入数据库
 
 后端依赖三个初始化脚本，全部位于 `backend/sql`，**必须按顺序执行**：
