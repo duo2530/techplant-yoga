@@ -44,9 +44,13 @@ function normalizeDetail(row) {
     coachAvatarUrl: toImageUrl(raw.coachAvatarUrl),
     coachIntro: toText(raw.coachIntro),
     storeAddress: toText(raw.storeAddress),
+    storePhone: toText(raw.storePhone),
+    storeBusinessHours: toText(raw.storeBusinessHours),
     minPersons: toNum(raw.minPersons),
     queueCount: toNum(raw.queueCount),
     queueLimit: toNum(raw.queueLimit),
+    queueStopMinutes: toNum(raw.queueStopMinutes),
+    cancelDeadlineMinutes: toNum(raw.cancelDeadlineMinutes),
     bookers: Array.isArray(raw.bookers) ? raw.bookers : []
   })
 }
