@@ -232,7 +232,7 @@ java -jar backend/ruoyi-admin/target/ruoyi-admin.jar
 - Windows 下也有 `backend/bin/*.bat`（clean/package/run）和 `backend/ry.bat`；Linux 用 `backend/ry.sh {start|stop|restart|status}`。**这些 .bat 是 GBK 编码，别用 UTF-8 工具直接改写。**
 - **JDK 必须是 8**：本机 `JAVA_HOME=D:\Develop\Java\jdk1.8.0_202`，命令行/IDEA 都用这个 SDK。
 - 启动前置条件：**MySQL 和 Redis 都必须可用**，且 `backend/sql/ry_20260417.sql`、`backend/sql/quartz.sql`、`backend/sql/yoga.sql` 三个脚本都已导入目标库。前两个 SQL 里没有 `CREATE DATABASE`/`use`，必须先自己建库（当前工作区的库名是 `yoga`，见 `application-druid.yml`）再导入；`yoga.sql` 在已有基础库上执行，建 5 张业务表 + `store_region` 字典 16 条 + 业务菜单 2000~2005。
-- 业务模块的表的脚本：`backend/sql/yoga.sql`
+- 业务模块的表的脚本：`backend/sql/yoga.sql`；已导入旧版脚本的库按日期顺序执行 `backend/sql/migrations/` 下的增量脚本补齐表结构，脚本可重复执行。
 - 默认端口 8080，默认账号 `admin / admin123`。
 
 测试策略与验证要求统一维护在 [AI Agent测试手册](../系统测试/AI%20Agent测试手册.md)。
