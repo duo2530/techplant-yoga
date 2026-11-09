@@ -4,7 +4,9 @@ import lombok.RequiredArgsConstructor;
 
 import java.time.LocalDateTime;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import org.springframework.stereotype.Repository;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
@@ -175,10 +177,18 @@ public class ReservationDaoImpl implements ReservationDao {
     }
 
     @Override
-    public long countQueued(Long scheduleId) {
-        return reservationMapper.selectCount(Wrappers.<ReservationDO>lambdaQuery()
-                .eq(ReservationDO::getScheduleId, scheduleId)
-                .eq(ReservationDO::getStatus, ReservationStatusEnum.QUEUED.getCode()));
+    public Map<Long, Integer> countQueuedBySchedules(Collection<Long> scheduleIds) {
+        Map<Long, Integer> counts = new HashMap<Long, Integer>();
+        if (scheduleIds == null || scheduleIds.isEmpty()) {
+            return counts;
+        }
+        List<Map<String, Object>> rows = reservationMapper.selectMaps(Wrappers.<ReservationDO>query()
+                .select("schedule_id", "COUNT(*) AS queue_count").in("schedule_id", scheduleIds)
+                .eq("status", ReservationStatusEnum.QUEUED.getCode()).groupBy("schedule_id"));
+        for (Map<String, Object> row : rows) {
+            counts.put(((Number) row.get("schedule_id")).longValue(), ((Number) row.get("queue_count")).intValue());
+        }
+        return counts;
     }
 
     @Override

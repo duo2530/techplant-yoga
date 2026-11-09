@@ -4,7 +4,7 @@ import lombok.Getter;
 
 import java.time.LocalDateTime;
 
-/** 排课状态枚举：状态码、「已结束」的推导、两套状态文案与 {@code bookable} 都收在这一处。 */
+/** 排课状态枚举：状态码、管理端「已结束」的推导与管理端状态文案；用户端展示状态见 {@link PublicScheduleStateEnum}。 */
 @Getter
 public enum ScheduleStatusEnum {
     /** 1 待上架：用户端不可见，可编辑、可物理删除 */
@@ -16,14 +16,8 @@ public enum ScheduleStatusEnum {
     /** 3 已取消：用户端可见，终态（不可编辑／不可改状态／不可删除） */
     CANCELLED(3, "已取消");
 
-    /** 「已结束」的展示文案（管理端与用户端同字，仅用户端不会出现「已上架」） */
+    /** 管理端「已结束」的展示文案 */
     public static final String FINISHED_TEXT = "已结束";
-
-    /** 用户端「已上架且未结束」的文案 */
-    public static final String BOOKABLE_TEXT = "可约";
-
-    /** 待上架排课在用户端的显示文案。 */
-    public static final String INVISIBLE_TEXT = "";
 
     /** 非法状态码的兜底文案 */
     public static final String UNKNOWN_TEXT = "";
@@ -91,35 +85,5 @@ public enum ScheduleStatusEnum {
             return FINISHED_TEXT;
         }
         return matched.adminText;
-    }
-
-    /**
-     * 用户端展示文案：可约／已结束／已取消
-     *
-     * <p>只可能是这三种之一；待上架（1）理论上查不到，兜底为空字符串。</p>
-     */
-    public static String publicTextOf(Integer status, LocalDateTime endTime, LocalDateTime now) {
-        ScheduleStatusEnum matched = of(status);
-        if (matched == null) {
-            return UNKNOWN_TEXT;
-        }
-        if (matched == PENDING) {
-            return INVISIBLE_TEXT;
-        }
-        if (matched == CANCELLED) {
-            return CANCELLED.adminText;
-        }
-        return isFinished(status, endTime, now) ? FINISHED_TEXT : BOOKABLE_TEXT;
-    }
-
-    /**
-     * 用户端是否可发起预约：{@code status == 2}、尚未开始且剩余名额大于 0
-     *
-     * <p>「今天起 14 天内」的窗口由排课服务按上课日期判定，这里只看状态、开始时间与名额。</p>
-     */
-    public static boolean isBookable(Integer status, LocalDateTime startTime, LocalDateTime endTime,
-            Integer remainingPlaces, LocalDateTime now) {
-        return status != null && status == PUBLISHED.code && startTime != null && endTime != null && now != null
-                && startTime.isAfter(now) && remainingPlaces != null && remainingPlaces > 0;
     }
 }

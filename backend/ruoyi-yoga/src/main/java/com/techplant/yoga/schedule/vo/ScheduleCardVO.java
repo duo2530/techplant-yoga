@@ -68,9 +68,12 @@ public class ScheduleCardVO {
     @ApiModelProperty(value = "落库状态：2 已上架、3 已取消（待上架对用户端不可见）", example = "2")
     private Integer status;
 
-    @ApiModelProperty(value = "用户端展示文案：可约／已结束／已取消", example = "可约")
+    @ApiModelProperty(value = "用户端展示状态文案：可约／排队／已约满／已结束／已取消／未开放", example = "可约")
     private String statusText;
 
-    @ApiModelProperty(value = "是否可发起预约（status=2 且 end_time>当前时间）", example = "true")
+    @ApiModelProperty(value = "是否可发起预约：展示状态为可约", example = "true")
     private Boolean bookable;
+
+    @ApiModelProperty(value = "是否可加入排队：展示状态为排队", example = "false")
+    private Boolean queueable;
 }

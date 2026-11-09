@@ -3,6 +3,7 @@ package com.techplant.yoga.reservation.dao;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.techplant.yoga.reservation.domain.ReservationDO;
 import com.techplant.yoga.reservation.query.ReservationAdminQuery;
@@ -76,8 +77,8 @@ public interface ReservationDao {
     /** 补位跳过：仅当仍为排队中时改为排队失败 */
     int markQueueFailed(Long reservationId);
 
-    /** 该排课排队中的记录数 */
-    long countQueued(Long scheduleId);
+    /** 按排课分组统计排队中记录数；ID 为空返回空表，没有排队的排课不在结果中 */
+    Map<Long, Integer> countQueuedBySchedules(Collection<Long> scheduleIds);
 
     /** 该排课排队中的记录数，当前读：事务快照之后提交的排队也计入 */
     long countQueuedForUpdate(Long scheduleId);

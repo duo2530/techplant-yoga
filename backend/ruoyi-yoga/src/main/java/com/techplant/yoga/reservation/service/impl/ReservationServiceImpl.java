@@ -442,8 +442,8 @@ public class ReservationServiceImpl implements ReservationService {
     }
 
     @Override
-    public int queueCount(Long scheduleId) {
-        return scheduleId == null ? 0 : (int) reservationDao.countQueued(scheduleId);
+    public Map<Long, Integer> queueCounts(Collection<Long> scheduleIds) {
+        return reservationDao.countQueuedBySchedules(scheduleIds);
     }
 
     /** 排队中记录的名次（从 1 开始）；其余状态返回 {@code null} */

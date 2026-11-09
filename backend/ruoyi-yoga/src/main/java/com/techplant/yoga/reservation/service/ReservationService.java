@@ -1,6 +1,8 @@
 package com.techplant.yoga.reservation.service;
 
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import com.techplant.yoga.common.response.PageResult;
 import com.techplant.yoga.reservation.dto.ReservationCreateDTO;
 import com.techplant.yoga.reservation.query.ReservationAdminQuery;
@@ -74,6 +76,6 @@ public interface ReservationService {
      */
     List<String> bookerDisplayNames(Long scheduleId);
 
-    /** 排课当前排队中的人数 */
-    int queueCount(Long scheduleId);
+    /** 按排课批量统计排队中人数：一次分组查询，没有排队的排课不在结果中 */
+    Map<Long, Integer> queueCounts(Collection<Long> scheduleIds);
 }

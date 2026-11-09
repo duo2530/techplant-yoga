@@ -48,10 +48,6 @@ public class PublicScheduleDetailVO extends ScheduleCardVO {
     @Setter
     private Integer queueLimit;
 
-    @ApiModelProperty(value = "是否可加入排队：已满员、排队未满、未过停止排队时间且其余条件与可约一致", example = "false")
-    @Setter
-    private Boolean queueable;
-
     @ApiModelProperty(value = "预约会员显示名（脱敏，最多 10 位）", example = "[\"张*\"]")
     private List<String> bookers = new ArrayList<String>();
 
