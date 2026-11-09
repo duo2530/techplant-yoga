@@ -1,6 +1,6 @@
 // 人数不足自动取消验收数据：node .agents/skills/verify-yoga/scripts/auto-cancel.mjs <setup|status|run|cleanup>
 // 只操作本地开发库；复用 queue.mjs 的验收会员（ID 1999000000000000001～003、005），两个脚本的 setup 会互相清掉对方的数据。
-// 两节团课都在今天约 125 分钟后开课：不足排课最低 3 人只约了 2 人，对照排课最低 2 人约满 2 人。
+// 两节团课都在约 125 分钟后开课：不足排课最低 3 人只约了 2 人，对照排课最低 2 人约满 2 人。
 import { execFileSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 
@@ -57,14 +57,13 @@ const format = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDa
   + `${pad(d.getHours())}:${pad(d.getMinutes())}:00`;
 const addMinutes = (d, minutes) => new Date(d.getTime() + minutes * 60000);
 
-/** 现在起 125 分钟后向上取整到分钟；两节课都须在今天内下课 */
+/** 现在起 125 分钟后向上取整到分钟；排课须在开课当天内下课 */
 function slotStart() {
   const start = addMinutes(new Date(), LEAD_MINUTES);
   if (start.getSeconds() || start.getMilliseconds()) start.setMinutes(start.getMinutes() + 1, 0, 0);
   const latestEnd = addMinutes(start, Math.max(UNDERSTAFFED.durationMinutes, CONTROL.durationMinutes));
-  const today = new Date().getDate();
-  if (start.getDate() !== today || latestEnd.getDate() !== today) {
-    throw new Error(`开课时间 ${format(start)} 起的课会跨过午夜，今天无法准备验收数据，请在 21:30 之前执行 setup`);
+  if (latestEnd.getDate() !== start.getDate()) {
+    throw new Error(`开课时间 ${format(start)} 起的课会跨过午夜，请在 21:00 之前或 22:00 之后执行 setup`);
   }
   return start;
 }
@@ -72,7 +71,7 @@ function slotStart() {
 function findSchedule(config) {
   const rows = sql(`SELECT id FROM t_schedule WHERE coach_id=${config.coachId} AND classroom_id=${config.classroomId}
     AND course_id=${COURSE_ID} AND max_persons=${config.maxPersons} AND min_persons=${config.minPersons}
-    AND schedule_date=CURDATE() AND TIMESTAMPDIFF(MINUTE, start_time, end_time)=${config.durationMinutes}
+    AND schedule_date BETWEEN CURDATE() AND CURDATE() + INTERVAL 1 DAY AND TIMESTAMPDIFF(MINUTE, start_time, end_time)=${config.durationMinutes}
     ORDER BY id DESC LIMIT 1;`);
   return rows.length ? rows[0][0] : null;
 }
