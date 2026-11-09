@@ -207,7 +207,7 @@ public class ReservationServiceImpl implements ReservationService {
             }
             return;
         }
-        if (ReservationStatusEnum.isPastChangeDeadline(reservation.getStartTime(), now)) {
+        if (ReservationStatusEnum.isPastCancelDeadline(reservation.getStartTime(), now)) {
             throw new ServiceException("已超过取消截止时间，不能取消预约", CONFLICT);
         }
 
@@ -220,15 +220,18 @@ public class ReservationServiceImpl implements ReservationService {
         }
         refundTimesIfNeeded(reservation);
         schedule.setBookedPersons(bookedPersons);
-        promoteQueued(schedule);
+        promoteQueued(schedule, now);
     }
 
     /**
      * 补位：持有排课行锁时按排队顺序把排队记录转为已预约并扣次，直到名额占满或无人排队
      *
-     * <p>轮到的会员卡已不可用或次数不足时，该记录置为排队失败并继续下一位。</p>
+     * <p>过了停止排队时间不再补位；轮到的会员卡已不可用或次数不足时，该记录置为排队失败并继续下一位。</p>
      */
-    private void promoteQueued(ScheduleBookingSnapshot schedule) {
+    private void promoteQueued(ScheduleBookingSnapshot schedule, LocalDateTime now) {
+        if (ReservationStatusEnum.isPastQueueStop(schedule.getStartTime(), schedule.getQueueStopMinutes(), now)) {
+            return;
+        }
         while (remainingPlaces(schedule) > 0) {
             ReservationDO next = reservationDao.selectFirstQueuedForUpdate(schedule.getId());
             if (next == null) {
@@ -481,13 +484,24 @@ public class ReservationServiceImpl implements ReservationService {
         }
     }
 
-    /** 排队校验：只有满员且未过补位截止才能排队 */
+    /**
+     * 排队校验：满员、开放排队、未过停止排队时间且排队人数未达上限
+     *
+     * <p>排队人数用当前读统计；调用方已持有排课行锁，并发排队因此不会超过上限。</p>
+     */
     private void validateQueueable(ScheduleBookingSnapshot schedule, LocalDateTime now) {
         if (remainingPlaces(schedule) > 0) {
             throw new ServiceException("课程还有空位，请直接预约", CONFLICT);
         }
-        if (ReservationStatusEnum.isPastChangeDeadline(schedule.getStartTime(), now)) {
-            throw new ServiceException("已超过排队截止时间，不能排队", CONFLICT);
+        int queueLimit = schedule.getQueueLimit() == null ? 0 : schedule.getQueueLimit();
+        if (queueLimit <= 0) {
+            throw new ServiceException("该课程不开放排队", CONFLICT);
+        }
+        if (ReservationStatusEnum.isPastQueueStop(schedule.getStartTime(), schedule.getQueueStopMinutes(), now)) {
+            throw new ServiceException("已超过停止排队时间，不能排队", CONFLICT);
+        }
+        if (reservationDao.countQueuedForUpdate(schedule.getId()) >= queueLimit) {
+            throw new ServiceException("排队人数已满", CONFLICT);
         }
     }
 

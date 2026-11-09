@@ -39,6 +39,8 @@ public final class ScheduleConverter {
         schedule.setEndTime(dto.getEndTime());
         schedule.setMaxPersons(dto.getMaxPersons());
         schedule.setMinPersons(dto.getMinPersons());
+        schedule.setQueueLimit(dto.getQueueLimit());
+        schedule.setQueueStopMinutes(dto.getQueueStopMinutes());
         schedule.setStatus(ScheduleStatusEnum.PENDING.getCode());
         schedule.setBookedPersons(0);
         return schedule;
@@ -61,6 +63,8 @@ public final class ScheduleConverter {
         target.setEndTime(dto.getEndTime());
         target.setMaxPersons(dto.getMaxPersons());
         target.setMinPersons(dto.getMinPersons());
+        target.setQueueLimit(dto.getQueueLimit());
+        target.setQueueStopMinutes(dto.getQueueStopMinutes());
     }
 
     /**
@@ -123,6 +127,7 @@ public final class ScheduleConverter {
         vo.setCourseId(source.getCourseId());
         vo.setCoachId(source.getCoachId());
         vo.setMinPersons(source.getMinPersons());
+        vo.setQueueLimit(source.getQueueLimit());
         vo.setBookers(new java.util.ArrayList<String>());
         return vo;
     }
@@ -141,6 +146,8 @@ public final class ScheduleConverter {
         snapshot.setEndTime(source.getEndTime());
         snapshot.setMaxPersons(source.getMaxPersons());
         snapshot.setMinPersons(source.getMinPersons());
+        snapshot.setQueueLimit(source.getQueueLimit());
+        snapshot.setQueueStopMinutes(source.getQueueStopMinutes());
         snapshot.setBookedPersons(source.getBookedPersons() == null ? 0 : source.getBookedPersons());
         snapshot.setStatus(source.getStatus());
         return snapshot;
@@ -159,6 +166,8 @@ public final class ScheduleConverter {
         vo.setEndTime(source.getEndTime());
         vo.setMaxPersons(source.getMaxPersons());
         vo.setMinPersons(source.getMinPersons());
+        vo.setQueueLimit(source.getQueueLimit());
+        vo.setQueueStopMinutes(source.getQueueStopMinutes());
         vo.setBookedPersons(source.getBookedPersons() == null ? 0 : source.getBookedPersons());
         vo.setStatus(source.getStatus());
         vo.setStatusText(ScheduleStatusEnum.adminTextOf(source.getStatus(), source.getEndTime(), now));

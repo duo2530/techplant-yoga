@@ -22,8 +22,10 @@ import com.techplant.yoga.schedule.enums.ScheduleStatusEnum;
 @Repository
 @RequiredArgsConstructor
 public class ReservationDaoImpl implements ReservationDao {
-    private static final String PUBLISHED_SCHEDULE_EXISTS = "EXISTS (SELECT 1 FROM t_schedule s"
-            + " WHERE s.id = t_reservation.schedule_id AND s.status = {0})";
+    /** 排队仍可补位：排课已上架且未过停止排队时间；{0} 为已上架状态码，{1} 为当前时间 */
+    private static final String QUEUE_OPEN_EXISTS = "EXISTS (SELECT 1 FROM t_schedule s"
+            + " WHERE s.id = t_reservation.schedule_id AND s.status = {0}"
+            + " AND t_reservation.start_time >= DATE_ADD({1}, INTERVAL s.queue_stop_minutes MINUTE))";
 
     private final ReservationMapper reservationMapper;
 
@@ -80,29 +82,22 @@ public class ReservationDaoImpl implements ReservationDao {
         return reservationMapper.selectPage(new Page<ReservationDO>(query.getPageNum(), query.getPageSize()), wrapper);
     }
 
-    /** 按展示状态筛选：排课不再上架或已过补位截止的排队中记录归入排队失败 */
+    /** 按展示状态筛选：排课不再上架或已过停止排队时间的排队中记录归入排队失败 */
     private void filterDisplayStatus(LambdaQueryWrapper<ReservationDO> wrapper, Integer status) {
         if (status == null) {
             return;
         }
         Integer queued = ReservationStatusEnum.QUEUED.getCode();
-        LocalDateTime queueDeadline = queueDeadline();
+        Integer published = ScheduleStatusEnum.PUBLISHED.getCode();
+        LocalDateTime now = LocalDateTime.now();
         if (queued.equals(status)) {
-            wrapper.eq(ReservationDO::getStatus, queued).ge(ReservationDO::getStartTime, queueDeadline)
-                    .apply(PUBLISHED_SCHEDULE_EXISTS, ScheduleStatusEnum.PUBLISHED.getCode());
+            wrapper.eq(ReservationDO::getStatus, queued).apply(QUEUE_OPEN_EXISTS, published, now);
         } else if (ReservationStatusEnum.QUEUE_FAILED.getCode().equals(status)) {
-            wrapper.and(w -> w.eq(ReservationDO::getStatus, status)
-                    .or(o -> o.eq(ReservationDO::getStatus, queued).and(x -> x
-                            .lt(ReservationDO::getStartTime, queueDeadline).or()
-                            .apply("NOT " + PUBLISHED_SCHEDULE_EXISTS, ScheduleStatusEnum.PUBLISHED.getCode()))));
+            wrapper.and(w -> w.eq(ReservationDO::getStatus, status).or(o -> o.eq(ReservationDO::getStatus, queued)
+                    .apply("NOT " + QUEUE_OPEN_EXISTS, published, now)));
         } else {
             wrapper.eq(ReservationDO::getStatus, status);
         }
-    }
-
-    /** 排队仍可补位的最早开始时间：开始时间不早于它的排队记录未过截止 */
-    private LocalDateTime queueDeadline() {
-        return LocalDateTime.now().plusMinutes(ReservationStatusEnum.CHANGE_DEADLINE_MINUTES);
     }
 
     @Override
@@ -113,7 +108,7 @@ public class ReservationDaoImpl implements ReservationDao {
                 ? null
                 : query.getEndDate().plusDays(1).atStartOfDay();
         return reservationMapper.selectAdminPage(new Page<ReservationDO>(query.getPageNum(), query.getPageSize()),
-                query, startTime, endTimeExclusive, queueDeadline());
+                query, startTime, endTimeExclusive, LocalDateTime.now());
     }
 
     @Override
@@ -184,6 +179,13 @@ public class ReservationDaoImpl implements ReservationDao {
         return reservationMapper.selectCount(Wrappers.<ReservationDO>lambdaQuery()
                 .eq(ReservationDO::getScheduleId, scheduleId)
                 .eq(ReservationDO::getStatus, ReservationStatusEnum.QUEUED.getCode()));
+    }
+
+    @Override
+    public long countQueuedForUpdate(Long scheduleId) {
+        return reservationMapper.selectCount(Wrappers.<ReservationDO>lambdaQuery()
+                .eq(ReservationDO::getScheduleId, scheduleId)
+                .eq(ReservationDO::getStatus, ReservationStatusEnum.QUEUED.getCode()).last("FOR UPDATE"));
     }
 
     @Override

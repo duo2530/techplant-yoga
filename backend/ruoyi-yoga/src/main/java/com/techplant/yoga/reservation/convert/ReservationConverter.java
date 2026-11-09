@@ -140,7 +140,7 @@ public final class ReservationConverter {
     private static ReservationStatusEnum displayStatus(ReservationDO reservation, ScheduleBookingSnapshot schedule,
             LocalDateTime now) {
         return ReservationStatusEnum.displayOf(reservation.getStatus(), schedule == null ? null : schedule.getStatus(),
-                reservation.getStartTime(), now);
+                reservation.getStartTime(), schedule == null ? null : schedule.getQueueStopMinutes(), now);
     }
 
     /** 起止时间差的整分钟数；快照缺失时返回 {@code null} */

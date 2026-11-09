@@ -79,6 +79,9 @@ public interface ReservationDao {
     /** 该排课排队中的记录数 */
     long countQueued(Long scheduleId);
 
+    /** 该排课排队中的记录数，当前读：事务快照之后提交的排队也计入 */
+    long countQueuedForUpdate(Long scheduleId);
+
     /** 排在指定排队记录之前的排队中记录数 */
     long countQueuedBefore(Long scheduleId, LocalDateTime reservationTime, Long reservationId);
 }

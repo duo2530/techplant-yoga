@@ -27,7 +27,7 @@ public interface ReservationService {
      * 加入排队：只校验会员卡资格，不占位、不扣次；幂等规则与预约课程相同
      *
      * @throws com.ruoyi.common.exception.ServiceException 排课不存在／待上架、会员卡不存在或不属于本人（404）；
-     *         仍有空位、超过排队截止、卡不可用或不适用、已预约或已在排队、幂等参数冲突（409）；
+     *         仍有空位、不开放排队、超过停止排队时间、排队人数已满、卡不可用或不适用、已预约或已在排队、幂等参数冲突（409）；
      *         人数不为 1 或参数格式非法（400）
      */
     void joinQueue(Long memberId, ReservationCreateDTO dto);

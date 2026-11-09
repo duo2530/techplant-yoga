@@ -422,8 +422,9 @@ public class ScheduleServiceImpl implements ScheduleService {
         vo.setStoreAddress(storeAddressOf(schedule.getStoreId()));
         vo.setBookable(isBookable(schedule, now));
         vo.setBookers(reservationService.bookerDisplayNames(schedule.getId()));
-        vo.setQueueCount(reservationService.queueCount(schedule.getId()));
-        vo.setQueueable(isQueueable(schedule, now));
+        int queueCount = reservationService.queueCount(schedule.getId());
+        vo.setQueueCount(queueCount);
+        vo.setQueueable(isQueueable(schedule, queueCount, now));
         return vo;
     }
 
@@ -599,10 +600,11 @@ public class ScheduleServiceImpl implements ScheduleService {
         return remainingPlaces(schedule) > 0 && isOpenForSignUp(schedule, now);
     }
 
-    /** 用户端是否可排队：满员、未过排队截止，其余条件与可约一致；会员资格在提交排队时校验 */
-    private boolean isQueueable(ScheduleDO schedule, LocalDateTime now) {
-        return remainingPlaces(schedule) == 0 && isOpenForSignUp(schedule, now)
-                && !ReservationStatusEnum.isPastChangeDeadline(schedule.getStartTime(), now);
+    /** 用户端是否可排队：满员、排队未满、未过停止排队时间，其余条件与可约一致；会员资格在提交排队时校验 */
+    private boolean isQueueable(ScheduleDO schedule, int queueCount, LocalDateTime now) {
+        int queueLimit = schedule.getQueueLimit() == null ? 0 : schedule.getQueueLimit();
+        return remainingPlaces(schedule) == 0 && queueCount < queueLimit && isOpenForSignUp(schedule, now)
+                && !ReservationStatusEnum.isPastQueueStop(schedule.getStartTime(), schedule.getQueueStopMinutes(), now);
     }
 
     private int remainingPlaces(ScheduleDO schedule) {

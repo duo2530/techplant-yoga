@@ -32,8 +32,8 @@ public enum ReservationStatusEnum {
     /** 排队失败：轮到补位时会员卡已不可用，跳过该会员 */
     QUEUE_FAILED(5, "排队失败");
 
-    /** 取消预约、加入排队与补位的截止：课程开始前 120 分钟 */
-    public static final long CHANGE_DEADLINE_MINUTES = 120L;
+    /** 取消已预约的截止：课程开始前 120 分钟；排队与补位的截止由排课的停止排队时间决定 */
+    public static final long CANCEL_DEADLINE_MINUTES = 120L;
 
     /** 占用排课名额的状态码 */
     public static final List<Integer> SEAT_CODES = Collections
@@ -83,30 +83,42 @@ public enum ReservationStatusEnum {
         return null;
     }
 
-    /** 是否已过取消、排队与补位截止：开始时间缺失视为已截止 */
-    public static boolean isPastChangeDeadline(LocalDateTime startTime, LocalDateTime now) {
-        return startTime == null || now.isAfter(startTime.minusMinutes(CHANGE_DEADLINE_MINUTES));
+    /** 是否已过取消已预约的截止：开始时间缺失视为已截止 */
+    public static boolean isPastCancelDeadline(LocalDateTime startTime, LocalDateTime now) {
+        return startTime == null || now.isAfter(startTime.minusMinutes(CANCEL_DEADLINE_MINUTES));
     }
 
     /**
-     * 排队是否仍可能补位：排课已上架且未过截止时间
+     * 是否已过停止排队时间：开课前 {@code queueStopMinutes} 分钟之后不能再排队，也不再补位
+     *
+     * <p>开始时间或停止排队配置缺失视为已停止。</p>
+     */
+    public static boolean isPastQueueStop(LocalDateTime startTime, Integer queueStopMinutes, LocalDateTime now) {
+        return startTime == null || queueStopMinutes == null
+                || now.isAfter(startTime.minusMinutes(queueStopMinutes));
+    }
+
+    /**
+     * 排队是否仍可能补位：排课已上架且未过停止排队时间
      *
      * @param scheduleStatus 排课落库状态；排课已删除传 {@code null}
      */
-    public static boolean isQueueOpen(Integer scheduleStatus, LocalDateTime startTime, LocalDateTime now) {
+    public static boolean isQueueOpen(Integer scheduleStatus, LocalDateTime startTime, Integer queueStopMinutes,
+            LocalDateTime now) {
         return ScheduleStatusEnum.of(scheduleStatus) == ScheduleStatusEnum.PUBLISHED
-                && !isPastChangeDeadline(startTime, now);
+                && !isPastQueueStop(startTime, queueStopMinutes, now);
     }
 
     /**
-     * 展示状态：排队中的记录在排课取消、删除或过了补位截止后显示为排队失败，不落库；非法码返回 {@code null}
+     * 展示状态：排队中的记录在排课取消、删除或过了停止排队时间后显示为排队失败，不落库；非法码返回 {@code null}
      *
-     * @param scheduleStatus 排课落库状态；排课已删除传 {@code null}
+     * @param scheduleStatus   排课落库状态；排课已删除传 {@code null}
+     * @param queueStopMinutes 排课的停止排队时间；排课已删除传 {@code null}
      */
     public static ReservationStatusEnum displayOf(Integer code, Integer scheduleStatus, LocalDateTime startTime,
-            LocalDateTime now) {
+            Integer queueStopMinutes, LocalDateTime now) {
         ReservationStatusEnum status = of(code);
-        if (status == QUEUED && !isQueueOpen(scheduleStatus, startTime, now)) {
+        if (status == QUEUED && !isQueueOpen(scheduleStatus, startTime, queueStopMinutes, now)) {
             return QUEUE_FAILED;
         }
         return status;

@@ -44,7 +44,11 @@ public class PublicScheduleDetailVO extends ScheduleCardVO {
     @Setter
     private Integer queueCount;
 
-    @ApiModelProperty(value = "是否可加入排队：已满员、未过排队截止且其余条件与可约一致", example = "false")
+    @ApiModelProperty(value = "排队上限（0 表示不开放排队）", example = "3")
+    @Setter
+    private Integer queueLimit;
+
+    @ApiModelProperty(value = "是否可加入排队：已满员、排队未满、未过停止排队时间且其余条件与可约一致", example = "false")
     @Setter
     private Boolean queueable;
 

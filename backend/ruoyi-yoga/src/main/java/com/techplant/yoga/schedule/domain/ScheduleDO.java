@@ -50,6 +50,12 @@ public class ScheduleDO {
     /** 最低开课人数（1<=min<=max，默认 2） */
     private Integer minPersons;
 
+    /** 排队上限（0 表示不开放排队） */
+    private Integer queueLimit;
+
+    /** 停止排队时间：开课前多少分钟起不能再排队，也不再补位 */
+    private Integer queueStopMinutes;
+
     /** 已预约人数 */
     private Integer bookedPersons;
 

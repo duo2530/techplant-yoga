@@ -154,6 +154,8 @@ public class ScheduleDaoImpl implements ScheduleDao {
                 .set(ScheduleDO::getEndTime, schedule.getEndTime())
                 .set(ScheduleDO::getMaxPersons, schedule.getMaxPersons())
                 .set(ScheduleDO::getMinPersons, schedule.getMinPersons())
+                .set(ScheduleDO::getQueueLimit, schedule.getQueueLimit())
+                .set(ScheduleDO::getQueueStopMinutes, schedule.getQueueStopMinutes())
                 .set(ScheduleDO::getUpdateBy, schedule.getUpdateBy())
                 .set(ScheduleDO::getUpdateTime, LocalDateTime.now()));
     }
