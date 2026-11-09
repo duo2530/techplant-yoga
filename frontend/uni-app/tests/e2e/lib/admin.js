@@ -316,7 +316,9 @@ async function createAdminFixture() {
         startTime: startText,
         endTime: formatDateTime(end),
         maxPersons: options.maxPersons || 20,
-        minPersons: options.minPersons || 2
+        minPersons: options.minPersons || 2,
+        queueLimit: options.queueLimit === undefined ? 3 : options.queueLimit,
+        queueStopMinutes: options.queueStopMinutes === undefined ? 110 : options.queueStopMinutes
       }
     })
     const hit = await trackCreated({
