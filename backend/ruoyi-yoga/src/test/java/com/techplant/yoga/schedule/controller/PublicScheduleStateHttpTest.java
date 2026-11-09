@@ -92,16 +92,20 @@ class PublicScheduleStateHttpTest extends AbstractYogaHttpIntegrationTest {
         YogaSchema.reset(dataSource, "t_store", "t_course", "t_classroom", "t_coach", "t_schedule", "t_reservation");
         jdbcTemplate = new JdbcTemplate(dataSource);
         reservationSeq = 9000L;
-        jdbcTemplate.update("INSERT INTO t_store (id, store_no, name, store_type, region_code, phone, business_hours,"
-                + " address) VALUES (?, '0001', '徐汇店', 1, '310104', '02100000000', '09:00-22:00', '上海')", STORE_ID);
-        jdbcTemplate.update("INSERT INTO t_course (id, name, course_type, intro, difficulty)"
-                + " VALUES (?, '哈他瑜伽', ?, '课程介绍', 2)", COURSE_ID, GROUP_COURSE);
+        jdbcTemplate.update(
+                "INSERT INTO t_store (id, store_no, name, store_type, region_code, phone, business_hours,"
+                        + " address) VALUES (?, '0001', '徐汇店', 1, '310104', '02100000000', '09:00-22:00', '上海')",
+                STORE_ID);
+        jdbcTemplate.update(
+                "INSERT INTO t_course (id, name, course_type, intro, difficulty)" + " VALUES (?, '哈他瑜伽', ?, '课程介绍', 2)",
+                COURSE_ID, GROUP_COURSE);
         jdbcTemplate.update("INSERT INTO t_classroom (id, store_id, name) VALUES (?, ?, '大教室')", CLASSROOM_ID,
                 STORE_ID);
         jdbcTemplate.update("INSERT INTO t_coach (id, name, level) VALUES (?, '林教练', 1)", COACH_ID);
 
         LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.MINUTES);
-        startedAt = now.minusMinutes(30).isBefore(now.toLocalDate().atStartOfDay()) ? now.toLocalDate().atStartOfDay()
+        startedAt = now.minusMinutes(30).isBefore(now.toLocalDate().atStartOfDay())
+                ? now.toLocalDate().atStartOfDay()
                 : now.minusMinutes(30);
         futureAt = now.plusHours(3);
         insertSchedule(STARTED_ID, startedAt, 0, 10, 3, 110, PUBLISHED);
@@ -168,6 +172,23 @@ class PublicScheduleStateHttpTest extends AbstractYogaHttpIntegrationTest {
     }
 
     @Test
+    @DisplayName("详情：返回门店电话、营业时间、停止排队分钟数与取消截止分钟数；门店删除后门店字段为空字符串")
+    void detail_shouldReturnStoreContactAndRuleMinutes() throws Exception {
+        JsonNode started = detail(STARTED_ID);
+        assertEquals("02100000000", started.get("storePhone").asText());
+        assertEquals("09:00-22:00", started.get("storeBusinessHours").asText());
+        assertEquals("上海", started.get("storeAddress").asText());
+        assertEquals(110, started.get("queueStopMinutes").asInt());
+        assertEquals(120, started.get("cancelDeadlineMinutes").asInt());
+
+        jdbcTemplate.update("DELETE FROM t_store WHERE id = ?", STORE_ID);
+        JsonNode orphan = detail(STARTED_ID);
+        assertEquals("", orphan.get("storePhone").asText());
+        assertEquals("", orphan.get("storeBusinessHours").asText());
+        assertEquals("", orphan.get("storeAddress").asText());
+    }
+
+    @Test
     @DisplayName("排队人数批量统计：多节排课一次返回，只计排队中，没有排队的排课不在结果中")
     void queueCounts_shouldGroupBySchedule() {
         Map<Long, Integer> counts = reservationService
@@ -188,8 +209,8 @@ class PublicScheduleStateHttpTest extends AbstractYogaHttpIntegrationTest {
 
     private Map<String, JsonNode> listByDate(LocalDate date) throws Exception {
         JsonNode root = read(mockMvc.perform(get("/api/schedules").param("storeId", String.valueOf(STORE_ID))
-                .param("courseType", String.valueOf(GROUP_COURSE)).param("date", date.toString())
-                .param("pageNum", "1").param("pageSize", "20")).andExpect(status().isOk()).andReturn());
+                .param("courseType", String.valueOf(GROUP_COURSE)).param("date", date.toString()).param("pageNum", "1")
+                .param("pageSize", "20")).andExpect(status().isOk()).andReturn());
         assertEquals(200, root.get("code").asInt());
         Map<String, JsonNode> rows = new HashMap<String, JsonNode>();
         for (JsonNode row : root.get("rows")) {
@@ -199,8 +220,8 @@ class PublicScheduleStateHttpTest extends AbstractYogaHttpIntegrationTest {
     }
 
     private JsonNode detail(long scheduleId) throws Exception {
-        JsonNode root = read(mockMvc.perform(get("/api/schedules/" + scheduleId)).andExpect(status().isOk())
-                .andReturn());
+        JsonNode root = read(
+                mockMvc.perform(get("/api/schedules/" + scheduleId)).andExpect(status().isOk()).andReturn());
         assertEquals(200, root.get("code").asInt());
         return root.get("data");
     }
@@ -221,8 +242,9 @@ class PublicScheduleStateHttpTest extends AbstractYogaHttpIntegrationTest {
 
     private void insertReservation(long scheduleId, int status) {
         long id = ++reservationSeq;
-        LocalDateTime startTime = jdbcTemplate.queryForObject("SELECT start_time FROM t_schedule WHERE id = ?",
-                Timestamp.class, scheduleId).toLocalDateTime();
+        LocalDateTime startTime = jdbcTemplate
+                .queryForObject("SELECT start_time FROM t_schedule WHERE id = ?", Timestamp.class, scheduleId)
+                .toLocalDateTime();
         jdbcTemplate.update("INSERT INTO t_reservation (id, request_id, member_id, schedule_id, start_time, end_time,"
                 + " persons, member_card_id, status, reservation_time) VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, NOW())", id,
                 "req-" + id, id, scheduleId, Timestamp.valueOf(startTime), Timestamp.valueOf(startTime.plusMinutes(60)),

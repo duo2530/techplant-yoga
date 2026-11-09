@@ -27,7 +27,7 @@ public interface StoreDao {
     /** 按名称精确查询（名称唯一校验用，返回第一条，供 service 排除自身） */
     StoreDO selectByName(String name);
 
-    /** 按主键集合批量查询，仅取 id、store_no 与 name（跨模块 summaries 用） */
+    /** 按主键集合批量查询，仅取 id、门店编号、名称、地址、电话与营业时间（跨模块 summaries 用） */
     List<StoreDO> selectByIds(Collection<Long> ids);
 
     /** 新增 */
