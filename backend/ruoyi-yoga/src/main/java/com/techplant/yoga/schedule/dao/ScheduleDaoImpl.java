@@ -123,6 +123,19 @@ public class ScheduleDaoImpl implements ScheduleDao {
     }
 
     @Override
+    public List<Long> selectUnderstaffedIds(LocalDateTime now, LocalDateTime latestStart) {
+        List<ScheduleDO> rows = scheduleMapper.selectList(Wrappers.<ScheduleDO>lambdaQuery().select(ScheduleDO::getId)
+                .eq(ScheduleDO::getStatus, ScheduleStatusEnum.PUBLISHED.getCode()).gt(ScheduleDO::getStartTime, now)
+                .le(ScheduleDO::getStartTime, latestStart).apply("booked_persons < min_persons")
+                .orderByAsc(ScheduleDO::getStartTime).orderByAsc(ScheduleDO::getId));
+        List<Long> ids = new ArrayList<Long>(rows.size());
+        for (ScheduleDO row : rows) {
+            ids.add(row.getId());
+        }
+        return ids;
+    }
+
+    @Override
     public ScheduleDO selectByIdForUpdate(Long id) {
         if (id == null) {
             return null;

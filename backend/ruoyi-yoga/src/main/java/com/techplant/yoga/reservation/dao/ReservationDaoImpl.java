@@ -95,8 +95,8 @@ public class ReservationDaoImpl implements ReservationDao {
         if (queued.equals(status)) {
             wrapper.eq(ReservationDO::getStatus, queued).apply(QUEUE_OPEN_EXISTS, published, now);
         } else if (ReservationStatusEnum.QUEUE_FAILED.getCode().equals(status)) {
-            wrapper.and(w -> w.eq(ReservationDO::getStatus, status).or(o -> o.eq(ReservationDO::getStatus, queued)
-                    .apply("NOT " + QUEUE_OPEN_EXISTS, published, now)));
+            wrapper.and(w -> w.eq(ReservationDO::getStatus, status)
+                    .or(o -> o.eq(ReservationDO::getStatus, queued).apply("NOT " + QUEUE_OPEN_EXISTS, published, now)));
         } else {
             wrapper.eq(ReservationDO::getStatus, status);
         }
@@ -149,31 +149,43 @@ public class ReservationDaoImpl implements ReservationDao {
     }
 
     @Override
+    public List<ReservationDO> selectCancellableByScheduleForUpdate(Long scheduleId) {
+        return reservationMapper
+                .selectList(Wrappers.<ReservationDO>lambdaQuery().eq(ReservationDO::getScheduleId, scheduleId)
+                        .in(ReservationDO::getStatus, ReservationStatusEnum.RESERVED.getCode(),
+                                ReservationStatusEnum.QUEUED.getCode())
+                        .orderByAsc(ReservationDO::getReservationTime).orderByAsc(ReservationDO::getId)
+                        .last("FOR UPDATE"));
+    }
+
+    @Override
     public ReservationDO selectFirstQueuedForUpdate(Long scheduleId) {
-        return reservationMapper.selectOne(Wrappers.<ReservationDO>lambdaQuery()
-                .eq(ReservationDO::getScheduleId, scheduleId)
-                .eq(ReservationDO::getStatus, ReservationStatusEnum.QUEUED.getCode())
-                .orderByAsc(ReservationDO::getReservationTime).orderByAsc(ReservationDO::getId)
-                .last("LIMIT 1 FOR UPDATE"));
+        return reservationMapper
+                .selectOne(Wrappers.<ReservationDO>lambdaQuery().eq(ReservationDO::getScheduleId, scheduleId)
+                        .eq(ReservationDO::getStatus, ReservationStatusEnum.QUEUED.getCode())
+                        .orderByAsc(ReservationDO::getReservationTime).orderByAsc(ReservationDO::getId)
+                        .last("LIMIT 1 FOR UPDATE"));
     }
 
     @Override
     public int promote(Long reservationId, LocalDateTime reservationTime) {
-        return transitFromQueued(reservationId, Wrappers.<ReservationDO>lambdaUpdate()
-                .set(ReservationDO::getStatus, ReservationStatusEnum.RESERVED.getCode())
-                .set(ReservationDO::getReservationTime, reservationTime));
+        return transitFromQueued(reservationId,
+                Wrappers.<ReservationDO>lambdaUpdate()
+                        .set(ReservationDO::getStatus, ReservationStatusEnum.RESERVED.getCode())
+                        .set(ReservationDO::getReservationTime, reservationTime));
     }
 
     @Override
     public int markQueueFailed(Long reservationId) {
-        return transitFromQueued(reservationId, Wrappers.<ReservationDO>lambdaUpdate()
-                .set(ReservationDO::getStatus, ReservationStatusEnum.QUEUE_FAILED.getCode()));
+        return transitFromQueued(reservationId, Wrappers.<ReservationDO>lambdaUpdate().set(ReservationDO::getStatus,
+                ReservationStatusEnum.QUEUE_FAILED.getCode()));
     }
 
     private int transitFromQueued(Long reservationId, LambdaUpdateWrapper<ReservationDO> update) {
-        return reservationMapper.update(null, update.eq(ReservationDO::getId, reservationId)
-                .eq(ReservationDO::getStatus, ReservationStatusEnum.QUEUED.getCode())
-                .set(ReservationDO::getUpdateTime, LocalDateTime.now()));
+        return reservationMapper.update(null,
+                update.eq(ReservationDO::getId, reservationId)
+                        .eq(ReservationDO::getStatus, ReservationStatusEnum.QUEUED.getCode())
+                        .set(ReservationDO::getUpdateTime, LocalDateTime.now()));
     }
 
     @Override
@@ -193,18 +205,18 @@ public class ReservationDaoImpl implements ReservationDao {
 
     @Override
     public long countQueuedForUpdate(Long scheduleId) {
-        return reservationMapper.selectCount(Wrappers.<ReservationDO>lambdaQuery()
-                .eq(ReservationDO::getScheduleId, scheduleId)
-                .eq(ReservationDO::getStatus, ReservationStatusEnum.QUEUED.getCode()).last("FOR UPDATE"));
+        return reservationMapper
+                .selectCount(Wrappers.<ReservationDO>lambdaQuery().eq(ReservationDO::getScheduleId, scheduleId)
+                        .eq(ReservationDO::getStatus, ReservationStatusEnum.QUEUED.getCode()).last("FOR UPDATE"));
     }
 
     @Override
     public long countQueuedBefore(Long scheduleId, LocalDateTime reservationTime, Long reservationId) {
-        return reservationMapper.selectCount(Wrappers.<ReservationDO>lambdaQuery()
-                .eq(ReservationDO::getScheduleId, scheduleId)
-                .eq(ReservationDO::getStatus, ReservationStatusEnum.QUEUED.getCode())
-                .and(w -> w.lt(ReservationDO::getReservationTime, reservationTime).or(
-                        o -> o.eq(ReservationDO::getReservationTime, reservationTime).lt(ReservationDO::getId,
-                                reservationId))));
+        return reservationMapper
+                .selectCount(Wrappers.<ReservationDO>lambdaQuery().eq(ReservationDO::getScheduleId, scheduleId)
+                        .eq(ReservationDO::getStatus, ReservationStatusEnum.QUEUED.getCode())
+                        .and(w -> w.lt(ReservationDO::getReservationTime, reservationTime)
+                                .or(o -> o.eq(ReservationDO::getReservationTime, reservationTime)
+                                        .lt(ReservationDO::getId, reservationId))));
     }
 }

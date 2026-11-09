@@ -68,6 +68,9 @@ public interface ReservationDao {
     /** 该排课占用名额的预约（已预约、已签到，按预约时间、ID 升序），用于排课详情的脱敏预约人员 */
     List<ReservationDO> selectSeatedBySchedule(Long scheduleId);
 
+    /** 该排课的已预约与排队中记录（当前读，按 {@code reservation_time, id} 升序），排课取消时逐条取消 */
+    List<ReservationDO> selectCancellableByScheduleForUpdate(Long scheduleId);
+
     /** 该排课排在最前的排队记录（当前读，按 {@code reservation_time, id} 升序），没有返回 {@code null} */
     ReservationDO selectFirstQueuedForUpdate(Long scheduleId);
 

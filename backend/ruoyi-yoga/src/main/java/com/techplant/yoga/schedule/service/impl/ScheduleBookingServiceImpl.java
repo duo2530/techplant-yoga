@@ -2,15 +2,18 @@ package com.techplant.yoga.schedule.service.impl;
 
 import lombok.RequiredArgsConstructor;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import org.springframework.stereotype.Service;
+import com.techplant.yoga.common.util.CurrentUserUtils;
 import com.techplant.yoga.schedule.convert.ScheduleConverter;
 import com.techplant.yoga.schedule.dao.ScheduleDao;
 import com.techplant.yoga.schedule.domain.ScheduleDO;
+import com.techplant.yoga.schedule.enums.ScheduleStatusEnum;
 import com.techplant.yoga.schedule.service.ScheduleBookingService;
 import com.techplant.yoga.schedule.vo.ScheduleBookingSnapshot;
 
@@ -53,5 +56,16 @@ public class ScheduleBookingServiceImpl implements ScheduleBookingService {
             return 0;
         }
         return scheduleDao.updateBookedPersons(scheduleId, bookedPersons);
+    }
+
+    @Override
+    public List<Long> understaffedIds(LocalDateTime now, LocalDateTime latestStart) {
+        return scheduleDao.selectUnderstaffedIds(now, latestStart);
+    }
+
+    @Override
+    public int cancel(Long scheduleId) {
+        return scheduleDao.updateStatus(scheduleId, ScheduleStatusEnum.CANCELLED.getCode(),
+                CurrentUserUtils.getUserIdOrNull());
     }
 }

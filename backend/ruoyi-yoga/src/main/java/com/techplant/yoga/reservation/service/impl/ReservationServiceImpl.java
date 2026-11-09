@@ -145,9 +145,8 @@ public class ReservationServiceImpl implements ReservationService {
         validateSchedule(schedule, now);
         ReservationDO open = reservationDao.selectOpenByMemberAndSchedule(memberId, scheduleId);
         if (open != null) {
-            throw new ServiceException(ReservationStatusEnum.QUEUED.getCode().equals(open.getStatus())
-                    ? "您已在排队中"
-                    : "您已预约该课程", CONFLICT);
+            throw new ServiceException(
+                    ReservationStatusEnum.QUEUED.getCode().equals(open.getStatus()) ? "您已在排队中" : "您已预约该课程", CONFLICT);
         }
         if (target == ReservationStatusEnum.QUEUED) {
             validateQueueable(schedule, now);
@@ -223,6 +222,45 @@ public class ReservationServiceImpl implements ReservationService {
         promoteQueued(schedule, now);
     }
 
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean cancelUnderstaffedSchedule(Long scheduleId) {
+        // 锁顺序：排课 → 预约 → 会员卡
+        ScheduleBookingSnapshot schedule = scheduleBookingService.lockForBooking(scheduleId);
+        LocalDateTime now = LocalDateTime.now();
+        if (schedule == null || !isUnderstaffedInCancelWindow(schedule, now)) {
+            return false;
+        }
+        if (scheduleBookingService.cancel(scheduleId) != 1) {
+            throw new ServiceException("排课取消失败，请稍后重试", CONFLICT);
+        }
+        int releasedPersons = 0;
+        Integer reason = ReservationCancelReasonEnum.SCHEDULE.getCode();
+        for (ReservationDO reservation : reservationDao.selectCancellableByScheduleForUpdate(scheduleId)) {
+            if (reservationDao.cancel(reservation.getId(), reservation.getStatus(), now, reason) != 1) {
+                throw new ServiceException("预约状态已变更，请稍后重试", CONFLICT);
+            }
+            if (ReservationStatusEnum.RESERVED.getCode().equals(reservation.getStatus())) {
+                releasedPersons += reservation.getPersons();
+                refundTimesIfNeeded(reservation);
+            }
+        }
+        int bookedPersons = Math.max(bookedPersons(schedule) - releasedPersons, 0);
+        if (scheduleBookingService.updateBookingCount(scheduleId, bookedPersons) != 1) {
+            throw new ServiceException("名额释放失败，请稍后重试", CONFLICT);
+        }
+        return true;
+    }
+
+    /** 已上架、未开始、距开课不超过取消截止分钟数，且已预约人数小于最低开课人数 */
+    private boolean isUnderstaffedInCancelWindow(ScheduleBookingSnapshot schedule, LocalDateTime now) {
+        LocalDateTime startTime = schedule.getStartTime();
+        return ScheduleStatusEnum.of(schedule.getStatus()) == ScheduleStatusEnum.PUBLISHED && startTime != null
+                && startTime.isAfter(now)
+                && !startTime.isAfter(now.plusMinutes(ReservationStatusEnum.CANCEL_DEADLINE_MINUTES))
+                && schedule.getMinPersons() != null && bookedPersons(schedule) < schedule.getMinPersons();
+    }
+
     /**
      * 补位：持有排课行锁时按排队顺序把排队记录转为已预约并扣次，直到名额占满或无人排队
      *
@@ -254,8 +292,7 @@ public class ReservationServiceImpl implements ReservationService {
     /** 补位时锁卡并校验资格：卡不可用、次数不足、已删除或不属于本人都返回 {@code null} */
     private MemberCardBookingSnapshot lockCardForPromotion(ReservationDO queued, ScheduleBookingSnapshot schedule) {
         try {
-            MemberCardBookingSnapshot card = lockBookableCard(queued.getMemberCardId(), queued.getMemberId(),
-                    schedule);
+            MemberCardBookingSnapshot card = lockBookableCard(queued.getMemberCardId(), queued.getMemberId(), schedule);
             validateCardLimit(card, queued.getPersons());
             return card;
         } catch (ServiceException e) {
