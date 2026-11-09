@@ -45,6 +45,16 @@ public interface ReservationService {
     void cancel(Long memberId, Long reservationId);
 
     /**
+     * 人数不足自动取消一节排课：持有排课行锁复查，仍为已上架、未开始、距开课不超过取消截止分钟数且已预约人数小于
+     * 最低开课人数时，把排课改为已取消，已预约与排队中的记录取消（原因：排课取消），已预约的按原扣次返次
+     *
+     * <p>已签到记录不处理。条件不再满足或排课已删除时不做任何修改。</p>
+     *
+     * @return 是否取消了该排课
+     */
+    boolean cancelUnderstaffedSchedule(Long scheduleId);
+
+    /**
      * 预约签到：不重复扣次，已有签到记录的重复请求按成功返回
      *
      * @throws com.ruoyi.common.exception.ServiceException 预约不存在或不属于本人（404）；

@@ -89,6 +89,13 @@
             <scope>test</scope>
         </dependency>
 
+        <!-- 仅测试范围：用若依定时任务的白名单校验与调用工具验证调用目标可保存、可执行 -->
+        <dependency>
+            <groupId>com.ruoyi</groupId>
+            <artifactId>ruoyi-quartz</artifactId>
+            <scope>test</scope>
+        </dependency>
+
     </dependencies>
 
     <build>

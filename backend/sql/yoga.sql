@@ -227,6 +227,15 @@ VALUES
   (1856739201475235804, '普拉提器械私教', 3, 'https://cdn.example.com/course/reformer.jpg', '一对一器械课程，按学员情况定制。',                     4, 1, '2026-09-20 10:34:20', 1, '2026-09-20 10:34:20');
 
 -- ----------------------------
+-- 初始化-业务定时任务
+-- ----------------------------
+DELETE FROM `sys_job` WHERE `job_id` = 100;
+INSERT INTO `sys_job` (`job_id`, `job_name`, `job_group`, `invoke_target`, `cron_expression`, `misfire_policy`,
+  `concurrent`, `status`, `create_by`, `create_time`, `remark`)
+VALUES (100, '人数不足自动取消排课', 'DEFAULT', 'yogaScheduleTask.cancelUnderstaffed', '0 * * * * ?', '3', '1', '0',
+  'admin', SYSDATE(), '每分钟扫描开课前 120 分钟内、已预约人数不足最低开课人数的已上架排课并自动取消');
+
+-- ----------------------------
 -- 6、排课表
 -- ----------------------------
 DROP TABLE IF EXISTS `t_schedule`;
@@ -241,7 +250,7 @@ CREATE TABLE `t_schedule` (
   `start_time`     datetime     NOT NULL COMMENT '开始时间（含日期）',
   `end_time`       datetime     NOT NULL COMMENT '结束时间（须与开始时间同一自然日）',
   `max_persons`    int          NOT NULL COMMENT '最大人数（>0）',
-  `min_persons`    int          NOT NULL DEFAULT 2 COMMENT '最低开课人数（1<=min<=max；一期不做自动取消）',
+  `min_persons`    int          NOT NULL DEFAULT 2 COMMENT '最低开课人数（1<=min<=max；开课前 120 分钟仍不足时自动取消）',
   `queue_limit`    int          NOT NULL DEFAULT 3 COMMENT '排队上限（0 表示不开放排队）',
   `queue_stop_minutes` int      NOT NULL DEFAULT 110 COMMENT '停止排队时间：开课前多少分钟起不能再排队，也不再补位',
   `booked_persons` int          NOT NULL DEFAULT 0 COMMENT '已预约人数（未取消预约的 persons 总和，由预约事务维护）',

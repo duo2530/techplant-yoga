@@ -56,6 +56,12 @@ public interface ScheduleDao {
     /** 按主键集合批量查（预约列表批量装配课程与门店信息） */
     List<ScheduleDO> selectByIds(Collection<Long> ids);
 
+    /**
+     * 人数不足待取消的排课 ID：已上架、{@code now < start_time <= latestStart} 且已预约人数小于最低开课人数，
+     * 按开始时间升序
+     */
+    List<Long> selectUnderstaffedIds(LocalDateTime now, LocalDateTime latestStart);
+
     /** 按主键做当前读（{@code SELECT ... FOR UPDATE}）取排课；不存在返回 {@code null} */
     ScheduleDO selectByIdForUpdate(Long id);
 

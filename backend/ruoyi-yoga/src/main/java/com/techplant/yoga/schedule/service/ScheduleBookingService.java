@@ -1,5 +1,6 @@
 package com.techplant.yoga.schedule.service;
 
+import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 import com.techplant.yoga.schedule.vo.ScheduleBookingSnapshot;
@@ -28,4 +29,18 @@ public interface ScheduleBookingService {
      * @return 影响行数，0 表示超出名额或排课已被删除
      */
     int updateBookingCount(Long scheduleId, Integer bookedPersons);
+
+    /**
+     * 人数不足待取消的排课 ID（不加锁），调用方须在持有排课行锁后复查
+     *
+     * @param latestStart 开始时间不晚于该时刻的排课才计入
+     */
+    List<Long> understaffedIds(LocalDateTime now, LocalDateTime latestStart);
+
+    /**
+     * 在已锁定的排课行上把状态改为已取消
+     *
+     * @return 影响行数，0 表示排课已被删除
+     */
+    int cancel(Long scheduleId);
 }

@@ -33,6 +33,12 @@ class SqlInitializationTest {
 
     private static final String QUEUE_CONFIG_MIGRATION = "migrations/20261109-schedule-queue-config.sql";
 
+    private static final String AUTO_CANCEL_JOB_MIGRATION = "migrations/20261109-schedule-auto-cancel-job.sql";
+
+    private static final String AUTO_CANCEL_JOB = "SELECT COUNT(*) FROM sys_job WHERE job_id = 100"
+            + " AND invoke_target = 'yogaScheduleTask.cancelUnderstaffed' AND cron_expression = '0 * * * * ?'"
+            + " AND misfire_policy = '3' AND concurrent = '1' AND status = '0'";
+
     private static final long SAMPLE_COACH_ID = 1856739201475237002L;
 
     private static final long EXTRA_COACH_ID = 9101L;
@@ -46,7 +52,7 @@ class SqlInitializationTest {
         try {
             DataSource dataSource = dataSourceOf(container);
             // 若依基础表由基础库提供，业务表和种子数据由 yoga.sql 初始化。
-            YogaSchema.reset(dataSource, "sys_menu", "sys_role_menu", "sys_dict_type", "sys_dict_data");
+            YogaSchema.reset(dataSource, "sys_menu", "sys_role_menu", "sys_dict_type", "sys_dict_data", "sys_job");
             executeScript(dataSource, YogaSchema.locateScript(BUSINESS_SCRIPT));
             assertInitialized(dataSource);
             long scheduleCount = count(dataSource, "SELECT COUNT(*) FROM t_schedule");
@@ -72,8 +78,19 @@ class SqlInitializationTest {
             executeScript(dataSource, YogaSchema.locateScript(QUEUE_CONFIG_MIGRATION));
             assertQueueConfigColumns(dataSource);
             assertEquals(scheduleCount,
-                    count(dataSource, "SELECT COUNT(*) FROM t_schedule WHERE queue_limit = 3 AND queue_stop_minutes = 110"),
+                    count(dataSource,
+                            "SELECT COUNT(*) FROM t_schedule WHERE queue_limit = 3 AND queue_stop_minutes = 110"),
                     "增量脚本为已有排课补默认排队配置，重复执行不报错");
+
+            execute(dataSource, "DELETE FROM sys_job WHERE job_id = 100");
+            executeScript(dataSource, YogaSchema.locateScript(AUTO_CANCEL_JOB_MIGRATION));
+            executeScript(dataSource, YogaSchema.locateScript(AUTO_CANCEL_JOB_MIGRATION));
+            assertEquals(1, count(dataSource, AUTO_CANCEL_JOB), "增量脚本补上自动取消任务，重复执行不重复插入");
+            execute(dataSource, "UPDATE sys_job SET status = '1' WHERE job_id = 100");
+            executeScript(dataSource, YogaSchema.locateScript(AUTO_CANCEL_JOB_MIGRATION));
+            assertEquals("1",
+                    String.valueOf(queryRow(dataSource, "SELECT status FROM sys_job WHERE job_id = 100").get("status")),
+                    "已有任务时增量脚本不覆盖管理员的修改");
         } finally {
             container.stop();
         }
@@ -85,6 +102,7 @@ class SqlInitializationTest {
         assertEquals(3, count(dataSource, "SELECT COUNT(*) FROM t_coach"), "样例教练 3 条");
         assertEquals(0, count(dataSource, "SELECT COUNT(*) FROM t_coach WHERE level <> 1"), "样例教练均为普通等级");
         assertNoLevelPermission(dataSource);
+        assertEquals(1, count(dataSource, AUTO_CANCEL_JOB), "业务脚本初始化自动取消定时任务");
         assertEquals(9, count(dataSource, "SELECT COUNT(*) FROM sys_menu WHERE menu_id BETWEEN 2000 AND 2008"),
                 "业务菜单完整");
         assertEquals(9,
@@ -112,10 +130,9 @@ class SqlInitializationTest {
     }
 
     private void assertIntColumn(DataSource dataSource, String name, String defaultValue) throws Exception {
-        Map<String, Object> column = queryRow(dataSource,
-                "SELECT COLUMN_TYPE, IS_NULLABLE, COLUMN_DEFAULT"
-                        + " FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 't_schedule'"
-                        + " AND COLUMN_NAME = '" + name + "'");
+        Map<String, Object> column = queryRow(dataSource, "SELECT COLUMN_TYPE, IS_NULLABLE, COLUMN_DEFAULT"
+                + " FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 't_schedule'"
+                + " AND COLUMN_NAME = '" + name + "'");
         assertNotEquals(0, column.size(), "t_schedule 必须有 " + name + " 列");
         assertEquals("int", column.get("column_type"));
         assertEquals("NO", column.get("is_nullable"));
