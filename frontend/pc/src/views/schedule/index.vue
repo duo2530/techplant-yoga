@@ -58,6 +58,8 @@
       <el-table-column label="结束时间" prop="endTime" width="165" />
       <el-table-column label="最大人数" prop="maxPersons" width="90" align="center" />
       <el-table-column label="最低开课人数" prop="minPersons" width="110" align="center" />
+      <el-table-column label="排队上限" prop="queueLimit" width="90" align="center" />
+      <el-table-column label="停止排队(开课前分钟)" prop="queueStopMinutes" width="160" align="center" />
       <el-table-column label="已预约" prop="bookedPersons" width="80" align="center" />
       <el-table-column label="状态" width="90" align="center">
         <template #default="scope">
@@ -122,6 +124,14 @@
         <el-form-item label="最低开课人数" prop="minPersons">
           <el-input-number v-model="form.minPersons" :min="1" :max="form.maxPersons || 1" controls-position="right" />
         </el-form-item>
+        <el-form-item label="排队上限" prop="queueLimit">
+          <el-input-number v-model="form.queueLimit" :min="0" :max="999" controls-position="right" />
+          <span class="form-tip">人，0 表示不开放排队</span>
+        </el-form-item>
+        <el-form-item label="停止排队时间" prop="queueStopMinutes">
+          <el-input-number v-model="form.queueStopMinutes" :min="0" :max="1440" controls-position="right" />
+          <span class="form-tip">开课前分钟数，之后不能排队，也不再补位</span>
+        </el-form-item>
         <el-form-item label="已预约人数">
           <!-- 一期固定 0，只读；不参与提交 -->
           <el-input-number v-model="form.bookedPersons" :min="0" disabled controls-position="right" />
@@ -169,6 +179,8 @@ function emptyForm() {
     endTime: undefined,
     maxPersons: 20,
     minPersons: 2,
+    queueLimit: 3,
+    queueStopMinutes: 110,
     // 只读展示用，不参与提交（后端 DTO 里没有这两个字段）
     bookedPersons: 0
   }
@@ -194,7 +206,9 @@ const data = reactive({
     startTime: [{ required: true, message: '请选择开始时间', trigger: 'change' }],
     endTime: [{ required: true, message: '请选择结束时间', trigger: 'change' }],
     maxPersons: [{ required: true, message: '请输入最大人数', trigger: 'blur' }],
-    minPersons: [{ required: true, message: '请输入最低开课人数', trigger: 'blur' }]
+    minPersons: [{ required: true, message: '请输入最低开课人数', trigger: 'blur' }],
+    queueLimit: [{ required: true, message: '请输入排队上限', trigger: 'blur' }],
+    queueStopMinutes: [{ required: true, message: '请输入停止排队时间', trigger: 'blur' }]
   }
 })
 
@@ -304,7 +318,7 @@ function handleUpdate(row) {
   })
 }
 
-/** 提交：只提交后端 DTO 里的 8 个字段，不带 status / bookedPersons / courseType / scheduleDate */
+/** 提交：只提交后端 DTO 里的字段，不带 status / bookedPersons / courseType / scheduleDate */
 function submitForm() {
   proxy.$refs.formRef.validate(valid => {
     if (!valid) {
@@ -318,7 +332,9 @@ function submitForm() {
       startTime: form.value.startTime,
       endTime: form.value.endTime,
       maxPersons: form.value.maxPersons,
-      minPersons: form.value.minPersons
+      minPersons: form.value.minPersons,
+      queueLimit: form.value.queueLimit,
+      queueStopMinutes: form.value.queueStopMinutes
     }
     const request = form.value.id ? updateSchedule(form.value.id, payload) : addSchedule(payload)
     request.then(() => {
@@ -353,3 +369,11 @@ function handleDelete(row) {
 getOptions()
 getList()
 </script>
+
+<style scoped>
+.form-tip {
+  margin-left: 8px;
+  color: var(--el-text-color-secondary);
+  font-size: 12px;
+}
+</style>

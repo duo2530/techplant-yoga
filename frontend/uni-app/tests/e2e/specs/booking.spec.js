@@ -83,6 +83,7 @@ function fullScheduleDetail(scheduleId)
     bookedPersons: 1,
     remainingPlaces: 0,
     queueCount: 2,
+    queueLimit: 3,
     status: 2,
     statusText: '已上架',
     bookable: false,
@@ -353,7 +354,7 @@ module.exports = {
         await detailButton.click()
         await ctx.page.waitForFunction(() => !!document.querySelector('.mcard--on'), null, { timeout: 20000 })
         assert.contains(ctx.page.url(), 'booking-confirm', '点击排队应进入预约页')
-        assert.contains(await ctx.page.locator('.queue-tip').innerText(), '2 人排队', '预约页展示排队人数')
+        assert.contains(await ctx.page.locator('.queue-tip').innerText(), '当前 2/3 人排队', '预约页展示排队人数与上限')
         assert.contains((await ctx.page.locator('.bar__btn').innerText()).trim(), '加入排队', '预约页按钮文案')
 
         await ctx.page.locator('.bar__btn').click()
@@ -365,6 +366,21 @@ module.exports = {
         assert.equal(queueBodies[0].persons, 1, '排队人数固定为 1')
         assert.ok(!ctx.reservationRequests().some((url) => /\/api\/reservations$/.test(url.split('?')[0])),
           '满员排队不应调用预约接口')
+      }
+    },
+    {
+      name: '排队已满：详情页按钮显示「排队已满」且不可点',
+      async run(ctx)
+      {
+        const scheduleId = '9202'
+        const detail = Object.assign(fullScheduleDetail(scheduleId), { queueCount: 3, queueable: false })
+        await ctx.page.route('**/api/schedules/' + scheduleId, jsonRoute({ code: 200, msg: '查询成功', data: detail }))
+
+        await ctx.openScheduleDetail(scheduleId)
+        const detailButton = ctx.page.locator('.bar__btn')
+        assert.equal((await detailButton.innerText()).trim(), '排队已满', '排队已满时详情页按钮文案')
+        assert.ok(await detailButton.evaluate((el) => el.classList.contains('bar__btn--off')),
+          '排队已满时详情页按钮不可点')
       }
     },
     {

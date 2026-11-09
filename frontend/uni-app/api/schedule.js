@@ -45,6 +45,7 @@ function normalizeDetail(row) {
     storeAddress: toText(raw.storeAddress),
     minPersons: toNum(raw.minPersons),
     queueCount: toNum(raw.queueCount),
+    queueLimit: toNum(raw.queueLimit),
     queueable: raw.queueable === true,
     bookers: Array.isArray(raw.bookers) ? raw.bookers : []
   })

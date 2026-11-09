@@ -55,7 +55,7 @@
 
         <view v-if="queueable" class="row">
           <text class="row__label">排队</text>
-          <text class="row__value queue-tip">课程已满，当前 {{ queueCount }} 人排队，有人取消时按顺序自动预约并扣次</text>
+          <text class="row__value queue-tip">课程已满，当前 {{ queueCount }}/{{ queueLimit }} 人排队，有人取消时按顺序自动预约并扣次</text>
         </view>
 
         <view class="row">
@@ -236,6 +236,8 @@ const bookable = computed(() => !!(detail.value && detail.value.bookable))
 const queueable = computed(() => !bookable.value && !!(detail.value && detail.value.queueable))
 
 const queueCount = computed(() => Number(detail.value ? detail.value.queueCount : 0) || 0)
+
+const queueLimit = computed(() => Number(detail.value ? detail.value.queueLimit : 0) || 0)
 
 const selectedCard = computed(() => {
   return cards.value.find((card) => card.id === selectedCardId.value) || null
@@ -515,7 +517,7 @@ async function submitQueue() {
       }
     })
   } catch (error) {
-    // 失败原因（已有空位 / 已在排队 / 超过排队截止等）已由 utils/request 统一 toast
+    // 失败原因（已有空位 / 已在排队 / 排队已满 / 超过停止排队时间等）已由 utils/request 统一 toast
   } finally {
     submitting.value = false
   }

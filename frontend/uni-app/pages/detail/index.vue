@@ -241,7 +241,16 @@ const barText = computed(() => {
   if (detail.value.bookable) {
     return '立即预约'
   }
-  return detail.value.queueable ? '排队' : '不可预约'
+  if (detail.value.queueable) {
+    return '排队'
+  }
+  return queueFull.value ? '排队已满' : '不可预约'
+})
+
+/** 满员且排队人数已达上限（上限为 0 表示不开放排队，不算排满） */
+const queueFull = computed(() => {
+  const item = detail.value
+  return !!item && item.remainingPlaces === 0 && item.queueLimit > 0 && item.queueCount >= item.queueLimit
 })
 
 function onBook() {
