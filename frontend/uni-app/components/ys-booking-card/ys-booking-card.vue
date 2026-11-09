@@ -12,9 +12,8 @@
       </view>
 
       <view class="ys-booking__line">
-        <text class="ys-booking__status" :class="statusClass">{{ item.statusText }}</text>
+        <text class="ys-booking__status" :class="statusClass">{{ statusLabel }}</text>
         <text class="ys-booking__date">{{ item.scheduleDate }}</text>
-        <text v-if="isQueued && item.queuePosition" class="ys-booking__queue">第 {{ item.queuePosition }} 位</text>
       </view>
 
       <text class="ys-booking__line">上课 {{ item.startHm }} - {{ item.endHm }}</text>
@@ -85,6 +84,14 @@ onUnmounted(() => {
 const isBooked = computed(() => Number(props.item.status) === 1)
 
 const isQueued = computed(() => Number(props.item.status) === 4)
+
+/** 排队中的状态带上名次，如「排队中 · 第 3 位」 */
+const statusLabel = computed(() => {
+  if (isQueued.value && props.item.queuePosition) {
+    return props.item.statusText + ' · 第 ' + props.item.queuePosition + ' 位'
+  }
+  return props.item.statusText
+})
 
 /** 到签到窗口才让点：当前时间 >= 开课时间 - 30 分钟，且 < 结束时间 */
 const canCheckIn = computed(() => {
@@ -233,13 +240,6 @@ function onCheckIn() {
     font-size: 25rpx;
     line-height: 1.4;
     color: $ys-ink-3;
-  }
-
-  &__queue {
-    margin-left: 10rpx;
-    font-size: 25rpx;
-    line-height: 1.4;
-    color: #f5a623;
   }
 
   &__actions {

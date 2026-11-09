@@ -384,7 +384,7 @@ module.exports = {
       }
     },
     {
-      name: '我的预约：排队中显示名次与「取消排队」，排队失败不显示操作',
+      name: '我的预约：状态 Tab 与原型一致，「全部」中排队中显示「排队中 · 第 N 位」与「取消排队」，排队失败不显示操作',
       async run(ctx)
       {
         const queued = reservationRow({
@@ -422,13 +422,15 @@ module.exports = {
           }]
         })
 
-        const tabs = (await ctx.page.locator('.status__text').allInnerTexts()).join(',')
-        assert.contains(tabs, '排队中', '状态 Tab 含排队中')
-        assert.contains(tabs, '排队失败', '状态 Tab 含排队失败')
+        const tabs = (await ctx.page.locator('.status__text').allInnerTexts()).map((t) => t.trim())
+        assert.equal(tabs.join(','), '全部,已预约,已取消,已签到', '状态 Tab 只有原型的四项')
 
         const queuedCard = ctx.page.locator('.ys-booking', { hasText: '排队中的团课' })
         const failedCard = ctx.page.locator('.ys-booking', { hasText: '排队失败的团课' })
-        assert.contains(await queuedCard.innerText(), '第 3 位', '排队中显示名次')
+        assert.equal((await queuedCard.locator('.ys-booking__status').innerText()).trim(), '排队中 · 第 3 位',
+          '排队中的状态带名次')
+        assert.equal((await failedCard.locator('.ys-booking__status').innerText()).trim(), '排队失败',
+          '排队失败的状态文案')
         assert.equal(await queuedCard.locator('.ys-booking__checkin').count(), 0, '排队中不显示签到')
         assert.equal(await failedCard.locator('.ys-booking__cancel').count(), 0, '排队失败不显示取消')
 

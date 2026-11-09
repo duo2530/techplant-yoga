@@ -8,7 +8,7 @@
   <view class="bookings">
     <!-- ===== 上方白色区：状态筛选 Tab + 卡类型筛选 ===== -->
     <view class="head">
-      <!-- 状态筛选 Tab：全部 / 已预约 / 已取消 / 已签到 / 排队中 / 排队失败
+      <!-- 状态筛选 Tab：全部 / 已预约 / 已取消 / 已签到；排队记录在「全部」中
            选中态 = 文字加深加粗 + 其下蓝色圆角下划线 -->
       <view class="status">
         <view
@@ -86,13 +86,14 @@
 
 <script setup>
 import { computed, ref } from 'vue'
-import { onReachBottom, onShow } from '@dcloudio/uni-app'
+import { onReachBottom, onShow, onUnload } from '@dcloudio/uni-app'
 import {
   getBookingStatusTabs,
   getCardTypeFilters,
   listBookings,
   cancelBooking,
-  checkInBooking
+  checkInBooking,
+  SHOW_ALL_BOOKINGS_EVENT
 } from '@/api/booking'
 import { isSessionValid, LOGIN_PAGE } from '@/utils/session'
 
@@ -224,6 +225,15 @@ function onCardTypeTap() {
   })
 }
 
+/** Tab 页切回时保留原筛选；加入排队后要求回到「全部」，随后的 onShow 按新筛选刷新 */
+function showAll() {
+  activeStatus.value = 0
+}
+uni.$on(SHOW_ALL_BOOKINGS_EVENT, showAll)
+onUnload(() => {
+  uni.$off(SHOW_ALL_BOOKINGS_EVENT, showAll)
+})
+
 // 用 onShow：从约课页预约成功切回来时列表要刷新
 onShow(() => {
   loadPage(true)
@@ -284,7 +294,7 @@ async function onCheckIn(item) {
   display: flex;
   align-items: flex-end;
   height: 100rpx;
-  padding: 0 16rpx;
+  padding: 0 31rpx;
 
   &__item {
     flex: 1;
@@ -294,7 +304,7 @@ async function onCheckIn(item) {
   }
 
   &__text {
-    font-size: 27rpx;
+    font-size: 29rpx;
     line-height: 1;
     color: $ys-ink-3;
 

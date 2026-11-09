@@ -5,15 +5,16 @@ import config from '@/config'
 
 const MAX_PAGE_SIZE = 100
 
-/** 状态筛选：与后端的 status 取值一致 */
+/** 状态筛选：与后端的 status 取值一致；排队中与排队失败的记录在「全部」中查看 */
 const STATUS_TABS = [
   { value: 0, label: '全部' },
   { value: 1, label: '已预约' },
   { value: 2, label: '已取消' },
-  { value: 3, label: '已签到' },
-  { value: 4, label: '排队中' },
-  { value: 5, label: '排队失败' }
+  { value: 3, label: '已签到' }
 ]
+
+/** 我的预约切回「全部」Tab 的页面事件 */
+export const SHOW_ALL_BOOKINGS_EVENT = 'my-bookings:show-all'
 
 /** 卡类型筛选：与后端的 cardType 取值一致 */
 const CARD_TYPE_FILTERS = [
@@ -74,7 +75,7 @@ function normalizeBooking(row) {
   }
 }
 
-/** 状态筛选 Tab（全部 / 已预约 / 已取消 / 已签到 / 排队中 / 排队失败） */
+/** 状态筛选 Tab（全部 / 已预约 / 已取消 / 已签到） */
 export function getBookingStatusTabs() {
   return STATUS_TABS.slice()
 }

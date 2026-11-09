@@ -157,7 +157,7 @@ import { computed, ref } from 'vue'
 import { onLoad, onUnload } from '@dcloudio/uni-app'
 import { getScheduleDetail } from '@/api/schedule'
 import { listMemberCards } from '@/api/member'
-import { createReservation, generateRequestId, joinQueue } from '@/api/booking'
+import { createReservation, generateRequestId, joinQueue, SHOW_ALL_BOOKINGS_EVENT } from '@/api/booking'
 import { isSessionValid, LOGIN_PAGE } from '@/utils/session'
 
 /** 立即预约页 */
@@ -509,10 +509,11 @@ async function submitQueue() {
     requestId.value = generateRequestId()
     uni.showModal({
       title: '排队成功',
-      content: '有人取消预约时将按排队顺序自动为您预约并扣次，可在「我的预约」查看排队名次',
+      content: '有人取消预约时将按排队顺序自动为您预约并扣次，可在「我的预约」的「全部」中查看排队名次',
       showCancel: false,
       confirmText: '查看预约',
       success: () => {
+        uni.$emit(SHOW_ALL_BOOKINGS_EVENT)
         uni.switchTab({ url: '/pages/my-bookings/index' })
       }
     })
