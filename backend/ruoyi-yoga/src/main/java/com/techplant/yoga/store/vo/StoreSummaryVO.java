@@ -10,7 +10,7 @@ import io.swagger.annotations.ApiModelProperty;
  * 门店摘要（跨模块批量补齐名称用）。
  *
  * <p>教室模块用它批量补 {@code storeName}，排课模块用它批量补门店名称，会员卡模块用它校验开卡门店／适用门店存在并取门店编号生成卡号，
- * 预约与排课详情用它补门店地址；由 {@code StoreService#summaries(java.util.Collection)} 提供。</p>
+ * 预约与排课详情用它补门店地址，排课详情另用电话与营业时间；由 {@code StoreService#summaries(java.util.Collection)} 提供。</p>
  */
 @ApiModel("门店摘要")
 @Getter
@@ -27,6 +27,12 @@ public class StoreSummaryVO {
 
     @ApiModelProperty(value = "门店地址", example = "漕溪北路 88 号")
     private String address;
+
+    @ApiModelProperty(value = "联系电话", example = "021-12345678")
+    private String phone;
+
+    @ApiModelProperty(value = "营业时间展示文本", example = "周一至周日 09:00-22:00")
+    private String businessHours;
 
     public StoreSummaryVO() {
     }

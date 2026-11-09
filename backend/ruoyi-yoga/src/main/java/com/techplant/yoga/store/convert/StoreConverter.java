@@ -123,12 +123,16 @@ public final class StoreConverter {
         return result;
     }
 
-    /** 批量 → 门店摘要（跨模块 summaries，给 id、门店编号、名称与地址） */
+    /** 批量 → 门店摘要（跨模块 summaries，给 id、门店编号、名称、地址、电话与营业时间） */
     public static List<StoreSummaryVO> toSummaryVOList(List<StoreDO> stores) {
         List<StoreSummaryVO> result = new ArrayList<StoreSummaryVO>();
         if (stores != null) {
             for (StoreDO store : stores) {
-                result.add(new StoreSummaryVO(store.getId(), store.getStoreNo(), store.getName(), store.getAddress()));
+                StoreSummaryVO summary = new StoreSummaryVO(store.getId(), store.getStoreNo(), store.getName(),
+                        store.getAddress());
+                summary.setPhone(store.getPhone());
+                summary.setBusinessHours(store.getBusinessHours());
+                result.add(summary);
             }
         }
         return result;

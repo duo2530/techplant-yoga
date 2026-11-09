@@ -1,101 +1,147 @@
 <template>
-  <!--
-    课程详情页（W6 · 新建）
-    路由参数：scheduleId（字符串形式的雪花 ID）
-    数据：GET /api/schedules/{scheduleId}
-
-    口径（用户端接口详细设计 §2.3）：
-      - 课种 courseType / courseTypeName **取排课快照**；难度 / 封面 / 介绍实时取课程当前值；
-      - 状态文案 statusText 与 bookable、queueable 全部用后端返回值；
-      - 预约人员 bookers 是后端返回的脱敏名单（最多 10 位），无预约时为空数组 → 显示空态；
-      - 可约或可排队时底部按钮进立即预约页，否则按钮显示状态文案、不跳转；
-      - 后端对「不存在 / 已删除 / 待上架」一律返回 404 → 友好提示并返回上一页。
-  -->
+  <!-- 课程详情页：路由参数 scheduleId，数据来自 GET /api/schedules/{scheduleId}；状态文案与 bookable、queueable 用后端返回值 -->
   <view class="detail">
     <view v-if="detail" class="detail__body">
-      <image class="detail__cover" :src="coverOf(detail)" mode="aspectFill" />
-
-      <!-- 课程资料 -->
-      <view class="card card--first">
-        <view class="card__head">
-          <text class="card__title">{{ detail.courseName }}</text>
-          <text class="card__status" :class="statusClass(detail)">{{ detail.statusText }}</text>
-        </view>
-        <view class="card__meta">
-          <text class="card__tag">{{ detail.courseTypeName }}</text>
-          <text class="card__dot">·</text>
-          <text class="card__meta-text">难度 {{ detail.difficulty }}</text>
-        </view>
-        <text class="card__intro">{{ introText }}</text>
-      </view>
-
-      <!-- 本次上课 -->
-      <view class="card">
-        <text class="card__section">本次上课</text>
-        <view class="row">
-          <text class="row__label">时间</text>
-          <text class="row__value">{{ timeText }}</text>
-        </view>
-        <view class="row">
-          <text class="row__label">门店</text>
-          <text class="row__value">{{ detail.storeName || '门店待定' }}</text>
-        </view>
-        <view class="row">
-          <text class="row__label">教室</text>
-          <text class="row__value">{{ detail.classroomName || '教室待定' }}</text>
+      <view class="hero">
+        <image class="hero__cover" :src="coverOf(detail)" mode="aspectFill" />
+        <view class="hero__back press" :style="{ top: backTop }" @tap="goBack">
+          <uni-icons type="left" size="20" color="#fff" />
         </view>
       </view>
 
-      <!-- 教练 -->
-      <view class="card">
-        <text class="card__section">上课教练</text>
-        <view class="coach">
-          <image
-            v-if="detail.coachAvatarUrl"
-            class="coach__avatar"
-            :src="detail.coachAvatarUrl"
-            mode="aspectFill"
-          />
+      <!-- 课程信息 -->
+      <view class="info">
+        <text class="info__tag">课程预约</text>
+        <text class="info__title">{{ detail.courseName || '课程' }}</text>
+
+        <view class="grid">
+          <view class="grid__cell grid__cell--left">
+            <view class="grid__icon"><uni-icons type="calendar" size="17" color="#609CE9" /></view>
+            <view class="grid__main">
+              <text class="grid__label">日期</text>
+              <text class="grid__value">{{ dateText }}</text>
+            </view>
+          </view>
+          <view class="grid__cell">
+            <view class="grid__icon"><uni-icons type="notification" size="17" color="#609CE9" /></view>
+            <view class="grid__main">
+              <text class="grid__label">时间</text>
+              <text class="grid__value">{{ timeText }}</text>
+            </view>
+          </view>
+          <view class="grid__cell grid__cell--left">
+            <view class="grid__icon"><uni-icons type="info" size="17" color="#609CE9" /></view>
+            <view class="grid__main">
+              <text class="grid__label">课程时长</text>
+              <text class="grid__value">{{ durationText }}</text>
+            </view>
+          </view>
+          <view class="grid__cell">
+            <view class="grid__icon grid__icon--star"><uni-icons type="star-filled" size="17" color="#C8963E" /></view>
+            <view class="grid__main">
+              <text class="grid__label">课程难度</text>
+              <text class="grid__value">{{ difficultyText }}</text>
+            </view>
+          </view>
+        </view>
+
+        <view class="place">
+          <view class="grid__icon"><uni-icons type="shop" size="17" color="#609CE9" /></view>
+          <view class="grid__main">
+            <text class="grid__label">上课地点</text>
+            <text class="place__store">{{ detail.storeName || '门店待定' }}</text>
+            <text class="place__line">{{ roomLine }}</text>
+            <text v-if="detail.storeAddress" class="place__line">{{ detail.storeAddress }}</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- 授课教练 -->
+      <view class="block">
+        <text class="block__title">授课教练</text>
+        <view class="coach press" @tap="goCoach">
+          <image class="coach__avatar" :src="detail.coachAvatarUrl || DEFAULT_AVATAR" mode="aspectFill" />
           <view class="coach__main">
             <text class="coach__name">{{ detail.coachName || '教练待定' }}</text>
-            <text class="coach__intro">{{ detail.coachIntro || '暂无简介' }}</text>
+            <text class="coach__intro">{{ detail.coachIntro || '暂无教练简介' }}</text>
+          </view>
+          <uni-icons v-if="detail.coachId" type="right" size="16" color="#BBBBBB" />
+        </view>
+      </view>
+
+      <!-- 预约情况 -->
+      <view class="block">
+        <view class="seats__head">
+          <view>
+            <text class="block__title block__title--plain">预约情况</text>
+            <text class="seats__sub">本节课程席位</text>
+          </view>
+          <text class="seats__badge">余 {{ remaining }} 席</text>
+        </view>
+
+        <view class="seats__nums">
+          <view class="seats__num">
+            <text class="seats__count seats__count--brand">{{ booked }}</text>
+            <text class="seats__caption">已约人数</text>
+          </view>
+          <view class="seats__divider" />
+          <view class="seats__num seats__num--right">
+            <text class="seats__count">{{ maxPersons }}</text>
+            <text class="seats__caption">课程总人数</text>
+          </view>
+        </view>
+
+        <view class="seats__bar"><view class="seats__fill" :style="{ width: percent + '%' }" /></view>
+        <view class="seats__foot">
+          <text>已预约 {{ booked }} 人</text>
+          <text>{{ percent }}%</text>
+        </view>
+
+        <view class="members">
+          <view class="members__main">
+            <text class="members__title">参与成员</text>
+            <text class="members__sub">{{ booked ? '已有 ' + booked + ' 人加入' : '暂无成员加入' }}</text>
+          </view>
+          <view v-if="booked" class="members__avatars">
+            <image
+              v-for="index in shownAvatars"
+              :key="index"
+              class="members__avatar"
+              :src="DEFAULT_AVATAR"
+              mode="aspectFill"
+            />
+            <view v-if="moreCount > 0" class="members__more">
+              <text>+{{ moreCount }}</text>
+            </view>
           </view>
         </view>
       </view>
 
-      <!-- 人数信息 -->
-      <view class="card">
-        <text class="card__section">人数信息</text>
-        <view class="row">
-          <text class="row__label">最大人数</text>
-          <text class="row__value">{{ detail.maxPersons }} 人</text>
-        </view>
-        <view class="row">
-          <text class="row__label">最低开课人数</text>
-          <text class="row__value">{{ detail.minPersons }} 人</text>
-        </view>
-        <view class="row">
-          <text class="row__label">剩余名额</text>
-          <text class="row__value row__value--strong">{{ detail.remainingPlaces }} 个</text>
-        </view>
+      <!-- 课程介绍 -->
+      <view class="block">
+        <text class="block__title">课程介绍</text>
+        <text class="block__text">{{ detail.courseIntro || '暂无课程介绍' }}</text>
+      </view>
 
-        <text class="card__sub">预约人员</text>
-        <view v-if="bookers.length" class="bookers">
-          <view v-for="(booker, index) in bookers" :key="index" class="bookers__item">
-            <text class="bookers__name">{{ bookerName(booker) }}</text>
-          </view>
-        </view>
-    <!-- 预约名单空态 -->
-        <view v-else class="bookers__empty">
-          <text class="bookers__empty-text">暂无预约人员</text>
+      <!-- 预约须知 -->
+      <view class="block">
+        <text class="block__title">预约须知</text>
+        <view class="notes">
+          <text v-for="(line, index) in bookingNotes" :key="index" class="notes__item">{{ index + 1 }}.{{ line }}</text>
         </view>
       </view>
 
-      <view class="detail__space" />
+      <!-- 排队须知：排课不开放排队时不显示 -->
+      <view v-if="queueOpen" class="block">
+        <text class="block__title">排队须知</text>
+        <view class="notes">
+          <text v-for="(line, index) in queueNotes" :key="index" class="notes__item">{{ index + 1 }}.{{ line }}</text>
+        </view>
+      </view>
     </view>
 
     <!-- 排课不存在 / 已删除 / 待上架（后端统一 404）→ 友好提示并返回上一页 -->
-    <view v-else-if="loadError" class="detail__error">
+    <view v-else-if="loadError" class="detail__error" :style="{ paddingTop: backTop }">
       <ys-empty
         image="/static/images/empty/booking.png"
         image-width="265rpx"
@@ -111,6 +157,10 @@
 
     <!-- 底部操作条 -->
     <view v-if="detail" class="bar">
+      <view class="bar__consult press" @tap="onConsult">
+        <uni-icons type="headphones" size="20" color="#609CE9" />
+        <text class="bar__consult-text">咨询</text>
+      </view>
       <view class="bar__btn" :class="{ 'bar__btn--off': !canEnter }" @tap="onBook">
         <text>{{ barText }}</text>
       </view>
@@ -123,65 +173,109 @@ import { ref, computed } from 'vue'
 import { onLoad, onUnload } from '@dcloudio/uni-app'
 import { getScheduleDetail } from '@/api/schedule'
 
-/** 课程详情页（W6） */
+/** 会员与未配头像的教练都用默认头像 */
+const DEFAULT_AVATAR = '/static/images/mine/avatar.jpg'
+const WEEKDAYS = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
+const DIFFICULTY_LABELS = ['', '入门', '初级', '适中', '进阶', '高阶']
+const MAX_AVATARS = 4
 
 const scheduleId = ref('')
 const detail = ref(null)
 const loadError = ref(false)
 
+const windowInfo = (typeof uni.getWindowInfo === 'function' ? uni.getWindowInfo() : uni.getSystemInfoSync()) || {}
+const backTop = (windowInfo.statusBarHeight || 0) + 12 + 'px'
+
 let backTimer = null
 
-const introText = computed(() => {
-  const text = detail.value ? detail.value.courseIntro : ''
-  return text || '暂无课程介绍'
+const booked = computed(() => toInt(detail.value && detail.value.bookedPersons))
+const maxPersons = computed(() => toInt(detail.value && detail.value.maxPersons))
+const remaining = computed(() => toInt(detail.value && detail.value.remainingPlaces))
+const percent = computed(() => (maxPersons.value ? Math.min(100, Math.round((booked.value * 100) / maxPersons.value)) : 0))
+const shownAvatars = computed(() => Math.min(MAX_AVATARS, booked.value))
+const moreCount = computed(() => Math.max(booked.value - shownAvatars.value, 0))
+
+const dateText = computed(() => {
+  const date = parseDate(detail.value && (detail.value.scheduleDate || detail.value.startTime))
+  return date ? date.getMonth() + 1 + '月' + date.getDate() + '日 ' + WEEKDAYS[date.getDay()] : '日期待定'
 })
 
 const timeText = computed(() => {
-  if (!detail.value) {
-    return ''
-  }
-  const date = detail.value.scheduleDate || ''
-  const start = hm(detail.value.startTime)
-  const end = hm(detail.value.endTime)
-  const range = start && end ? start + '-' + end : start || end || '时间待定'
-  return date ? date + ' ' + range : range
+  const start = hm(detail.value && detail.value.startTime)
+  const end = hm(detail.value && detail.value.endTime)
+  return start && end ? start + ' - ' + end : start || end || '时间待定'
 })
 
-/** 预约人员 */
-const bookers = computed(() => {
-  const list = detail.value ? detail.value.bookers : null
-  return Array.isArray(list) ? list : []
+const durationText = computed(() => {
+  const start = parseDateTime(detail.value && detail.value.startTime)
+  const end = parseDateTime(detail.value && detail.value.endTime)
+  if (!start || !end || end <= start) {
+    return '时长待定'
+  }
+  return Math.round((end - start) / 60000) + ' 分钟'
 })
+
+const difficultyText = computed(() => {
+  const level = toInt(detail.value && detail.value.difficulty)
+  return DIFFICULTY_LABELS[level] ? level + ' 星 · ' + DIFFICULTY_LABELS[level] : '暂无'
+})
+
+const roomLine = computed(() => {
+  const parts = [detail.value.classroomName || '教室待定']
+  if (detail.value.storeBusinessHours) {
+    parts.push('营业 ' + detail.value.storeBusinessHours)
+  }
+  return parts.join('　')
+})
+
+const queueOpen = computed(() => toInt(detail.value && detail.value.queueLimit) > 0)
+
+const bookingNotes = computed(() => {
+  const cancelMinutes = toInt(detail.value.cancelDeadlineMinutes)
+  return [
+    '本课程需在开课前预约。',
+    '预约成功后自动扣除相应费用。',
+    '开课前' + cancelMinutes + '分钟不可取消。',
+    '取消预约不扣除费用。',
+    '该课程满' + toInt(detail.value.minPersons) + '人开课，如预约人数不足会在开课前' + cancelMinutes + '分钟自动取消预约。'
+  ]
+})
+
+const queueNotes = computed(() => {
+  const stopMinutes = toInt(detail.value.queueStopMinutes)
+  return [
+    '本课程需早于开课前' + stopMinutes + '分钟排队。',
+    '开课前' + stopMinutes + '分钟停止从排队中加入预约。',
+    '排队上限为' + toInt(detail.value.queueLimit) + '人。',
+    '排队时不扣费，从排队转为预约成功后扣除相应费用。'
+  ]
+})
+
+function toInt(value) {
+  const number = Number(value)
+  return Number.isFinite(number) ? Math.max(Math.floor(number), 0) : 0
+}
 
 function hm(value) {
   const text = String(value || '')
   return text.length >= 16 ? text.slice(11, 16) : text
 }
 
-/** 封面：后端未配图时用原型封面占位（不造数据，只兜底视觉） */
+function parseDate(value) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(value || ''))
+  return match ? new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3])) : null
+}
+
+function parseDateTime(value) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/.exec(String(value || ''))
+  return match
+    ? new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]), Number(match[4]), Number(match[5]))
+    : null
+}
+
+/** 后端未配封面时用原型封面占位 */
 function coverOf(item) {
   return item.courseCoverUrl || '/static/images/booking/cover-1.jpg'
-}
-
-/** 状态徽标配色（可约 = 蓝，排队 = 橙，已取消 = 灰红，其余 = 灰） */
-function statusClass(item) {
-  if (item.bookable) {
-    return 'card__status--on'
-  }
-  if (item.queueable) {
-    return 'card__status--queue'
-  }
-  return item.statusText === '已取消' ? 'card__status--cancel' : 'card__status--off'
-}
-
-function bookerName(booker) {
-  if (!booker) {
-    return ''
-  }
-  if (typeof booker === 'string') {
-    return booker
-  }
-  return booker.name || booker.nickName || ''
 }
 
 onLoad((query) => {
@@ -213,7 +307,7 @@ async function loadDetail() {
   }
 }
 
-/** 友好提示 + 自动返回上一页（没有上一页时回约课 Tab） */
+/** 友好提示后自动返回上一页，没有上一页时回约课 Tab */
 function onNotFound() {
   loadError.value = true
   if (backTimer) {
@@ -232,6 +326,22 @@ function goBack() {
     return
   }
   uni.switchTab({ url: '/pages/booking/index' })
+}
+
+function goCoach() {
+  if (!detail.value || !detail.value.coachId) {
+    return
+  }
+  uni.navigateTo({ url: '/pages/coaches/index?coachId=' + encodeURIComponent(detail.value.coachId) })
+}
+
+function onConsult() {
+  const phone = detail.value && detail.value.storePhone
+  if (!phone) {
+    uni.showToast({ title: '门店暂未提供电话', icon: 'none' })
+    return
+  }
+  uni.makePhoneCall({ phoneNumber: phone })
 }
 
 /** 可约进预约页；满员可排队也进同一页，由该页提交排队 */
@@ -270,22 +380,7 @@ function onBook() {
   background: $ys-page;
 
   &__body {
-    padding-bottom: 160rpx;
-  }
-
-  &__cover {
-    display: block;
-    width: 100%;
-    height: 420rpx;
-    background: $ys-line;
-  }
-
-  &__space {
-    height: 20rpx;
-  }
-
-  &__error {
-    padding-top: 80rpx;
+    padding-bottom: 180rpx;
   }
 
   &__error-btn {
@@ -302,157 +397,191 @@ function onBook() {
   }
 }
 
-/* ---------------- 卡片 ---------------- */
-.card {
-  margin: 20rpx $ys-gap 0;
-  padding: 28rpx 25rpx;
-  background: #fff;
-  border-radius: $ys-radius-lg;
-  box-shadow: $ys-card-shadow;
+.hero {
+  position: relative;
 
-  &--first {
-    margin-top: 24rpx;
+  &__cover {
+    display: block;
+    width: 100%;
+    height: 560rpx;
+    background: $ys-line;
   }
 
-  &__head {
+  &__back {
+    position: absolute;
+    left: 24rpx;
+    width: 64rpx;
+    height: 64rpx;
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.35);
+    border-radius: 50%;
+  }
+}
+
+.info {
+  position: relative;
+  margin: -24rpx 16rpx 0;
+  padding: 36rpx 32rpx 24rpx;
+  background: #fff;
+  border-radius: 16rpx;
+  box-shadow: 0 6rpx 24rpx rgba(47, 71, 84, 0.08);
+
+  &__tag {
+    display: block;
+    font-size: 25rpx;
+    font-weight: 600;
+    color: $ys-brand;
   }
 
   &__title {
-    flex: 1;
-    font-size: 35rpx;
-    font-weight: 600;
+    display: block;
+    margin-top: 12rpx;
+    font-size: 44rpx;
+    font-weight: 700;
     line-height: 1.3;
-    color: $ys-title;
+    color: $ys-ink-1;
   }
+}
 
-  &__status {
-    flex: none;
-    margin-left: 15rpx;
-    padding: 4rpx 14rpx;
-    font-size: 23rpx;
-    line-height: 1.4;
-    border-radius: 8rpx;
+.grid {
+  display: flex;
+  flex-wrap: wrap;
+  margin-top: 28rpx;
+  border-top: 1px solid $ys-line;
 
-    &--on {
-      color: $ys-brand;
-      background: $ys-brand-pale;
-    }
-
-    &--off {
-      color: $ys-ink-3;
-      background: $ys-line;
-    }
-
-    &--queue {
-      color: #f5a623;
-      background: #fdf3e2;
-    }
-
-    &--cancel {
-      color: #b25a5a;
-      background: #f6e7e7;
-    }
-  }
-
-  &__meta {
+  &__cell {
+    width: 50%;
+    box-sizing: border-box;
     display: flex;
     align-items: center;
-    margin-top: 16rpx;
+    padding: 26rpx 0 26rpx 22rpx;
+    border-bottom: 1px solid $ys-line;
+
+    &--left {
+      padding-left: 0;
+      border-right: 1px solid $ys-line;
+    }
   }
 
-  &__tag {
-    padding: 2rpx 12rpx;
-    font-size: 23rpx;
-    line-height: 1.4;
-    color: $ys-brand;
+  &__icon {
+    flex: none;
+    width: 60rpx;
+    height: 60rpx;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     background: $ys-brand-pale;
-    border-radius: 8rpx;
+    border-radius: 12rpx;
+
+    &--star {
+      background: #f8eedc;
+    }
   }
 
-  &__dot {
-    margin: 0 10rpx;
-    font-size: 23rpx;
-    color: $ys-ink-4;
+  &__main {
+    flex: 1;
+    min-width: 0;
+    margin-left: 22rpx;
+    display: flex;
+    flex-direction: column;
   }
 
-  &__meta-text {
+  &__label {
     font-size: 25rpx;
-    color: $ys-ink-3;
-  }
-
-  &__intro {
-    display: block;
-    margin-top: 18rpx;
-    font-size: 27rpx;
-    line-height: 1.6;
+    line-height: 1.4;
     color: $ys-ink-2;
   }
 
-  &__section {
-    display: block;
+  &__value {
+    margin-top: 6rpx;
     font-size: 29rpx;
     font-weight: 600;
-    line-height: 1.3;
-    color: $ys-title;
-  }
-
-  &__sub {
-    display: block;
-    margin-top: 28rpx;
-    font-size: 27rpx;
-    font-weight: 500;
-    line-height: 1.3;
-    color: $ys-title;
-  }
-}
-
-/* ---------------- 信息行 ---------------- */
-.row {
-  display: flex;
-  align-items: flex-start;
-  margin-top: 22rpx;
-
-  &__label {
-    flex: none;
-    width: 190rpx;
-    font-size: 27rpx;
-    line-height: 1.4;
-    color: $ys-ink-3;
-  }
-
-  &__value {
-    flex: 1;
-    font-size: 27rpx;
     line-height: 1.4;
     color: $ys-ink-1;
-
-    &--strong {
-      font-weight: 600;
-      color: $ys-brand;
-    }
   }
 }
 
-/* ---------------- 教练 ---------------- */
+.place {
+  display: flex;
+  align-items: flex-start;
+  padding-top: 26rpx;
+
+  &__store {
+    margin-top: 6rpx;
+    font-size: 29rpx;
+    font-weight: 600;
+    line-height: 1.4;
+    color: $ys-ink-1;
+  }
+
+  &__line {
+    margin-top: 8rpx;
+    font-size: 25rpx;
+    line-height: 1.5;
+    color: $ys-ink-2;
+  }
+}
+
+.block {
+  margin-top: 20rpx;
+  padding: 36rpx 34rpx;
+  background: #fff;
+
+  &__title {
+    display: block;
+    padding-bottom: 26rpx;
+    font-size: 31rpx;
+    font-weight: 700;
+    line-height: 1.3;
+    color: $ys-ink-1;
+    border-bottom: 1px solid $ys-line;
+
+    &--plain {
+      padding-bottom: 0;
+      border-bottom: none;
+    }
+  }
+
+  &__text {
+    display: block;
+    margin-top: 28rpx;
+    font-size: 29rpx;
+    line-height: 1.6;
+    color: $ys-ink-2;
+  }
+}
+
+.notes {
+  padding-top: 10rpx;
+
+  &__item {
+    display: block;
+    margin-top: 18rpx;
+    font-size: 29rpx;
+    line-height: 1.7;
+    color: $ys-ink-2;
+  }
+}
+
 .coach {
   display: flex;
   align-items: center;
-  margin-top: 22rpx;
+  padding-top: 26rpx;
 
   &__avatar {
     flex: none;
-    width: 110rpx;
-    height: 110rpx;
-    border-radius: $ys-radius-md;
+    width: 96rpx;
+    height: 96rpx;
+    border-radius: 50%;
     background: $ys-line;
   }
 
   &__main {
     flex: 1;
-    margin-left: 23rpx;
+    min-width: 0;
+    margin-left: 24rpx;
     display: flex;
     flex-direction: column;
   }
@@ -460,61 +589,188 @@ function onBook() {
   &__name {
     font-size: 29rpx;
     font-weight: 600;
-    line-height: 1.3;
+    line-height: 1.4;
     color: $ys-ink-1;
   }
 
   &__intro {
-    margin-top: 10rpx;
+    margin-top: 6rpx;
     font-size: 25rpx;
     line-height: 1.5;
-    color: $ys-ink-3;
+    color: $ys-ink-2;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
   }
 }
 
-/* ---------------- 预约人员 ---------------- */
-.bookers {
-  margin-top: 18rpx;
-
-  &__item {
-    padding: 14rpx 0;
-    border-bottom: 1px solid $ys-line;
+.seats {
+  &__head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
   }
 
-  &__name {
-    font-size: 27rpx;
-    line-height: 1.3;
+  &__sub {
+    display: block;
+    margin-top: 10rpx;
+    font-size: 25rpx;
     color: $ys-ink-2;
   }
 
-  &__empty {
-    margin-top: 18rpx;
-    padding: 30rpx 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: $ys-page;
-    border-radius: $ys-radius-sm;
+  &__badge {
+    padding: 6rpx 16rpx;
+    font-size: 25rpx;
+    font-weight: 600;
+    color: $ys-brand-deep;
+    background: $ys-brand-pale;
+    border-radius: 8rpx;
   }
 
-  &__empty-text {
+  &__nums {
+    display: flex;
+    align-items: center;
+    margin-top: 36rpx;
+  }
+
+  &__num {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+
+    &--right {
+      align-items: flex-end;
+    }
+  }
+
+  &__divider {
+    width: 1px;
+    height: 64rpx;
+    background: $ys-line;
+  }
+
+  &__count {
+    font-size: 52rpx;
+    font-weight: 700;
+    line-height: 1.2;
+    color: $ys-ink-1;
+
+    &--brand {
+      color: $ys-brand-deep;
+    }
+  }
+
+  &__caption {
+    margin-top: 6rpx;
     font-size: 25rpx;
-    line-height: 1;
-    color: $ys-ink-3;
+    color: $ys-ink-2;
+  }
+
+  &__bar {
+    margin-top: 32rpx;
+    height: 12rpx;
+    background: $ys-line;
+    border-radius: 12rpx;
+    overflow: hidden;
+  }
+
+  &__fill {
+    height: 100%;
+    background: linear-gradient(90deg, $ys-brand-deep, $ys-brand-light);
+    border-radius: 12rpx;
+  }
+
+  &__foot {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 14rpx;
+    font-size: 25rpx;
+    color: $ys-ink-2;
   }
 }
 
-/* ---------------- 底部操作条 ---------------- */
+.members {
+  display: flex;
+  align-items: center;
+  margin-top: 30rpx;
+  padding-top: 30rpx;
+  border-top: 1px solid $ys-line;
+
+  &__main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  &__title {
+    font-size: 27rpx;
+    font-weight: 600;
+    color: $ys-ink-1;
+  }
+
+  &__sub {
+    margin-top: 8rpx;
+    font-size: 25rpx;
+    color: $ys-ink-2;
+  }
+
+  &__avatars {
+    display: flex;
+    align-items: center;
+  }
+
+  &__avatar,
+  &__more {
+    width: 60rpx;
+    height: 60rpx;
+    margin-left: -14rpx;
+    border: 3rpx solid #fff;
+    border-radius: 50%;
+    background: $ys-line;
+  }
+
+  &__more {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20rpx;
+    color: $ys-ink-2;
+    background: $ys-brand-pale;
+  }
+}
+
 .bar {
   position: fixed;
   left: 0;
   right: 0;
   bottom: 0;
-  padding: 20rpx 25rpx 30rpx;
+  display: flex;
+  align-items: center;
+  padding: 20rpx 25rpx calc(20rpx + env(safe-area-inset-bottom));
   background: #fff;
   box-shadow: 0 -2rpx 12rpx rgba(0, 0, 0, 0.05);
 
+  &__consult {
+    flex: none;
+    width: 112rpx;
+    height: 88rpx;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: $ys-brand-pale;
+    border-radius: 12rpx;
+  }
+
+  &__consult-text {
+    margin-top: 2rpx;
+    font-size: 23rpx;
+    color: $ys-ink-1;
+  }
+
   &__btn {
+    flex: 1;
+    margin-left: 20rpx;
     height: 88rpx;
     display: flex;
     align-items: center;
@@ -523,11 +779,11 @@ function onBook() {
     font-weight: 500;
     color: #fff;
     background: $ys-brand;
-    border-radius: 56rpx;
+    border-radius: 12rpx;
 
-    /* 不可预约也不可排队 */
     &--off {
-      background: #c9d3dd;
+      color: $ys-ink-3;
+      background: #eef1f5;
     }
   }
 }

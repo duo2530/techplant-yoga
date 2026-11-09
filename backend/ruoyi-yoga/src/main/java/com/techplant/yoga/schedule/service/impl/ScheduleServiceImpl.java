@@ -420,7 +420,7 @@ public class ScheduleServiceImpl implements ScheduleService {
         vo.setStoreName(nameOf(storeNameMap(Collections.singletonList(schedule.getStoreId())), schedule.getStoreId()));
         vo.setClassroomName(nameOf(classroomNameMap(Collections.singletonList(schedule.getClassroomId())),
                 schedule.getClassroomId()));
-        vo.setStoreAddress(storeAddressOf(schedule.getStoreId()));
+        applyStoreContact(vo, schedule.getStoreId());
         vo.setBookers(reservationService.bookerDisplayNames(schedule.getId()));
         int queueCount = queueCountOf(reservationService.queueCounts(Collections.singletonList(schedule.getId())),
                 schedule.getId());
@@ -650,16 +650,18 @@ public class ScheduleServiceImpl implements ScheduleService {
         return !scheduleDate.isBefore(today) && !scheduleDate.isAfter(today.plusDays(SCHEDULE_WINDOW_DAYS - 1L));
     }
 
-    /** 门店地址：门店资料已删除时返回空字符串（契约允许为空，但不返回 null） */
-    private String storeAddressOf(Long storeId) {
-        if (storeId == null) {
-            return "";
+    /** 门店地址、电话与营业时间：门店资料已删除时都返回空字符串 */
+    private void applyStoreContact(PublicScheduleDetailVO vo, Long storeId) {
+        StoreSummaryVO store = null;
+        if (storeId != null) {
+            List<StoreSummaryVO> summaries = storeService.summaries(Collections.singletonList(storeId));
+            if (summaries != null && !summaries.isEmpty()) {
+                store = summaries.get(0);
+            }
         }
-        List<StoreSummaryVO> summaries = storeService.summaries(Collections.singletonList(storeId));
-        if (summaries == null || summaries.isEmpty() || summaries.get(0) == null) {
-            return "";
-        }
-        return text(summaries.get(0).getAddress());
+        vo.setStoreAddress(store == null ? "" : text(store.getAddress()));
+        vo.setStorePhone(store == null ? "" : text(store.getPhone()));
+        vo.setStoreBusinessHours(store == null ? "" : text(store.getBusinessHours()));
     }
 
     private ScheduleDO requireSchedule(Long scheduleId) {

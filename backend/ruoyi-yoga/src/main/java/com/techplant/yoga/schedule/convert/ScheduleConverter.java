@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalDateTime;
 import com.techplant.yoga.course.enums.CourseTypeEnum;
+import com.techplant.yoga.reservation.enums.ReservationStatusEnum;
 import com.techplant.yoga.schedule.domain.ScheduleDO;
 import com.techplant.yoga.schedule.dto.ScheduleCreateDTO;
 import com.techplant.yoga.schedule.dto.ScheduleUpdateDTO;
@@ -129,6 +130,8 @@ public final class ScheduleConverter {
         vo.setCoachId(source.getCoachId());
         vo.setMinPersons(source.getMinPersons());
         vo.setQueueLimit(source.getQueueLimit());
+        vo.setQueueStopMinutes(source.getQueueStopMinutes());
+        vo.setCancelDeadlineMinutes(ReservationStatusEnum.CANCEL_DEADLINE_MINUTES);
         vo.setBookers(new java.util.ArrayList<String>());
         return vo;
     }
