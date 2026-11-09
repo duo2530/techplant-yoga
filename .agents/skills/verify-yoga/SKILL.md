@@ -65,6 +65,7 @@ $B set viewport 390 844
 ## Evidence
 
 - 截图放 `.verify/<功能>/`（已 gitignore，不提交），文件名用 `序号-看到的状态.png`。Cleanup 不删这个目录。
+- `screenshot` 必须传绝对 Windows 路径：`W="$(cygpath -w "$PWD/.verify/<功能>")"; $B screenshot "$W\01-xxx.png"`。传相对路径时 agent-browser 会把图存到它自己的临时目录，仍然打印“Screenshot saved”。
 - 每一步同时留“动作 + 结果”：截图配一条 `get text`／`get url` 输出。
 - 页面结果要用第二个视角核对副作用：功能脚本的 `status`（直接读库：名额、状态、卡剩余次数）或管理端列表。
 - 走真实用户路径：页面点击或真实会员接口。不调测试专用接口，不拦截响应。e2e 里的响应拦截不算验收。
