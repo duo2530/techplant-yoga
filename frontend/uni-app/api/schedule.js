@@ -28,7 +28,8 @@ function normalizeCard(row) {
     remainingPlaces: toNum(item.remainingPlaces),
     status: item.status,
     statusText: toText(item.statusText),
-    bookable: item.bookable === true
+    bookable: item.bookable === true,
+    queueable: item.queueable === true
   }
 }
 
@@ -46,7 +47,6 @@ function normalizeDetail(row) {
     minPersons: toNum(raw.minPersons),
     queueCount: toNum(raw.queueCount),
     queueLimit: toNum(raw.queueLimit),
-    queueable: raw.queueable === true,
     bookers: Array.isArray(raw.bookers) ? raw.bookers : []
   })
 }

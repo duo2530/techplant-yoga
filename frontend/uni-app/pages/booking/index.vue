@@ -4,9 +4,9 @@
     数据：GET /api/schedules（storeId ＋ courseType ＋ date ＋ 分页）。
 
     状态栏 / 导航栏 / 微信胶囊 / TabBar 由小程序绘制，本页不画。
-    状态文案（可约 / 已结束 / 已取消）与是否可预约（bookable）**一律用后端返回值**，
+    状态文案（可约 / 排队 / 已约满 / 已结束 / 已取消）与 bookable、queueable **一律用后端返回值**，
     前端不做任何推导、也不额外过滤：可见口径是后端施加的 `status <> 1`，
-    所以「已结束 / 已取消」的卡片照常出现在列表里，只是置灰、不可预约，仍可点进详情。
+    所以不可预约也不可排队的卡片照常出现在列表里，只是置灰，仍可点进详情。
   -->
   <view class="booking">
     <!-- 顶部浅蓝渐隐带画在页面根节点 .booking 上（0 → 356rpx 由 #BAE6FC 渐隐到页面底色 #F7F7F7） -->
@@ -65,7 +65,7 @@
         v-for="item in schedules"
         :key="item.id"
         class="ccard press"
-        :class="{ 'ccard--off': !item.bookable }"
+        :class="{ 'ccard--off': !canEnter(item) }"
         @tap="goDetail(item)"
       >
         <image class="ccard__cover" :src="coverOf(item)" mode="aspectFill" />
@@ -91,10 +91,10 @@
             <text class="ccard__left">剩余 {{ item.remainingPlaces }} 个名额</text>
             <view
               class="ccard__btn"
-              :class="{ 'ccard__btn--off': !item.bookable }"
+              :class="{ 'ccard__btn--off': !canEnter(item) }"
               @tap.stop="onBook(item)"
             >
-              <text>{{ item.bookable ? '立即预约' : '不可预约' }}</text>
+              <text>{{ bookText(item) }}</text>
             </view>
           </view>
         </view>
@@ -326,12 +326,27 @@ function placeText(item) {
   return parts.length ? parts.join(' · ') : '门店 / 教室待定'
 }
 
-/** 状态徽标配色由后端文案决定（可约 = 蓝，已取消 = 灰红，其余 = 灰） */
+/** 状态徽标配色（可约 = 蓝，排队 = 橙，已取消 = 灰红，其余 = 灰） */
 function statusClass(item) {
   if (item.bookable) {
     return 'ccard__status--on'
   }
+  if (item.queueable) {
+    return 'ccard__status--queue'
+  }
   return item.statusText === '已取消' ? 'ccard__status--cancel' : 'ccard__status--off'
+}
+
+/** 可约与可排队都进立即预约页，排队由该页提交 */
+function canEnter(item) {
+  return item.bookable || item.queueable
+}
+
+function bookText(item) {
+  if (item.bookable) {
+    return '立即预约'
+  }
+  return item.queueable ? '去排队' : item.statusText
 }
 
 /* ---------------- 交互 ---------------- */
@@ -342,7 +357,7 @@ function goDetail(item) {
 }
 
 function onBook(item) {
-  if (!item.bookable) {
+  if (!canEnter(item)) {
     return
   }
   uni.navigateTo({ url: '/pages/booking-confirm/index?scheduleId=' + String(item.id) })
@@ -578,7 +593,7 @@ function goHome() {
   border-radius: 25rpx;
   box-shadow: 0 2rpx 4rpx rgba(0, 0, 0, 0.05);
 
-  /* 已结束 / 已取消：整卡置灰（bookable = false），但仍可点进详情 */
+  /* 不可预约也不可排队：整卡置灰，但仍可点进详情 */
   &--off {
     background: #f2f4f6;
 
@@ -637,6 +652,11 @@ function goHome() {
     &--off {
       color: $ys-ink-3;
       background: $ys-line;
+    }
+
+    &--queue {
+      color: #f5a623;
+      background: #fdf3e2;
     }
 
     &--cancel {
@@ -700,7 +720,7 @@ function goHome() {
     background: $ys-brand;
     border-radius: 56rpx;
 
-    /* 已结束 / 已取消：不可预约，按钮置灰 */
+    /* 不可预约也不可排队：按钮置灰 */
     &--off {
       background: #c9d3dd;
     }

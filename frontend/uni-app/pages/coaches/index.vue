@@ -139,7 +139,7 @@
             v-for="item in schedules"
             :key="item.id"
             class="sched-card"
-            :class="{ 'sched-card--off': !item.bookable }"
+            :class="{ 'sched-card--off': !item.bookable && !item.queueable }"
           >
             <image
               v-if="item.courseCoverUrl && !coverFailed[item.id]"
@@ -449,10 +449,13 @@ function hm(value) {
   return text.length >= 16 ? text.slice(11, 16) : text
 }
 
-/** 状态徽标配色由后端文案决定（可约 = 蓝，已取消 = 灰红，其余 = 灰） */
+/** 状态徽标配色（可约 = 蓝，排队 = 橙，已取消 = 灰红，其余 = 灰） */
 function statusClass(item) {
   if (item.bookable) {
     return 'sched-card__status--on'
+  }
+  if (item.queueable) {
+    return 'sched-card__status--queue'
   }
   return item.statusText === '已取消' ? 'sched-card__status--cancel' : 'sched-card__status--off'
 }
@@ -961,6 +964,11 @@ onPullDownRefresh(async () => {
     &--off {
       color: $ys-ink-2;
       background: rgba(255, 255, 255, 0.7);
+    }
+
+    &--queue {
+      color: #f5a623;
+      background: rgba(255, 255, 255, 0.75);
     }
 
     &--cancel {
