@@ -31,6 +31,8 @@ class SqlInitializationTest {
 
     private static final String BUSINESS_SCRIPT = "yoga.sql";
 
+    private static final String QUEUE_CONFIG_MIGRATION = "migrations/20261109-schedule-queue-config.sql";
+
     private static final long SAMPLE_COACH_ID = 1856739201475237002L;
 
     private static final long EXTRA_COACH_ID = 9101L;
@@ -64,6 +66,14 @@ class SqlInitializationTest {
             assertEquals(0, count(dataSource, "SELECT COUNT(*) FROM t_coach WHERE id = " + EXTRA_COACH_ID),
                     "重建移除原有业务数据");
             assertEquals(scheduleCount, count(dataSource, "SELECT COUNT(*) FROM t_schedule"), "重建恢复种子排课");
+
+            execute(dataSource, "ALTER TABLE t_schedule DROP COLUMN queue_stop_minutes, DROP COLUMN queue_limit");
+            executeScript(dataSource, YogaSchema.locateScript(QUEUE_CONFIG_MIGRATION));
+            executeScript(dataSource, YogaSchema.locateScript(QUEUE_CONFIG_MIGRATION));
+            assertQueueConfigColumns(dataSource);
+            assertEquals(scheduleCount,
+                    count(dataSource, "SELECT COUNT(*) FROM t_schedule WHERE queue_limit = 3 AND queue_stop_minutes = 110"),
+                    "增量脚本为已有排课补默认排队配置，重复执行不报错");
         } finally {
             container.stop();
         }
@@ -71,6 +81,7 @@ class SqlInitializationTest {
 
     private void assertInitialized(DataSource dataSource) throws Exception {
         assertLevelColumn(dataSource);
+        assertQueueConfigColumns(dataSource);
         assertEquals(3, count(dataSource, "SELECT COUNT(*) FROM t_coach"), "样例教练 3 条");
         assertEquals(0, count(dataSource, "SELECT COUNT(*) FROM t_coach WHERE level <> 1"), "样例教练均为普通等级");
         assertNoLevelPermission(dataSource);
@@ -93,6 +104,22 @@ class SqlInitializationTest {
         assertEquals("tinyint", column.get("column_type"));
         assertEquals("NO", column.get("is_nullable"));
         assertEquals("1", String.valueOf(column.get("column_default")));
+    }
+
+    private void assertQueueConfigColumns(DataSource dataSource) throws Exception {
+        assertIntColumn(dataSource, "queue_limit", "3");
+        assertIntColumn(dataSource, "queue_stop_minutes", "110");
+    }
+
+    private void assertIntColumn(DataSource dataSource, String name, String defaultValue) throws Exception {
+        Map<String, Object> column = queryRow(dataSource,
+                "SELECT COLUMN_TYPE, IS_NULLABLE, COLUMN_DEFAULT"
+                        + " FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 't_schedule'"
+                        + " AND COLUMN_NAME = '" + name + "'");
+        assertNotEquals(0, column.size(), "t_schedule 必须有 " + name + " 列");
+        assertEquals("int", column.get("column_type"));
+        assertEquals("NO", column.get("is_nullable"));
+        assertEquals(defaultValue, String.valueOf(column.get("column_default")));
     }
 
     private void assertNoLevelPermission(DataSource dataSource) throws Exception {

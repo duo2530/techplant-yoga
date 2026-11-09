@@ -26,9 +26,9 @@ public final class ReservationConverter {
     private ReservationConverter() {
     }
 
-    /** 预约请求 → DO：上课时间取排课快照，状态固定为已预约 */
+    /** 预约请求 → DO：上课时间取排课快照 */
     public static ReservationDO toDO(ReservationCreateDTO dto, Long memberId, ScheduleBookingSnapshot schedule,
-            LocalDateTime reservationTime) {
+            ReservationStatusEnum status, LocalDateTime reservationTime) {
         ReservationDO reservation = new ReservationDO();
         reservation.setRequestId(dto.getRequestId().trim());
         reservation.setMemberId(memberId);
@@ -37,18 +37,26 @@ public final class ReservationConverter {
         reservation.setEndTime(schedule.getEndTime());
         reservation.setPersons(dto.getPersons());
         reservation.setMemberCardId(dto.getMemberCardId());
-        reservation.setStatus(ReservationStatusEnum.RESERVED.getCode());
+        reservation.setStatus(status.getCode());
         reservation.setReservationTime(reservationTime);
         return reservation;
     }
 
-    /** 单行 → 我的预约列表项；上课日期由预约的开始时间快照生成，课种取排课快照 */
-    public static ReservationPublicItemVO toPublicItemVO(ReservationDO reservation, Long courseId, Integer courseType,
-            String courseName, String courseCoverUrl, String coachName, String storeAddress) {
+    /**
+     * 单行 → 我的预约列表项；上课日期由预约的开始时间快照生成，课种取排课快照
+     *
+     * @param schedule      排课已删除时为 {@code null}
+     * @param queuePosition 排队中记录的排队名次，其余为 {@code null}
+     * @param now           展示状态的判定基准时间
+     */
+    public static ReservationPublicItemVO toPublicItemVO(ReservationDO reservation, ScheduleBookingSnapshot schedule,
+            String courseName, String courseCoverUrl, String coachName, String storeAddress, Integer queuePosition,
+            LocalDateTime now) {
+        Integer courseType = schedule == null ? null : schedule.getCourseType();
         ReservationPublicItemVO vo = new ReservationPublicItemVO();
         vo.setId(reservation.getId());
         vo.setScheduleId(reservation.getScheduleId());
-        vo.setCourseId(courseId);
+        vo.setCourseId(schedule == null ? null : schedule.getCourseId());
         vo.setCourseName(courseName);
         vo.setCourseCoverUrl(courseCoverUrl);
         vo.setCourseType(courseType);
@@ -58,8 +66,10 @@ public final class ReservationConverter {
         vo.setScheduleDate(scheduleDateOf(reservation.getStartTime()));
         vo.setStartTime(reservation.getStartTime());
         vo.setEndTime(reservation.getEndTime());
-        vo.setStatus(reservation.getStatus());
-        vo.setStatusText(ReservationStatusEnum.textOf(reservation.getStatus()));
+        ReservationStatusEnum status = displayStatus(reservation, schedule, now);
+        vo.setStatus(status == null ? reservation.getStatus() : status.getCode());
+        vo.setStatusText(status == null ? "" : status.getText());
+        vo.setQueuePosition(status == ReservationStatusEnum.QUEUED ? queuePosition : null);
         return vo;
     }
 
@@ -69,7 +79,7 @@ public final class ReservationConverter {
      * <p>上课时间、人数与事件时间取预约自身的快照；排课与关联资料只用于展示字段，
      * 排课已被物理删除时排课派生字段留空，关联资料（课程、教练、门店、教室、会员、会员卡）缺失时对应字段为 {@code null}。</p>
      *
-     * @param now 排课状态文案的判定基准时间（同一请求只用同一个 now）
+     * @param now 排课与预约展示状态的判定基准时间（同一请求只用同一个 now）
      */
     public static ReservationAdminItemVO toAdminItemVO(ReservationDO reservation, ScheduleBookingSnapshot schedule,
             CourseSummaryVO course, String coachName, StoreSummaryVO store, String classroomName,
@@ -83,8 +93,9 @@ public final class ReservationConverter {
         vo.setDurationMinutes(durationMinutes(reservation));
         vo.setPersons(reservation.getPersons());
         vo.setMemberCardId(reservation.getMemberCardId());
-        vo.setStatus(reservation.getStatus());
-        vo.setStatusText(ReservationStatusEnum.textOf(reservation.getStatus()));
+        ReservationStatusEnum status = displayStatus(reservation, schedule, now);
+        vo.setStatus(status == null ? reservation.getStatus() : status.getCode());
+        vo.setStatusText(status == null ? "" : status.getText());
         vo.setReservationTime(reservation.getReservationTime());
         vo.setCancelTime(reservation.getCancelTime());
         vo.setCancelReason(reservation.getCancelReason());
@@ -124,6 +135,12 @@ public final class ReservationConverter {
             vo.setCardTypeText(MemberCardTypeEnum.nameOf(card.getCardType()));
         }
         return vo;
+    }
+
+    private static ReservationStatusEnum displayStatus(ReservationDO reservation, ScheduleBookingSnapshot schedule,
+            LocalDateTime now) {
+        return ReservationStatusEnum.displayOf(reservation.getStatus(), schedule == null ? null : schedule.getStatus(),
+                reservation.getStartTime(), schedule == null ? null : schedule.getQueueStopMinutes(), now);
     }
 
     /** 起止时间差的整分钟数；快照缺失时返回 {@code null} */

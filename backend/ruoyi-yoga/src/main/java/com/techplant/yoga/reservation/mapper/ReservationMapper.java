@@ -16,7 +16,9 @@ public interface ReservationMapper extends BaseMapper<ReservationDO> {
      * @param query            筛选条件
      * @param startTime        起始时间（含），按预约 start_time 判定；为空不筛
      * @param endTimeExclusive 结束时间（不含，即结束日期次日 00:00:00）；为空不筛
+     * @param now              当前时间，按排课的停止排队时间区分排队中与排队失败
      */
     IPage<ReservationDO> selectAdminPage(IPage<ReservationDO> page, @Param("query") ReservationAdminQuery query,
-            @Param("startTime") LocalDateTime startTime, @Param("endTimeExclusive") LocalDateTime endTimeExclusive);
+            @Param("startTime") LocalDateTime startTime, @Param("endTimeExclusive") LocalDateTime endTimeExclusive,
+            @Param("now") LocalDateTime now);
 }

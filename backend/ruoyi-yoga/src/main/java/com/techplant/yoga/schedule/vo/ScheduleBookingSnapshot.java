@@ -46,6 +46,12 @@ public class ScheduleBookingSnapshot {
     @ApiModelProperty("最低开课人数")
     private Integer minPersons;
 
+    @ApiModelProperty("排队上限（0 表示不开放排队）")
+    private Integer queueLimit;
+
+    @ApiModelProperty("停止排队时间：开课前多少分钟")
+    private Integer queueStopMinutes;
+
     @ApiModelProperty("已预约人数")
     private Integer bookedPersons;
 

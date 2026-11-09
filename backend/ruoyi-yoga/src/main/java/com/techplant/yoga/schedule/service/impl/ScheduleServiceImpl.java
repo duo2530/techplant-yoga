@@ -30,12 +30,14 @@ import com.techplant.yoga.common.util.CurrentUserUtils;
 import com.techplant.yoga.course.enums.CourseTypeEnum;
 import com.techplant.yoga.course.service.CourseService;
 import com.techplant.yoga.course.vo.CourseSummaryVO;
+import com.techplant.yoga.reservation.enums.ReservationStatusEnum;
 import com.techplant.yoga.reservation.service.ReservationService;
 import com.techplant.yoga.schedule.convert.ScheduleConverter;
 import com.techplant.yoga.schedule.dao.ScheduleDao;
 import com.techplant.yoga.schedule.domain.ScheduleDO;
 import com.techplant.yoga.schedule.dto.ScheduleCreateDTO;
 import com.techplant.yoga.schedule.dto.ScheduleUpdateDTO;
+import com.techplant.yoga.schedule.enums.PublicScheduleStateEnum;
 import com.techplant.yoga.schedule.enums.ScheduleStatusEnum;
 import com.techplant.yoga.schedule.query.CoachScheduleQuery;
 import com.techplant.yoga.schedule.query.PublicScheduleQuery;
@@ -393,7 +395,7 @@ public class ScheduleServiceImpl implements ScheduleService {
         }
 
         LocalDateTime now = LocalDateTime.now();
-        PublicScheduleDetailVO vo = ScheduleConverter.toPublicDetailVO(schedule, now);
+        PublicScheduleDetailVO vo = ScheduleConverter.toPublicDetailVO(schedule);
 
         // 封面／介绍／难度实时取课程；课程已删除时全部按空处理
         CourseSummaryVO course = courseService.getSummary(schedule.getCourseId());
@@ -419,8 +421,11 @@ public class ScheduleServiceImpl implements ScheduleService {
         vo.setClassroomName(nameOf(classroomNameMap(Collections.singletonList(schedule.getClassroomId())),
                 schedule.getClassroomId()));
         vo.setStoreAddress(storeAddressOf(schedule.getStoreId()));
-        vo.setBookable(isBookable(schedule, now));
         vo.setBookers(reservationService.bookerDisplayNames(schedule.getId()));
+        int queueCount = queueCountOf(reservationService.queueCounts(Collections.singletonList(schedule.getId())),
+                schedule.getId());
+        vo.setQueueCount(queueCount);
+        applyPublicState(vo, publicStateOf(schedule, queueCount, now));
         return vo;
     }
 
@@ -429,7 +434,7 @@ public class ScheduleServiceImpl implements ScheduleService {
     // ------------------------------------------------------------------
 
     /**
-     * 用户端排课卡片装配：批量补齐课程、教练、教室、门店名称并推导 {@code bookable}
+     * 用户端排课卡片装配：批量补齐课程、教练、教室、门店名称，满员排课批量统计排队人数后推导展示状态
      *
      * @param records       当前页排课
      * @param extraStoreIds 除结果集外还要补齐的门店ID（如查询条件里的当前门店）
@@ -445,10 +450,17 @@ public class ScheduleServiceImpl implements ScheduleService {
         Map<Long, String> coachNames = coachNameMap(distinctIds(records, ScheduleDO::getCoachId));
         Map<Long, String> classroomNames = classroomNameMap(distinctIds(records, ScheduleDO::getClassroomId));
         Map<Long, String> storeNames = storeNameMap(storeIds);
+        List<Long> fullIds = new ArrayList<Long>();
+        for (ScheduleDO schedule : records) {
+            if (remainingPlaces(schedule) == 0) {
+                fullIds.add(schedule.getId());
+            }
+        }
+        Map<Long, Integer> queueCounts = reservationService.queueCounts(fullIds);
 
         List<ScheduleCardVO> list = new ArrayList<ScheduleCardVO>(records.size());
         for (ScheduleDO schedule : records) {
-            ScheduleCardVO vo = ScheduleConverter.toCardVO(schedule, now);
+            ScheduleCardVO vo = ScheduleConverter.toCardVO(schedule);
             CourseSummaryVO course = courses.get(schedule.getCourseId());
             if (course != null) {
                 // 名称／封面／难度实时取课程（不做快照）
@@ -459,7 +471,7 @@ public class ScheduleServiceImpl implements ScheduleService {
             vo.setCoachName(nameOf(coachNames, schedule.getCoachId()));
             vo.setClassroomName(nameOf(classroomNames, schedule.getClassroomId()));
             vo.setStoreName(nameOf(storeNames, schedule.getStoreId()));
-            vo.setBookable(isBookable(schedule, now));
+            applyPublicState(vo, publicStateOf(schedule, queueCountOf(queueCounts, schedule.getId()), now));
             list.add(vo);
         }
         return list;
@@ -588,24 +600,53 @@ public class ScheduleServiceImpl implements ScheduleService {
     }
 
     /**
-     * 用户端是否可约：已上架、尚未开始、上课日期落在今天起 14 天内（含今天）且剩余名额大于 0
+     * 用户端展示状态：已取消 → 已开始（开课即已结束）→ 不在 14 天窗口 → 有名额可约 → 满员时看能否排队
      *
-     * <p>只表示排课本身可约，不代表当前会员已满足卡资格。</p>
+     * <p>只表示排课本身的状态，会员卡资格在提交预约或排队时校验。</p>
      */
-    private boolean isBookable(ScheduleDO schedule, LocalDateTime now) {
-        int bookedPersons = schedule.getBookedPersons() == null ? 0 : schedule.getBookedPersons();
-        int remainingPlaces = ScheduleConverter.remainingPlaces(schedule.getMaxPersons(), bookedPersons);
-        if (!ScheduleStatusEnum.isBookable(schedule.getStatus(), schedule.getStartTime(), schedule.getEndTime(),
-                remainingPlaces, now)) {
-            return false;
+    private PublicScheduleStateEnum publicStateOf(ScheduleDO schedule, int queueCount, LocalDateTime now) {
+        if (ScheduleStatusEnum.of(schedule.getStatus()) == ScheduleStatusEnum.CANCELLED) {
+            return PublicScheduleStateEnum.CANCELLED;
         }
+        if (schedule.getStartTime() == null || !schedule.getStartTime().isAfter(now)) {
+            return PublicScheduleStateEnum.FINISHED;
+        }
+        if (!isInScheduleWindow(schedule, now.toLocalDate())) {
+            return PublicScheduleStateEnum.NOT_OPEN;
+        }
+        if (remainingPlaces(schedule) > 0) {
+            return PublicScheduleStateEnum.BOOKABLE;
+        }
+        int queueLimit = schedule.getQueueLimit() == null ? 0 : schedule.getQueueLimit();
+        boolean queueOpen = queueCount < queueLimit
+                && !ReservationStatusEnum.isPastQueueStop(schedule.getStartTime(), schedule.getQueueStopMinutes(), now);
+        return queueOpen ? PublicScheduleStateEnum.QUEUEABLE : PublicScheduleStateEnum.FULL;
+    }
+
+    private void applyPublicState(ScheduleCardVO vo, PublicScheduleStateEnum state) {
+        vo.setStatusText(state.getText());
+        vo.setBookable(state == PublicScheduleStateEnum.BOOKABLE);
+        vo.setQueueable(state == PublicScheduleStateEnum.QUEUEABLE);
+    }
+
+    private int queueCountOf(Map<Long, Integer> queueCounts, Long scheduleId) {
+        Integer count = queueCounts.get(scheduleId);
+        return count == null ? 0 : count;
+    }
+
+    private int remainingPlaces(ScheduleDO schedule) {
+        int bookedPersons = schedule.getBookedPersons() == null ? 0 : schedule.getBookedPersons();
+        return ScheduleConverter.remainingPlaces(schedule.getMaxPersons(), bookedPersons);
+    }
+
+    /** 上课日期落在今天起 14 天内（含今天） */
+    private boolean isInScheduleWindow(ScheduleDO schedule, LocalDate today) {
         LocalDate scheduleDate = schedule.getScheduleDate() != null
                 ? schedule.getScheduleDate()
                 : (schedule.getStartTime() == null ? null : schedule.getStartTime().toLocalDate());
         if (scheduleDate == null) {
             return false;
         }
-        LocalDate today = now.toLocalDate();
         return !scheduleDate.isBefore(today) && !scheduleDate.isAfter(today.plusDays(SCHEDULE_WINDOW_DAYS - 1L));
     }
 

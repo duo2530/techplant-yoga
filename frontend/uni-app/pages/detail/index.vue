@@ -6,9 +6,9 @@
 
     口径（用户端接口详细设计 §2.3）：
       - 课种 courseType / courseTypeName **取排课快照**；难度 / 封面 / 介绍实时取课程当前值；
-      - 状态文案 statusText 与 bookable 全部用后端返回值；
+      - 状态文案 statusText 与 bookable、queueable 全部用后端返回值；
       - 预约人员 bookers 是后端返回的脱敏名单（最多 10 位），无预约时为空数组 → 显示空态；
-      - 「立即预约」在 bookable 为真时进立即预约页，否则不跳转；
+      - 可约或可排队时底部按钮进立即预约页，否则按钮显示状态文案、不跳转；
       - 后端对「不存在 / 已删除 / 待上架」一律返回 404 → 友好提示并返回上一页。
   -->
   <view class="detail">
@@ -111,8 +111,8 @@
 
     <!-- 底部操作条 -->
     <view v-if="detail" class="bar">
-      <view class="bar__btn" :class="{ 'bar__btn--off': !detail.bookable }" @tap="onBook">
-        <text>{{ detail.bookable ? '立即预约' : '不可预约' }}</text>
+      <view class="bar__btn" :class="{ 'bar__btn--off': !canEnter }" @tap="onBook">
+        <text>{{ barText }}</text>
       </view>
     </view>
   </view>
@@ -163,10 +163,13 @@ function coverOf(item) {
   return item.courseCoverUrl || '/static/images/booking/cover-1.jpg'
 }
 
-/** 状态徽标配色由后端文案决定（可约 = 蓝，已取消 = 灰红，其余 = 灰） */
+/** 状态徽标配色（可约 = 蓝，排队 = 橙，已取消 = 灰红，其余 = 灰） */
 function statusClass(item) {
   if (item.bookable) {
     return 'card__status--on'
+  }
+  if (item.queueable) {
+    return 'card__status--queue'
   }
   return item.statusText === '已取消' ? 'card__status--cancel' : 'card__status--off'
 }
@@ -231,8 +234,30 @@ function goBack() {
   uni.switchTab({ url: '/pages/booking/index' })
 }
 
+/** 可约进预约页；满员可排队也进同一页，由该页提交排队 */
+const canEnter = computed(() => !!detail.value && (detail.value.bookable || detail.value.queueable))
+
+const barText = computed(() => {
+  if (!detail.value) {
+    return ''
+  }
+  if (detail.value.bookable) {
+    return '立即预约'
+  }
+  if (detail.value.queueable) {
+    return '排队'
+  }
+  return queueFull.value ? '排队已满' : detail.value.statusText
+})
+
+/** 满员且排队人数已达上限（上限为 0 表示不开放排队，不算排满） */
+const queueFull = computed(() => {
+  const item = detail.value
+  return !!item && item.remainingPlaces === 0 && item.queueLimit > 0 && item.queueCount >= item.queueLimit
+})
+
 function onBook() {
-  if (!detail.value || !detail.value.bookable) {
+  if (!canEnter.value) {
     return
   }
   uni.navigateTo({ url: '/pages/booking-confirm/index?scheduleId=' + scheduleId.value })
@@ -319,6 +344,11 @@ function onBook() {
     &--off {
       color: $ys-ink-3;
       background: $ys-line;
+    }
+
+    &--queue {
+      color: #f5a623;
+      background: #fdf3e2;
     }
 
     &--cancel {
@@ -495,7 +525,7 @@ function onBook() {
     background: $ys-brand;
     border-radius: 56rpx;
 
-    /* 已结束 / 已取消（bookable = false）：不可预约 */
+    /* 不可预约也不可排队 */
     &--off {
       background: #c9d3dd;
     }

@@ -65,6 +65,12 @@ public class ScheduleListItemVO {
     @ApiModelProperty(value = "最低开课人数", example = "2")
     private Integer minPersons;
 
+    @ApiModelProperty(value = "排队上限（0 表示不开放排队）", example = "3")
+    private Integer queueLimit;
+
+    @ApiModelProperty(value = "停止排队时间：开课前多少分钟起不能再排队，也不再补位", example = "110")
+    private Integer queueStopMinutes;
+
     @ApiModelProperty(value = "已预约人数（一期恒 0）", example = "0")
     private Integer bookedPersons;
 

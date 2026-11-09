@@ -24,7 +24,7 @@ import com.techplant.yoga.reservation.vo.ReservationPublicItemVO;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 
-/** 用户端预约接口：预约课程、取消预约、预约签到与我的预约查询。 */
+/** 用户端预约接口：预约课程、加入排队、取消预约、预约签到与我的预约查询。 */
 @Api(tags = "用户端-预约")
 @Validated
 @RestController
@@ -41,7 +41,15 @@ public class ReservationPublicController extends BaseController {
         return AjaxResult.success("预约成功");
     }
 
-    /** 取消预约：已取消的重复请求按成功返回 */
+    /** 加入排队：课程满员时使用，不占位、不扣次；有人取消预约时按排队顺序转为预约 */
+    @ApiOperation("加入排队")
+    @PostMapping("/queue")
+    public AjaxResult joinQueue(@Valid @RequestBody ReservationCreateDTO dto) {
+        reservationService.joinQueue(MemberContextUtils.requireMemberId(), dto);
+        return AjaxResult.success("排队成功");
+    }
+
+    /** 取消预约或排队：已取消的重复请求按成功返回 */
     @ApiOperation("取消预约")
     @PutMapping("/{reservationId}/cancel")
     public AjaxResult cancel(@PathVariable Long reservationId) {

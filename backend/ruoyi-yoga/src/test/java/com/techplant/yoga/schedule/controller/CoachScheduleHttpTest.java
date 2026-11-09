@@ -96,7 +96,7 @@ class CoachScheduleHttpTest extends AbstractYogaHttpIntegrationTest {
                 today.plusDays(5).atTime(11, 0), today.plusDays(5).atTime(12, 0), 20, 2, 0, 2);
         insertSchedule(1110L, OTHER_STORE_ID, COURSE_ID, GROUP_COURSE, COACH_ID, CLASSROOM_ID, today.plusDays(5),
                 today.plusDays(5).atTime(12, 0), today.plusDays(5).atTime(13, 0), 20, 2, 0, 2);
-        // 窗口内满员：剩余名额 0，不可约
+        // 窗口内满员：剩余名额 0，排队上限与停止排队时间取表默认值，可排队
         insertSchedule(1111L, STORE_ID, COURSE_ID, GROUP_COURSE, COACH_ID, CLASSROOM_ID, today.plusDays(5),
                 today.plusDays(5).atTime(13, 0), today.plusDays(5).atTime(14, 0), 5, 2, 5, 2);
         // 窗口内同一开始时间的两场：验证 id ASC 稳定排序
@@ -124,7 +124,8 @@ class CoachScheduleHttpTest extends AbstractYogaHttpIntegrationTest {
         assertFalse(rows.get(2).get("bookable").asBoolean());
         assertEquals(0, rows.get(3).get("remainingPlaces").asInt(), "满员：剩余名额 0");
         assertFalse(rows.get(3).get("bookable").asBoolean(), "满员不可约");
-        assertEquals("可约", rows.get(3).get("statusText").asText());
+        assertEquals("排队", rows.get(3).get("statusText").asText(), "满员且排队未满显示排队");
+        assertTrue(rows.get(3).get("queueable").asBoolean());
         assertEquals("哈他瑜伽", rows.get(1).get("courseName").asText(), "课程名称实时取课程");
         assertEquals("林教练", rows.get(1).get("coachName").asText());
         assertEquals("徐汇店", rows.get(1).get("storeName").asText());

@@ -137,7 +137,9 @@ const { proxy } = getCurrentInstance()
 const STATUSES = [
   { value: 1, label: '已预约' },
   { value: 2, label: '已取消' },
-  { value: 3, label: '已签到' }
+  { value: 3, label: '已签到' },
+  { value: 4, label: '排队中' },
+  { value: 5, label: '排队失败' }
 ]
 const CARD_TYPES = [
   { value: 1, label: '次数卡' },
@@ -206,6 +208,8 @@ function cancelReasonText(reason) {
 function reservationTagType(statusText) {
   if (statusText === '已预约') return 'primary'
   if (statusText === '已签到') return 'success'
+  if (statusText === '排队中') return 'warning'
+  if (statusText === '排队失败') return 'danger'
   return 'info'
 }
 

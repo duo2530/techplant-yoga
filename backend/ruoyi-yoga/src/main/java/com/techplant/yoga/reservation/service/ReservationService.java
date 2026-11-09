@@ -1,6 +1,8 @@
 package com.techplant.yoga.reservation.service;
 
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import com.techplant.yoga.common.response.PageResult;
 import com.techplant.yoga.reservation.dto.ReservationCreateDTO;
 import com.techplant.yoga.reservation.query.ReservationAdminQuery;
@@ -8,7 +10,7 @@ import com.techplant.yoga.reservation.query.ReservationPublicQuery;
 import com.techplant.yoga.reservation.vo.ReservationAdminItemVO;
 import com.techplant.yoga.reservation.vo.ReservationPublicItemVO;
 
-/** 预约业务：用户端预约课程、取消预约、预约签到与我的预约查询，以及管理端预约列表查询。 */
+/** 预约业务：用户端预约课程、排队、取消预约、预约签到与我的预约查询，以及管理端预约列表查询。 */
 public interface ReservationService {
     /**
      * 预约课程：扣次、占位与预约写入在同一事务内
@@ -24,10 +26,21 @@ public interface ReservationService {
     void create(Long memberId, ReservationCreateDTO dto);
 
     /**
-     * 取消预约：释放名额并返次在同一事务内；已取消的重复请求按成功返回
+     * 加入排队：只校验会员卡资格，不占位、不扣次；幂等规则与预约课程相同
+     *
+     * @throws com.ruoyi.common.exception.ServiceException 排课不存在／待上架、会员卡不存在或不属于本人（404）；
+     *         仍有空位、不开放排队、超过停止排队时间、排队人数已满、卡不可用或不适用、已预约或已在排队、幂等参数冲突（409）；
+     *         人数不为 1 或参数格式非法（400）
+     */
+    void joinQueue(Long memberId, ReservationCreateDTO dto);
+
+    /**
+     * 取消预约或排队；已取消的重复请求按成功返回
+     *
+     * <p>取消已预约时释放名额、返次，并在同一事务内按排队顺序补位；取消排队不涉及名额与次数。</p>
      *
      * @throws com.ruoyi.common.exception.ServiceException 预约不存在或不属于本人（404）；
-     *         超过取消截止时间、已签到、排课已取消（409）
+     *         超过取消截止时间、已签到、排队已失败、排课已取消（409）
      */
     void cancel(Long memberId, Long reservationId);
 
@@ -57,9 +70,12 @@ public interface ReservationService {
     PageResult<ReservationAdminItemVO> pageForAdmin(ReservationAdminQuery query);
 
     /**
-     * 排课详情的脱敏预约人员：未取消预约按预约时间、ID 升序，按会员去重后最多取 10 位
+     * 排课详情的脱敏预约人员：已预约与已签到记录按预约时间、ID 升序，按会员去重后最多取 10 位
      *
      * @return 姓名只保留首字符的显示名列表；无预约返回空列表
      */
     List<String> bookerDisplayNames(Long scheduleId);
+
+    /** 按排课批量统计排队中人数：一次分组查询，没有排队的排课不在结果中 */
+    Map<Long, Integer> queueCounts(Collection<Long> scheduleIds);
 }

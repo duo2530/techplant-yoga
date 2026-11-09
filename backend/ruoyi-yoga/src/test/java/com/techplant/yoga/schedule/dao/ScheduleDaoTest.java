@@ -173,6 +173,8 @@ class ScheduleDaoTest extends AbstractYogaIntegrationTest {
         update.setEndTime(today.plusDays(1).atTime(16, 0));
         update.setMaxPersons(30);
         update.setMinPersons(3);
+        update.setQueueLimit(5);
+        update.setQueueStopMinutes(150);
         // 故意塞进来，验证不会被写库
         update.setStatus(3);
         update.setBookedPersons(9);
@@ -185,6 +187,8 @@ class ScheduleDaoTest extends AbstractYogaIntegrationTest {
         assertEquals(Integer.valueOf(0), latest.getBookedPersons(), "booked_persons 只属于预约模块");
         assertEquals(Integer.valueOf(30), latest.getMaxPersons());
         assertEquals(Integer.valueOf(3), latest.getMinPersons());
+        assertEquals(Integer.valueOf(5), latest.getQueueLimit());
+        assertEquals(Integer.valueOf(150), latest.getQueueStopMinutes());
         assertEquals(today.plusDays(1), latest.getScheduleDate(), "开始时间变了，派生日期同步刷新");
         assertEquals(Integer.valueOf(COURSE_TYPE_FEATURE), latest.getCourseType());
     }

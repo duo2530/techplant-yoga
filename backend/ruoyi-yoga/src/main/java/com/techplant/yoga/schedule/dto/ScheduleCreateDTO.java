@@ -4,6 +4,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
+import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
 import com.fasterxml.jackson.annotation.JsonFormat;
@@ -52,4 +53,16 @@ public class ScheduleCreateDTO {
     @ApiModelProperty(value = "最低开课人数（1<=min<=max，默认 2）", required = true, example = "2")
     @NotNull(message = "最低开课人数不能为空")
     private Integer minPersons;
+
+    @ApiModelProperty(value = "排队上限（0～999，0 表示不开放排队）", required = true, example = "3")
+    @NotNull(message = "排队上限不能为空")
+    @Min(value = 0, message = "排队上限取值为 0～999")
+    @Max(value = 999, message = "排队上限取值为 0～999")
+    private Integer queueLimit;
+
+    @ApiModelProperty(value = "停止排队时间：开课前多少分钟起不能再排队，也不再补位（0～1440）", required = true, example = "110")
+    @NotNull(message = "停止排队时间不能为空")
+    @Min(value = 0, message = "停止排队时间取值为 0～1440 分钟")
+    @Max(value = 1440, message = "停止排队时间取值为 0～1440 分钟")
+    private Integer queueStopMinutes;
 }

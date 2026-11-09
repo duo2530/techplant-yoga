@@ -46,7 +46,8 @@ function normalizeCard(row) {
     remainingPlaces: toNum(item.remainingPlaces),
     status: item.status,
     statusText: toText(item.statusText),
-    bookable: item.bookable === true
+    bookable: item.bookable === true,
+    queueable: item.queueable === true
   }
 }
 

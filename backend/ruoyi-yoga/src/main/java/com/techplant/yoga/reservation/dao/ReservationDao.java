@@ -3,6 +3,7 @@ package com.techplant.yoga.reservation.dao;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.techplant.yoga.reservation.domain.ReservationDO;
 import com.techplant.yoga.reservation.query.ReservationAdminQuery;
@@ -52,18 +53,36 @@ public interface ReservationDao {
     IPage<ReservationDO> selectAdminPage(ReservationAdminQuery query);
 
     /**
-     * 该会员在该排课上是否已有未取消预约（status &lt;&gt; 2）
+     * 该会员在该排课上的已预约、已签到或排队中记录（当前读），没有返回 {@code null}
      *
-     * <p>当前读：取锁后的重复预约校验必须看到并发提交的最新预约，不能被事务快照挡住。</p>
+     * <p>取锁后的重复校验必须看到并发提交的最新记录，不能被事务快照挡住。</p>
      */
-    boolean existsActiveByMemberAndSchedule(Long memberId, Long scheduleId);
+    ReservationDO selectOpenByMemberAndSchedule(Long memberId, Long scheduleId);
 
-    /** 取消：仅当仍为已预约时写入取消时间与原因 */
-    int cancel(Long reservationId, LocalDateTime cancelTime, Integer cancelReason);
+    /** 取消：仅当仍为 {@code fromStatus} 时写入取消状态、时间与原因 */
+    int cancel(Long reservationId, Integer fromStatus, LocalDateTime cancelTime, Integer cancelReason);
 
     /** 签到：仅当仍为已预约时写入签到时间与已签到状态 */
     int checkIn(Long reservationId, LocalDateTime checkInTime);
 
-    /** 该排课的全部未取消预约（按预约时间、ID 升序），用于排课详情的脱敏预约人员 */
-    List<ReservationDO> selectActiveBySchedule(Long scheduleId);
+    /** 该排课占用名额的预约（已预约、已签到，按预约时间、ID 升序），用于排课详情的脱敏预约人员 */
+    List<ReservationDO> selectSeatedBySchedule(Long scheduleId);
+
+    /** 该排课排在最前的排队记录（当前读，按 {@code reservation_time, id} 升序），没有返回 {@code null} */
+    ReservationDO selectFirstQueuedForUpdate(Long scheduleId);
+
+    /** 补位：仅当仍为排队中时改为已预约，预约时间改为补位时间 */
+    int promote(Long reservationId, LocalDateTime reservationTime);
+
+    /** 补位跳过：仅当仍为排队中时改为排队失败 */
+    int markQueueFailed(Long reservationId);
+
+    /** 按排课分组统计排队中记录数；ID 为空返回空表，没有排队的排课不在结果中 */
+    Map<Long, Integer> countQueuedBySchedules(Collection<Long> scheduleIds);
+
+    /** 该排课排队中的记录数，当前读：事务快照之后提交的排队也计入 */
+    long countQueuedForUpdate(Long scheduleId);
+
+    /** 排在指定排队记录之前的排队中记录数 */
+    long countQueuedBefore(Long scheduleId, LocalDateTime reservationTime, Long reservationId);
 }

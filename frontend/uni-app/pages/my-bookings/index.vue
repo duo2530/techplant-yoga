@@ -2,13 +2,13 @@
   <!--
     我的预约
 
-    数据：GET /api/reservations（status ＋ cardType ＋ 分页），取消与签到都是真实接口。
+    数据：GET /api/reservations（status ＋ cardType ＋ 分页），取消（含取消排队）与签到都是真实接口。
     状态栏 / 导航栏 / 微信胶囊 / TabBar 由系统绘制，本页只画内容区。
   -->
   <view class="bookings">
     <!-- ===== 上方白色区：状态筛选 Tab + 卡类型筛选 ===== -->
     <view class="head">
-      <!-- 状态筛选 Tab：全部 / 已预约 / 已取消 / 已签到
+      <!-- 状态筛选 Tab：全部 / 已预约 / 已取消 / 已签到；排队记录在「全部」中
            选中态 = 文字加深加粗 + 其下蓝色圆角下划线 -->
       <view class="status">
         <view
@@ -86,13 +86,14 @@
 
 <script setup>
 import { computed, ref } from 'vue'
-import { onReachBottom, onShow } from '@dcloudio/uni-app'
+import { onReachBottom, onShow, onUnload } from '@dcloudio/uni-app'
 import {
   getBookingStatusTabs,
   getCardTypeFilters,
   listBookings,
   cancelBooking,
-  checkInBooking
+  checkInBooking,
+  SHOW_ALL_BOOKINGS_EVENT
 } from '@/api/booking'
 import { isSessionValid, LOGIN_PAGE } from '@/utils/session'
 
@@ -224,6 +225,15 @@ function onCardTypeTap() {
   })
 }
 
+/** Tab 页切回时保留原筛选；加入排队后要求回到「全部」，随后的 onShow 按新筛选刷新 */
+function showAll() {
+  activeStatus.value = 0
+}
+uni.$on(SHOW_ALL_BOOKINGS_EVENT, showAll)
+onUnload(() => {
+  uni.$off(SHOW_ALL_BOOKINGS_EVENT, showAll)
+})
+
 // 用 onShow：从约课页预约成功切回来时列表要刷新
 onShow(() => {
   loadPage(true)
@@ -233,11 +243,12 @@ onReachBottom(() => {
   loadPage()
 })
 
-/** 「取消预约」→ 确认弹窗 → cancelBooking → toast 后刷新列表 */
+/** 「取消预约」/「取消排队」→ 确认弹窗 → cancelBooking → toast 后刷新列表 */
 function onCancel(item) {
+  const queued = Number(item.status) === 4
   uni.showModal({
-    title: '取消预约',
-    content: '确定要取消「' + item.courseName + '」的预约吗？',
+    title: queued ? '取消排队' : '取消预约',
+    content: '确定要取消「' + item.courseName + '」的' + (queued ? '排队' : '预约') + '吗？',
     confirmText: '确定',
     cancelText: '取消',
     success: async (res) => {
@@ -246,7 +257,7 @@ function onCancel(item) {
       }
       try {
         const message = await cancelBooking(item.id)
-        uni.showToast({ title: message || '取消预约成功' })
+        uni.showToast({ title: queued ? '已取消排队' : message || '取消预约成功' })
         await loadPage(true)
       } catch (requestError) {
         // 失败原因（超过取消截止时间 / 已签到 / 排课已结束）已由 request 统一 toast

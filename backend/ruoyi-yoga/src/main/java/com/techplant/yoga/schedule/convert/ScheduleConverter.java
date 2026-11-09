@@ -2,6 +2,7 @@ package com.techplant.yoga.schedule.convert;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalDateTime;
 import com.techplant.yoga.course.enums.CourseTypeEnum;
 import com.techplant.yoga.schedule.domain.ScheduleDO;
 import com.techplant.yoga.schedule.dto.ScheduleCreateDTO;
@@ -39,6 +40,8 @@ public final class ScheduleConverter {
         schedule.setEndTime(dto.getEndTime());
         schedule.setMaxPersons(dto.getMaxPersons());
         schedule.setMinPersons(dto.getMinPersons());
+        schedule.setQueueLimit(dto.getQueueLimit());
+        schedule.setQueueStopMinutes(dto.getQueueStopMinutes());
         schedule.setStatus(ScheduleStatusEnum.PENDING.getCode());
         schedule.setBookedPersons(0);
         return schedule;
@@ -61,6 +64,8 @@ public final class ScheduleConverter {
         target.setEndTime(dto.getEndTime());
         target.setMaxPersons(dto.getMaxPersons());
         target.setMinPersons(dto.getMinPersons());
+        target.setQueueLimit(dto.getQueueLimit());
+        target.setQueueStopMinutes(dto.getQueueStopMinutes());
     }
 
     /**
@@ -83,10 +88,10 @@ public final class ScheduleConverter {
         return vo;
     }
 
-    /** DO → 用户端卡片（用户端文案只有 可约／已结束／已取消） */
-    public static ScheduleCardVO toCardVO(ScheduleDO source, LocalDateTime now) {
+    /** DO → 用户端卡片（展示状态由 service 统一判定后写入） */
+    public static ScheduleCardVO toCardVO(ScheduleDO source) {
         ScheduleCardVO vo = new ScheduleCardVO();
-        fillCardFields(vo, source, now);
+        fillCardFields(vo, source);
         return vo;
     }
 
@@ -117,12 +122,13 @@ public final class ScheduleConverter {
      *
      * <p>课种取**快照**；封面／介绍／难度由 service 实时从课程取；{@code bookers} 由 service 生成脱敏名单。</p>
      */
-    public static PublicScheduleDetailVO toPublicDetailVO(ScheduleDO source, LocalDateTime now) {
+    public static PublicScheduleDetailVO toPublicDetailVO(ScheduleDO source) {
         PublicScheduleDetailVO vo = new PublicScheduleDetailVO();
-        fillCardFields(vo, source, now);
+        fillCardFields(vo, source);
         vo.setCourseId(source.getCourseId());
         vo.setCoachId(source.getCoachId());
         vo.setMinPersons(source.getMinPersons());
+        vo.setQueueLimit(source.getQueueLimit());
         vo.setBookers(new java.util.ArrayList<String>());
         return vo;
     }
@@ -141,6 +147,8 @@ public final class ScheduleConverter {
         snapshot.setEndTime(source.getEndTime());
         snapshot.setMaxPersons(source.getMaxPersons());
         snapshot.setMinPersons(source.getMinPersons());
+        snapshot.setQueueLimit(source.getQueueLimit());
+        snapshot.setQueueStopMinutes(source.getQueueStopMinutes());
         snapshot.setBookedPersons(source.getBookedPersons() == null ? 0 : source.getBookedPersons());
         snapshot.setStatus(source.getStatus());
         return snapshot;
@@ -159,6 +167,8 @@ public final class ScheduleConverter {
         vo.setEndTime(source.getEndTime());
         vo.setMaxPersons(source.getMaxPersons());
         vo.setMinPersons(source.getMinPersons());
+        vo.setQueueLimit(source.getQueueLimit());
+        vo.setQueueStopMinutes(source.getQueueStopMinutes());
         vo.setBookedPersons(source.getBookedPersons() == null ? 0 : source.getBookedPersons());
         vo.setStatus(source.getStatus());
         vo.setStatusText(ScheduleStatusEnum.adminTextOf(source.getStatus(), source.getEndTime(), now));
@@ -170,7 +180,7 @@ public final class ScheduleConverter {
         vo.setClassroomName("");
     }
 
-    private static void fillCardFields(ScheduleCardVO vo, ScheduleDO source, LocalDateTime now) {
+    private static void fillCardFields(ScheduleCardVO vo, ScheduleDO source) {
         int bookedPersons = source.getBookedPersons() == null ? 0 : source.getBookedPersons();
         vo.setId(source.getId());
         vo.setCourseType(source.getCourseType());
@@ -183,9 +193,6 @@ public final class ScheduleConverter {
         vo.setBookedPersons(bookedPersons);
         vo.setRemainingPlaces(remainingPlaces(source.getMaxPersons(), bookedPersons));
         vo.setStatus(source.getStatus());
-        vo.setStatusText(ScheduleStatusEnum.publicTextOf(source.getStatus(), source.getEndTime(), now));
-        // 是否可约由 service 按上架状态、开始时间、14 天窗口与剩余名额统一判定
-        vo.setBookable(false);
         // 空值兜底：名称与课程资料由 service 批量补齐，未补齐时是空字符串而不是 null
         vo.setCourseName("");
         vo.setCourseCoverUrl("");
