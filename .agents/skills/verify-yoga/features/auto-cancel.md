@@ -34,7 +34,7 @@ Preconditions:
 - **我的预约。** 运行 `$B open "http://localhost:9090/#/pages/my-bookings/index"`、`$B reload`、`$B wait 2000`、`$B find text "已取消" click`、`$B wait 2000`、`$B eval "[...document.querySelectorAll('.ys-booking')].map(e => e.innerText.replace(/\n/g,' '))"`。输出含这节课，状态 `已取消`。截图 `02-我的预约已取消.png`。
 - **约课列表。** 运行 `$B open "http://localhost:9090/#/pages/booking/index"`、`$B reload`、`$B wait 2000`，开课日期是明天时先点日期条第 2 天，再 `$B eval "[...document.querySelectorAll('.ccard')].map(e => e.querySelector('.ccard__meta').innerText + ' | ' + e.querySelector('.ccard__status').innerText + ' | ' + e.querySelector('.ccard__btn').innerText)"`。按开始时间找到两节课：`$U` 是 `已取消`，`$K` 不是。截图 `03-约课列表已取消.png`。
 - **详情页。** 运行 `$B open "http://localhost:9090/#/pages/detail/index?scheduleId=$U"`、`$B reload`、`$B wait 2000`、`$B get text ".card__status"`。输出 `已取消`。截图 `04-详情页已取消.png`。
-- **管理端。** 排课管理按开课日期筛选，`$U` 状态“已取消”、`$K` 状态“已上架”；预约管理里两条预约状态“已取消”、取消原因“排课取消”；“系统监控 → 定时任务”的调度日志有成功记录。截图 `05-管理端排课已取消.png`。
+- **管理端。** admin／admin123 登录 `http://localhost`。排课管理（`/operation/schedule`）按开课日期筛选，`$U` 状态“已取消”、`$K` 状态“已上架”；预约管理（`/operation/reservation`）里两条预约状态“已取消”、取消原因“排课取消”；“系统监控 → 定时任务”的调度日志有成功记录。截图 `05-管理端排课已取消.png`。
 
 ## Gotchas
 
