@@ -20,9 +20,9 @@ const MEMBERS = [
   { id: '1999000000000000002', phone: '19900000002', name: '验收会员B', role: 'reserve' },
   { id: '1999000000000000003', phone: '19900000003', name: '验收会员C', role: 'reserve' },
   { id: '1999000000000000004', phone: '19900000004', name: '验收会员D', role: 'queue' },
-  { id: '1999000000000000006', phone: '{{PHONE_g9ozr9xf}}', name: '验收会员E', role: 'queue' },
+  { id: '1999000000000000006', phone: '19900000006', name: '验收会员E', role: 'queue' },
   { id: '1999000000000000005', phone: '19900000005', name: '验收体验', role: 'you' },
-  { id: '1999000000000000007', phone: '{{PHONE_wuqklvs2}}', name: '验收会员F', role: 'spare' },
+  { id: '1999000000000000007', phone: '19900000007', name: '验收会员F', role: 'spare' },
 ];
 const MEMBER_IDS = MEMBERS.map((m) => m.id).join(',');
 
