@@ -1,0 +1,10 @@
+FROM eclipse-temurin:8-jre-jammy
+ENV TZ=Asia/Shanghai
+WORKDIR /app
+COPY app.jar /app/app.jar
+COPY jolokia-jvm-1.7.2.jar /app/jolokia.jar
+# JVM_OPTS 默认与 backend/ry.sh 一致；JOLOKIA_OPTS 只在压测环境暴露 JMX 读取端口
+ENV JVM_OPTS="-Duser.timezone=Asia/Shanghai -Xms512m -Xmx1024m -XX:MetaspaceSize=128m -XX:MaxMetaspaceSize=512m -XX:+HeapDumpOnOutOfMemoryError -XX:NewRatio=1 -XX:SurvivorRatio=30 -XX:+UseParallelGC -XX:+UseParallelOldGC" \
+    JOLOKIA_OPTS="-javaagent:/app/jolokia.jar=host=0.0.0.0,port=8778,discoveryEnabled=false"
+EXPOSE 8080 8778
+ENTRYPOINT ["sh", "-c", "unset JAVA_TOOL_OPTIONS JDK_JAVA_OPTIONS; exec java $JVM_OPTS $JOLOKIA_OPTS -jar /app/app.jar $APP_ARGS"]

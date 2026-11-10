@@ -1,0 +1,283 @@
+{
+ "table_rows": {
+  "t_reservation": 277201,
+  "t_member_card_transaction": 277201
+ },
+ "digests": [
+  {
+   "sql_text": "SELECT `id` , `request_id` , `member_id` , `schedule_id` , `start_time` , `end_time` , `persons` , `member_card_id` , STATUS , `reservation_time` , `cancel_time` , `cancel_reason` , `check_in_time` , `create_by` , `create_time` , `update_by` , `update_time` FROM `t_reservation` WHERE ( `member_id` = ? AND `schedule_id` = ? AND STATUS IN (...) ) LIMIT ? FOR UPDATE",
+   "calls": 49199,
+   "avg_ms": 1.961,
+   "max_ms": 33.011,
+   "total_s": 96.486,
+   "lock_s": 0.07,
+   "rows_examined": 4946428,
+   "rows_examined_avg": "100.5",
+   "no_index": 0
+  },
+  {
+   "sql_text": "SELECT `id` , `store_id` , `course_id` , `course_type` , `coach_id` , `classroom_id` , `schedule_date` , `start_time` , `end_time` , `max_persons` , `min_persons` , `queue_limit` , `queue_stop_minutes` , `booked_persons` , STATUS , `create_by` , `create_time` , `update_by` , `update_time` FROM `t_schedule` WHERE ( `id` = ? ) FOR UPDATE",
+   "calls": 49197,
+   "avg_ms": 1.286,
+   "max_ms": 404.168,
+   "total_s": 63.249,
+   "lock_s": 53.447,
+   "rows_examined": 49199,
+   "rows_examined_avg": "1.0",
+   "no_index": 0
+  },
+  {
+   "sql_text": "INSERT INTO `t_reservation` ( `id` , `request_id` , `member_id` , `schedule_id` , `start_time` , `end_time` , `persons` , `member_card_id` , STATUS , `reservation_time` , `create_by` , `create_time` , `update_by` , `update_time` ) VALUES (...)",
+   "calls": 49198,
+   "avg_ms": 0.431,
+   "max_ms": 40.53,
+   "total_s": 21.224,
+   "lock_s": 0.103,
+   "rows_examined": 0,
+   "rows_examined_avg": "0.0",
+   "no_index": 0
+  },
+  {
+   "sql_text": "UPDATE `t_member_card` SET `remaining_times` = `remaining_times` - ? , `update_time` = ? WHERE ( `id` = ? AND `remaining_times` >= ? )",
+   "calls": 49198,
+   "avg_ms": 0.324,
+   "max_ms": 26.746,
+   "total_s": 15.947,
+   "lock_s": 0.082,
+   "rows_examined": 49198,
+   "rows_examined_avg": "1.0",
+   "no_index": 0
+  },
+  {
+   "sql_text": "UPDATE `t_schedule` SET `booked_persons` = ? , `update_time` = ? WHERE ( `id` = ? AND `max_persons` >= ? )",
+   "calls": 49197,
+   "avg_ms": 0.323,
+   "max_ms": 24.697,
+   "total_s": 15.882,
+   "lock_s": 0.103,
+   "rows_examined": 49198,
+   "rows_examined_avg": "1.0",
+   "no_index": 0
+  },
+  {
+   "sql_text": "INSERT INTO `t_member_card_transaction` ( `id` , `member_card_id` , `member_id` , `reservation_id` , `change_type` , `persons` , `change_times` , `before_times` , `after_times` , `create_time` ) VALUES (...)",
+   "calls": 49197,
+   "avg_ms": 0.266,
+   "max_ms": 25.276,
+   "total_s": 13.083,
+   "lock_s": 0.079,
+   "rows_examined": 0,
+   "rows_examined_avg": "0.0",
+   "no_index": 0
+  },
+  {
+   "sql_text": "SELECT `id` , `member_id` , `open_store_id` , `card_no` , `card_name` , `card_type` , `course_scope` , `store_id` , `purchase_times` , `gift_times` , `remaining_times` , `valid_period_unit` , `valid_period_count` , `valid_start_time` , `valid_end_time` , `activate_time` , `stop_time` , `stop_reason` , `create_by` , `create_time` , `update_by` , `update_time` FROM `t_member_card` WHERE ( `id` = ? ) FOR UPDATE",
+   "calls": 49198,
+   "avg_ms": 0.236,
+   "max_ms": 14.197,
+   "total_s": 11.624,
+   "lock_s": 0.093,
+   "rows_examined": 49199,
+   "rows_examined_avg": "1.0",
+   "no_index": 0
+  },
+  {
+   "sql_text": "SELECT `id` , `request_id` , `member_id` , `schedule_id` , `start_time` , `end_time` , `persons` , `member_card_id` , STATUS , `reservation_time` , `cancel_time` , `cancel_reason` , `check_in_time` , `create_by` , `create_time` , `update_by` , `update_time` FROM `t_reservation` WHERE ( `member_id` = ? AND `request_id` = ? ) LIMIT ? FOR UPDATE",
+   "calls": 49199,
+   "avg_ms": 0.198,
+   "max_ms": 17.205,
+   "total_s": 9.718,
+   "lock_s": 0.078,
+   "rows_examined": 0,
+   "rows_examined_avg": "0.0",
+   "no_index": 0
+  },
+  {
+   "sql_text": "SELECT `id` , NAME , `course_type` , `cover_url` , `intro` , `difficulty` , `create_by` , `create_time` , `update_by` , `update_time` FROM `t_course` WHERE `id` = ?",
+   "calls": 49198,
+   "avg_ms": 0.192,
+   "max_ms": 10.21,
+   "total_s": 9.442,
+   "lock_s": 0.089,
+   "rows_examined": 49197,
+   "rows_examined_avg": "1.0",
+   "no_index": 0
+  },
+  {
+   "sql_text": "SELECT `id` , `request_id` , `member_id` , `schedule_id` , `start_time` , `end_time` , `persons` , `member_card_id` , STATUS , `reservation_time` , `cancel_time` , `cancel_reason` , `check_in_time` , `create_by` , `create_time` , `update_by` , `update_time` FROM `t_reservation` WHERE ( `member_id` = ? AND `request_id` = ? )",
+   "calls": 49199,
+   "avg_ms": 0.184,
+   "max_ms": 13.652,
+   "total_s": 9.073,
+   "lock_s": 0.097,
+   "rows_examined": 0,
+   "rows_examined_avg": "0.0",
+   "no_index": 0
+  },
+  {
+   "sql_text": "SELECT `id` , `wechat_openid` , `wechat_unionid` , `last_login_time` , `phone` , PASSWORD , `phone_last4` , NAME , `gender` , LEVEL , `create_by` , `create_time` , `update_by` , `update_time` FROM `t_member` WHERE ( `id` = ? ) FOR UPDATE",
+   "calls": 49199,
+   "avg_ms": 0.165,
+   "max_ms": 16.749,
+   "total_s": 8.141,
+   "lock_s": 0.073,
+   "rows_examined": 49199,
+   "rows_examined_avg": "1.0",
+   "no_index": 0
+  },
+  {
+   "sql_text": "SELECT COUNT ( * ) AS `total` FROM `t_member` WHERE ( `id` = ? AND PASSWORD IS NOT NULL AND PASSWORD != ? )",
+   "calls": 49199,
+   "avg_ms": 0.162,
+   "max_ms": 11.255,
+   "total_s": 7.963,
+   "lock_s": 0.082,
+   "rows_examined": 49198,
+   "rows_examined_avg": "1.0",
+   "no_index": 0
+  },
+  {
+   "sql_text": "SELECT `member_id` , `schedule_id` , COUNT ( * ) AS `open_count` FROM `t_reservation` WHERE STATUS IN (...) GROUP BY `member_id` , `schedule_id` HAVING COUNT ( * ) > ?",
+   "calls": 1,
+   "avg_ms": 1108.778,
+   "max_ms": 1108.778,
+   "total_s": 1.109,
+   "lock_s": 0.0,
+   "rows_examined": 277201,
+   "rows_examined_avg": "277201.0",
+   "no_index": 1
+  },
+  {
+   "sql_text": "SELECT `r` . `id` , `r` . `member_id` , `r` . `schedule_id` , `r` . `status` , `r` . `persons` FROM `t_reservation` `r` JOIN `t_member_card` `c` ON `c` . `id` = `r` . `member_card_id` WHERE `c` . `card_type` = ? AND `r` . `status` IN (...) AND ( SELECT COUNT ( * ) FROM `t_member_card_transaction` `t` WHERE `t` . `reservation_id` = `r` . `id` AND `t` . `change_type` = ? AND `t` . `change_times` = - `r` . `persons` ) != ?",
+   "calls": 1,
+   "avg_ms": 919.752,
+   "max_ms": 919.752,
+   "total_s": 0.92,
+   "lock_s": 0.0,
+   "rows_examined": 554402,
+   "rows_examined_avg": "554402.0",
+   "no_index": 1
+  },
+  {
+   "sql_text": "SELECT `r` . `id` , `r` . `member_id` , `r` . `schedule_id` , `r` . `reservation_time` , `r` . `cancel_time` , `d` . `change_times` AS `deduct_times` , `d` . `create_time` AS `deduct_time` FROM `t_reservation` `r` JOIN `t_member_card_transaction` `d` ON `d` . `reservation_id` = `r` . `id` AND `d` . `change_type` = ? WHERE `r` . `status` = ? AND NOT EXISTS ( SELECT ? FROM `t_member_card_transaction` `t` WHERE `t` . `reservation_id` = `r` . `id` AND `t` . `change_type` = ? AND `t` . `change_times` = - `d` . `change_times` )",
+   "calls": 1,
+   "avg_ms": 420.137,
+   "max_ms": 420.137,
+   "total_s": 0.42,
+   "lock_s": 0.0,
+   "rows_examined": 554402,
+   "rows_examined_avg": "554402.0",
+   "no_index": 1
+  },
+  {
+   "sql_text": "SELECT `s` . `id` , `s` . `booked_persons` , `s` . `max_persons` FROM `t_schedule` `s` WHERE `s` . `booked_persons` < `s` . `max_persons` AND EXISTS ( SELECT ? FROM `t_reservation` `r` WHERE `r` . `schedule_id` = `s` . `id` AND `r` . `status` = ? )",
+   "calls": 1,
+   "avg_ms": 391.267,
+   "max_ms": 391.267,
+   "total_s": 0.391,
+   "lock_s": 0.0,
+   "rows_examined": 277602,
+   "rows_examined_avg": "277602.0",
+   "no_index": 1
+  },
+  {
+   "sql_text": "SELECT `s` . `id` , `s` . `booked_persons` , ( SELECT COALESCE ( SUM ( `r` . `persons` ) , ? ) FROM `t_reservation` `r` WHERE `r` . `schedule_id` = `s` . `id` AND `r` . `status` IN (...) ) AS `seated` FROM `t_schedule` `s` HAVING `s` . `booked_persons` != `seated`",
+   "calls": 1,
+   "avg_ms": 349.887,
+   "max_ms": 349.887,
+   "total_s": 0.35,
+   "lock_s": 0.0,
+   "rows_examined": 277602,
+   "rows_examined_avg": "277602.0",
+   "no_index": 1
+  },
+  {
+   "sql_text": "SELECT `c` . `id` , `c` . `purchase_times` + `c` . `gift_times` AS `initial_times` , `c` . `remaining_times` , ( SELECT COALESCE ( SUM ( `t` . `change_times` ) , ? ) FROM `t_member_card_transaction` `t` WHERE `t` . `member_card_id` = `c` . `id` ) AS `ledger_change` FROM `t_member_card` `c` WHERE `c` . `card_type` = ? HAVING `c` . `remaining_times` != `initial_times` + `ledger_change`",
+   "calls": 1,
+   "avg_ms": 332.522,
+   "max_ms": 332.522,
+   "total_s": 0.333,
+   "lock_s": 0.0,
+   "rows_examined": 279701,
+   "rows_examined_avg": "279701.0",
+   "no_index": 1
+  },
+  {
+   "sql_text": "SELECT `s` . `id` , `s` . `queue_limit` FROM `t_schedule` `s` WHERE `s` . `queue_limit` < ( SELECT COUNT ( * ) FROM `t_reservation` `r` WHERE `r` . `schedule_id` = `s` . `id` AND `r` . `status` = ? )",
+   "calls": 1,
+   "avg_ms": 327.827,
+   "max_ms": 327.827,
+   "total_s": 0.328,
+   "lock_s": 0.0,
+   "rows_examined": 277602,
+   "rows_examined_avg": "277602.0",
+   "no_index": 1
+  },
+  {
+   "sql_text": "SELECT STATUS , COUNT ( * ) AS `n` , SUM ( `persons` ) AS `persons` FROM `t_reservation` GROUP BY STATUS",
+   "calls": 1,
+   "avg_ms": 144.266,
+   "max_ms": 144.266,
+   "total_s": 0.144,
+   "lock_s": 0.0,
+   "rows_examined": 277201,
+   "rows_examined_avg": "277201.0",
+   "no_index": 1
+  },
+  {
+   "sql_text": "SELECT `change_type` , COUNT ( * ) AS `n` , SUM ( `change_times` ) AS `times` FROM `t_member_card_transaction` GROUP BY `change_type`",
+   "calls": 1,
+   "avg_ms": 134.948,
+   "max_ms": 134.948,
+   "total_s": 0.135,
+   "lock_s": 0.0,
+   "rows_examined": 277201,
+   "rows_examined_avg": "277201.0",
+   "no_index": 1
+  },
+  {
+   "sql_text": "SELECT * FROM `t_member_card_transaction` WHERE `after_times` != `before_times` + `change_times`",
+   "calls": 1,
+   "avg_ms": 97.184,
+   "max_ms": 97.184,
+   "total_s": 0.097,
+   "lock_s": 0.0,
+   "rows_examined": 277201,
+   "rows_examined_avg": "277201.0",
+   "no_index": 1
+  },
+  {
+   "sql_text": "SELECT `r` . `id` , `r` . `status` FROM `t_reservation` `r` WHERE `r` . `status` IN (...) AND EXISTS ( SELECT ? FROM `t_member_card_transaction` `t` WHERE `t` . `reservation_id` = `r` . `id` )",
+   "calls": 1,
+   "avg_ms": 56.91,
+   "max_ms": 56.91,
+   "total_s": 0.057,
+   "lock_s": 0.0,
+   "rows_examined": 277201,
+   "rows_examined_avg": "277201.0",
+   "no_index": 0
+  },
+  {
+   "sql_text": "SELECT `reservation_id` , COUNT ( * ) AS `refund_count` FROM `t_member_card_transaction` WHERE `change_type` = ? GROUP BY `reservation_id` HAVING COUNT ( * ) > ?",
+   "calls": 1,
+   "avg_ms": 48.662,
+   "max_ms": 48.662,
+   "total_s": 0.049,
+   "lock_s": 0.0,
+   "rows_examined": 277201,
+   "rows_examined_avg": "277201.0",
+   "no_index": 0
+  },
+  {
+   "sql_text": "SELECT `id` FROM `t_schedule` WHERE ( STATUS = ? AND `start_time` > ? AND `start_time` <= ? AND `booked_persons` < `min_persons` ) ORDER BY `start_time` ASC , `id` ASC",
+   "calls": 3,
+   "avg_ms": 3.152,
+   "max_ms": 8.484,
+   "total_s": 0.009,
+   "lock_s": 0.0,
+   "rows_examined": 1203,
+   "rows_examined_avg": "401.0",
+   "no_index": 3
+  }
+ ]
+}

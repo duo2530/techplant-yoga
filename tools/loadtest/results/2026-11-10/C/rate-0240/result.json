@@ -1,0 +1,130 @@
+{
+ "name": "C/rate-0240",
+ "k6_exit": 0,
+ "env": {
+  "BASE_URL": "http://backend-cn-shanghai-yogalt.yogalt:8080",
+  "SCENARIO": "C",
+  "TOKENS_FILE": "/loadtest/data/tokens.json",
+  "SCHEDULE_BASE": 9700000000,
+  "SCHEDULE_COUNT": 400,
+  "B_SCHEDULE_ID": 9700009999,
+  "RATE": 240,
+  "DURATION": "2m",
+  "OFFSET": 158410
+ },
+ "started": 1794320732.9050257,
+ "ended": 1794320856.0676858,
+ "k6": {
+  "http_reqs": 28715,
+  "qps": 239.26,
+  "iterations": 28715,
+  "dropped_iterations": 86,
+  "p50_ms": 24.24,
+  "p90_ms": 42.95,
+  "p95_ms": 302.95,
+  "p99_ms": 2389.92,
+  "max_ms": 4048.11,
+  "avg_ms": 107.09,
+  "error_rate": 0,
+  "errors": 0,
+  "reserved": 28715,
+  "unexpected": 0,
+  "conflict_total": 0,
+  "conflicts": {},
+  "reserved_p95_ms": 302.95,
+  "vus_max": 566
+ },
+ "mysql_delta": {
+  "Innodb_row_lock_waits": 10,
+  "Innodb_row_lock_time": 179,
+  "Innodb_row_lock_time_max": 0,
+  "Com_commit": 28715,
+  "Com_rollback": 0,
+  "Innodb_rows_inserted": 57432,
+  "Innodb_rows_updated": 57430,
+  "Innodb_data_fsyncs": 125421,
+  "Innodb_os_log_fsyncs": 113659,
+  "row_lock_time_avg_ms_in_run": 17.9,
+  "Innodb_row_lock_time_max_global": 194
+ },
+ "Innodb_row_lock_time_avg_global": 67,
+ "monitor": {
+  "samples": 62,
+  "druid.ActiveCount": {
+   "max": 20,
+   "avg": 5.565,
+   "p50": 5,
+   "n": 62
+  },
+  "druid.WaitThreadCount": {
+   "max": 382,
+   "avg": 16.048,
+   "p50": 0,
+   "n": 62
+  },
+  "druid.PoolingCount": {
+   "max": 20,
+   "avg": 14.435,
+   "p50": 15,
+   "n": 62
+  },
+  "tomcat.currentThreadsBusy": {
+   "max": 528,
+   "avg": 24.306,
+   "p50": 5,
+   "n": 62
+  },
+  "tomcat.currentThreadCount": {
+   "max": 555,
+   "avg": 432.968,
+   "p50": 410,
+   "n": 62
+  },
+  "tomcat.connectionCount": {
+   "max": 568,
+   "avg": 487.516,
+   "p50": 482,
+   "n": 62
+  },
+  "jvm.ProcessCpuLoad": {
+   "max": 0.8575,
+   "avg": 0.54,
+   "p50": 0.5525,
+   "n": 62
+  },
+  "jvm.SystemCpuLoad": {
+   "max": 0.8563865765,
+   "avg": 0.541,
+   "p50": 0.5522608765,
+   "n": 62
+  },
+  "threads.ThreadCount": {
+   "max": 587,
+   "avg": 465.226,
+   "p50": 442,
+   "n": 62
+  },
+  "mysql.Threads_running": {
+   "max": 22,
+   "avg": 4.548,
+   "p50": 4,
+   "n": 62
+  },
+  "mysql.Threads_connected": {
+   "max": 22,
+   "avg": 22.0,
+   "p50": 22,
+   "n": 62
+  },
+  "mysql.Innodb_row_lock_current_waits": {
+   "max": 0,
+   "avg": 0.0,
+   "p50": 0,
+   "n": 62
+  },
+  "sample_errors": 0,
+  "druid.NotEmptyWaitCount.delta": 3452,
+  "druid.NotEmptyWaitMillis.delta": 2125143,
+  "druid.ActivePeak.end": 20
+ }
+}
