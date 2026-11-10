@@ -22,7 +22,7 @@ checks=(QueueRace RefundRace AutoCancel LastSeat StatusRace CrossQueue)
 # 当前代码已知会违反：配置:不变量:标签
 findings=(
     "FindingStatusTerminal:CancelledIsTerminal:#36"
-    "FindingCrossQueueLockCycle:NoLockCycle:card-lock-cycle"
+    "FindingCrossQueueLockCycle:NoLockCycle:#40"
 )
 # 破坏版本必须被抓到：配置:不变量
 mutations=(

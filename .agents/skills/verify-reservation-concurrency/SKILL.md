@@ -38,7 +38,7 @@ bash tools/formal/reservation/run.sh MutationRR   # 只跑一个配置，打印 
 ```text
 PASS            QueueRace / RefundRace / AutoCancel / LastSeat / StatusRace / CrossQueue
 KNOWN FINDING #36              FindingStatusTerminal
-KNOWN FINDING card-lock-cycle  FindingCrossQueueLockCycle
+KNOWN FINDING #40              FindingCrossQueueLockCycle
 CAUGHT          MutationRR / MutationNoScheduleLock / MutationDuplicate   （只在 all 时出现）
 ```
 
@@ -93,7 +93,7 @@ git diff 6df4364 -- backend/ruoyi-yoga/src/main/java/com/techplant/yoga/reservat
 ## 已知发现
 
 - **#36 排课状态被覆盖**：取消请求和下架请求都用普通读读到“已上架”。取消请求先提交，下架请求随后无条件写回“待上架”。代码在 `ScheduleServiceImpl#changeStatus` 与 `ScheduleDaoImpl#updateStatus`。
-- **跨课补位的卡锁环**：课程1由会员1占位、会员2排队，课程2相反。两人同时取消时，各自先锁自己的卡返次，再补位时去锁对方的卡，形成环。InnoDB 会回滚一方（1213），名额与返次规则不受影响，但请求失败。代码在 `ReservationServiceImpl#refundTimesIfNeeded` 与 `ReservationServiceImpl#promoteQueued`。
+- **跨课补位的卡锁环**：课程1由会员1占位、会员2排队，课程2相反。两人同时取消时，各自先锁自己的卡返次，再补位时去锁对方的卡，形成环。InnoDB 会回滚一方（1213），名额与返次规则不受影响，但请求失败，已在真实 MySQL 复现，见 #40。代码在 `ReservationServiceImpl#refundTimesIfNeeded` 与 `ReservationServiceImpl#promoteQueued`。
 
 ## 覆盖表
 
