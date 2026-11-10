@@ -60,6 +60,16 @@ mvn -f backend/pom.xml -pl ruoyi-yoga -am test '-Dtest=ReservationServiceImplTes
 
 将示例替换为实际受影响的测试类或方法。`surefire.failIfNoSpecifiedTests=false` 用于允许依赖模块没有匹配的测试；必须检查业务模块报告，确认指定用例确实执行，不能仅凭 Maven 成功退出判断通过。push 前的全量命令不使用 `-Dtest` 筛选。
 
+### 预约并发协议模型检查
+
+[verify-reservation-concurrency](../../.agents/skills/verify-reservation-concurrency/SKILL.md) 用 TLA+ 模型和 TLC 穷举小规模场景下的全部交错，检查不超卖、不重复有效预约与返次恰好一次。修改预约、排课或会员卡的加锁、隔离级别、条件更新或排课状态流转时，与 #24 引入的多线程并发正确性测试 `ReservationConcurrencyTest`（随 #37 合入）一起执行：
+
+```bash
+bash tools/formal/reservation/run.sh
+```
+
+需要 Docker，约 1 分钟。模型只覆盖其范围内的交错，间隙锁与真实数据库行为仍以该并发测试为准；范围、已知发现与维护方法见该 skill。
+
 ### 配置与数据
 
 - 测试入口位于 `backend/ruoyi-yoga/src/test/`，公共装配位于 `common/testcontainers/`。
