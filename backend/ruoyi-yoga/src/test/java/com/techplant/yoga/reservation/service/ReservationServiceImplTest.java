@@ -7,8 +7,11 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.sql.Connection;
+import java.sql.DriverManager;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -26,6 +29,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.dao.DataAccessException;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -835,8 +839,7 @@ class ReservationServiceImplTest extends AbstractYogaIntegrationTest {
     @Test
     @DisplayName("加入排队：有空位时拒绝；满员后排队不占位、不扣次，同一 requestId 重试幂等")
     void joinQueue_onlyWhenFull_shouldNotOccupyOrDeduct() {
-        assertMessage(409, "课程还有空位，请直接预约", () -> joinQueue(MEMBER_ID, REQUEST_ID, SCHEDULE_FULL_ID,
-                TIMES_CARD_ID, 1));
+        assertMessage(409, "课程还有空位，请直接预约", () -> joinQueue(MEMBER_ID, REQUEST_ID, SCHEDULE_FULL_ID, TIMES_CARD_ID, 1));
         createForMember(OTHER_MEMBER_ID, OTHER_REQUEST_ID, SCHEDULE_FULL_ID, OTHER_MEMBER_CARD_ID, 1);
 
         joinQueue(MEMBER_ID, REQUEST_ID, SCHEDULE_FULL_ID, TIMES_CARD_ID, 1);
@@ -849,8 +852,7 @@ class ReservationServiceImplTest extends AbstractYogaIntegrationTest {
         assertEquals(Integer.valueOf(12),
                 intOf("SELECT remaining_times FROM t_member_card WHERE id = ?", TIMES_CARD_ID), "排队不扣次");
         assertEquals(0, countOf("SELECT COUNT(*) FROM t_member_card_transaction WHERE member_id = ?", MEMBER_ID));
-        assertEquals(Integer.valueOf(1), scheduleService.publicDetail(SCHEDULE_FULL_ID).getQueueCount(),
-                "排课详情返回排队人数");
+        assertEquals(Integer.valueOf(1), scheduleService.publicDetail(SCHEDULE_FULL_ID).getQueueCount(), "排课详情返回排队人数");
         assertAccountingConsistent();
     }
 
@@ -859,26 +861,22 @@ class ReservationServiceImplTest extends AbstractYogaIntegrationTest {
     void joinQueue_withIllegalRequest_shouldReject() {
         createForMember(OTHER_MEMBER_ID, OTHER_REQUEST_ID, SCHEDULE_FULL_ID, OTHER_MEMBER_CARD_ID, 1);
 
-        assertMessage(400, "排队人数只能为 1", () -> joinQueue(MEMBER_ID, REQUEST_ID, SCHEDULE_FULL_ID,
-                TIMES_CARD_ID, 2));
-        assertMessage(409, "会员卡已停卡，不能预约", () -> joinQueue(MEMBER_ID, REQUEST_ID, SCHEDULE_FULL_ID,
-                STOPPED_CARD_ID, 1));
+        assertMessage(400, "排队人数只能为 1", () -> joinQueue(MEMBER_ID, REQUEST_ID, SCHEDULE_FULL_ID, TIMES_CARD_ID, 2));
+        assertMessage(409, "会员卡已停卡，不能预约", () -> joinQueue(MEMBER_ID, REQUEST_ID, SCHEDULE_FULL_ID, STOPPED_CARD_ID, 1));
         jdbcTemplate.update("UPDATE t_member_card SET remaining_times = 0 WHERE id = ?", TIMES_CARD_ID);
-        assertMessage(409, "会员卡剩余次数不足", () -> joinQueue(MEMBER_ID, REQUEST_ID, SCHEDULE_FULL_ID,
-                TIMES_CARD_ID, 1));
+        assertMessage(409, "会员卡剩余次数不足", () -> joinQueue(MEMBER_ID, REQUEST_ID, SCHEDULE_FULL_ID, TIMES_CARD_ID, 1));
         jdbcTemplate.update("UPDATE t_member_card SET remaining_times = 12 WHERE id = ?", TIMES_CARD_ID);
 
         joinQueue(MEMBER_ID, REQUEST_ID, SCHEDULE_FULL_ID, TIMES_CARD_ID, 1);
-        assertMessage(409, "您已在排队中", () -> joinQueue(MEMBER_ID, SECOND_REQUEST_ID, SCHEDULE_FULL_ID,
-                YEAR_CARD_ID, 1));
+        assertMessage(409, "您已在排队中", () -> joinQueue(MEMBER_ID, SECOND_REQUEST_ID, SCHEDULE_FULL_ID, YEAR_CARD_ID, 1));
         assertMessage(409, "您已在排队中", () -> create(SECOND_REQUEST_ID, SCHEDULE_FULL_ID, TIMES_CARD_ID, 1));
-        assertMessage(409, "您已预约该课程", () -> joinQueue(OTHER_MEMBER_ID, THIRD_REQUEST_ID, SCHEDULE_FULL_ID,
-                OTHER_MEMBER_CARD_ID, 1));
+        assertMessage(409, "您已预约该课程",
+                () -> joinQueue(OTHER_MEMBER_ID, THIRD_REQUEST_ID, SCHEDULE_FULL_ID, OTHER_MEMBER_CARD_ID, 1));
 
         jdbcTemplate.update("UPDATE t_schedule SET booked_persons = max_persons WHERE id = ?",
                 SCHEDULE_CANCEL_WINDOW_ID);
-        assertMessage(409, "已超过停止排队时间，不能排队", () -> joinQueue(MEMBER_ID, FOURTH_REQUEST_ID,
-                SCHEDULE_CANCEL_WINDOW_ID, TIMES_CARD_ID, 1));
+        assertMessage(409, "已超过停止排队时间，不能排队",
+                () -> joinQueue(MEMBER_ID, FOURTH_REQUEST_ID, SCHEDULE_CANCEL_WINDOW_ID, TIMES_CARD_ID, 1));
         assertEquals(1, countOf("SELECT COUNT(*) FROM t_reservation WHERE status = 4"));
     }
 
@@ -902,8 +900,9 @@ class ReservationServiceImplTest extends AbstractYogaIntegrationTest {
         assertEquals(Integer.valueOf(1), intOf("SELECT booked_persons FROM t_schedule WHERE id = ?", SCHEDULE_FULL_ID));
         assertEquals(Integer.valueOf(11),
                 intOf("SELECT remaining_times FROM t_member_card WHERE id = ?", TIMES_CARD_ID), "补位时扣次");
-        assertEquals(Integer.valueOf(11), intOf("SELECT after_times FROM t_member_card_transaction"
-                + " WHERE reservation_id = ? AND change_type = 1", firstQueuedId), "补位写入扣次流水");
+        assertEquals(Integer.valueOf(11), intOf(
+                "SELECT after_times FROM t_member_card_transaction" + " WHERE reservation_id = ? AND change_type = 1",
+                firstQueuedId), "补位写入扣次流水");
         assertEquals(Integer.valueOf(12),
                 intOf("SELECT remaining_times FROM t_member_card WHERE id = ?", THIRD_MEMBER_CARD_ID));
         assertEquals(Integer.valueOf(1), queuedItem(THIRD_MEMBER_ID).getQueuePosition(), "前一位补位后名次前移");
@@ -931,8 +930,7 @@ class ReservationServiceImplTest extends AbstractYogaIntegrationTest {
 
         assertEquals(Integer.valueOf(5), intOf("SELECT status FROM t_reservation WHERE id = ?", skippedId),
                 "卡不可用的排队记录置为排队失败");
-        assertEquals(Integer.valueOf(1), intOf("SELECT status FROM t_reservation WHERE id = ?", promotedId),
-                "下一位补位成功");
+        assertEquals(Integer.valueOf(1), intOf("SELECT status FROM t_reservation WHERE id = ?", promotedId), "下一位补位成功");
         assertEquals(Integer.valueOf(0),
                 intOf("SELECT remaining_times FROM t_member_card WHERE id = ?", TIMES_CARD_ID));
         assertEquals(0, countOf("SELECT COUNT(*) FROM t_member_card_transaction WHERE reservation_id = ?", skippedId));
@@ -973,8 +971,7 @@ class ReservationServiceImplTest extends AbstractYogaIntegrationTest {
         createForMember(OTHER_MEMBER_ID, OTHER_REQUEST_ID, SCHEDULE_FULL_ID, OTHER_MEMBER_CARD_ID, 1);
         joinQueue(MEMBER_ID, REQUEST_ID, SCHEDULE_FULL_ID, TIMES_CARD_ID, 1);
 
-        assertEquals(Arrays.asList("李*"), reservationService.bookerDisplayNames(SCHEDULE_FULL_ID),
-                "排队会员不出现在预约人员里");
+        assertEquals(Arrays.asList("李*"), reservationService.bookerDisplayNames(SCHEDULE_FULL_ID), "排队会员不出现在预约人员里");
         PublicScheduleDetailVO detail = scheduleService.publicDetail(SCHEDULE_FULL_ID);
         assertEquals(Integer.valueOf(1), detail.getBookedPersons());
         assertEquals(Integer.valueOf(0), detail.getRemainingPlaces());
@@ -1065,6 +1062,80 @@ class ReservationServiceImplTest extends AbstractYogaIntegrationTest {
     }
 
     @Test
+    @DisplayName("取消排队与补位竞争：取消请求读到排队中后等待排课锁，期间被补位扣次，取消时按扣次流水返次")
+    void cancel_queuedWhilePromoted_shouldRefundDeduction() throws Exception {
+        createForMember(OTHER_MEMBER_ID, OTHER_REQUEST_ID, SCHEDULE_FULL_ID, OTHER_MEMBER_CARD_ID, 1);
+        Long seatId = reservationId();
+        joinQueue(MEMBER_ID, REQUEST_ID, SCHEDULE_FULL_ID, TIMES_CARD_ID, 1);
+        Long queuedId = reservationId();
+
+        ExecutorService pool = Executors.newFixedThreadPool(2);
+        CountDownLatch promoted = new CountDownLatch(1);
+        CountDownLatch releasePromotion = new CountDownLatch(1);
+        try {
+            Future<String> promotion = pool.submit(() -> new TransactionTemplate(transactionManager).execute(s -> {
+                reservationService.cancel(OTHER_MEMBER_ID, seatId);
+                promoted.countDown();
+                awaitLatch(releasePromotion);
+                return RESULT_OK;
+            }));
+            assertTrue(promoted.await(10, TimeUnit.SECONDS), "他人取消应已补位排队会员且尚未提交");
+            Future<String> queuedCancel = pool.submit(() -> {
+                try {
+                    reservationService.cancel(MEMBER_ID, queuedId);
+                    return RESULT_OK;
+                } catch (ServiceException e) {
+                    return e.getCode() + ":" + e.getMessage();
+                }
+            });
+            assertTrue(awaitLockWait(), "取消排队的请求应在排课行锁上等待");
+            releasePromotion.countDown();
+            assertEquals(RESULT_OK, promotion.get(30, TimeUnit.SECONDS));
+            assertEquals(RESULT_OK, queuedCancel.get(30, TimeUnit.SECONDS));
+        } finally {
+            releasePromotion.countDown();
+            pool.shutdownNow();
+            assertTrue(pool.awaitTermination(10, TimeUnit.SECONDS), "测试线程应结束，避免影响后续数据清理");
+        }
+
+        assertEquals(Integer.valueOf(2), intOf("SELECT status FROM t_reservation WHERE id = ?", queuedId), "补位后的预约已取消");
+        assertEquals(1, countOf(
+                "SELECT COUNT(*) FROM t_member_card_transaction WHERE reservation_id = ?" + " AND change_type = 1",
+                queuedId), "补位写入一条扣次流水");
+        assertEquals(1, countOf(
+                "SELECT COUNT(*) FROM t_member_card_transaction WHERE reservation_id = ?" + " AND change_type = 2",
+                queuedId), "取消写入一条返次流水");
+        assertEquals(Integer.valueOf(12),
+                intOf("SELECT remaining_times FROM t_member_card WHERE id = ?", TIMES_CARD_ID), "补位扣的次数已返还");
+        assertEquals(Integer.valueOf(0), intOf("SELECT booked_persons FROM t_schedule WHERE id = ?", SCHEDULE_FULL_ID),
+                "两条预约都已取消，名额全部释放");
+        assertAccountingConsistent();
+    }
+
+    /**
+     * 轮询到有事务处于锁等待；查看 innodb_trx 需要 PROCESS 权限，测试容器的 root 密码与业务账号相同
+     *
+     * <p>innodb_trx 读自 InnoDB 缓存，距上次读取不足 0.1 秒时不刷新，轮询间隔必须大于该值。</p>
+     */
+    private boolean awaitLockWait() throws Exception {
+        DriverManagerDataSource source = (DriverManagerDataSource) dataSource;
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
+        try (Connection connection = DriverManager.getConnection(source.getUrl(), "root", source.getPassword());
+                Statement statement = connection.createStatement()) {
+            while (System.nanoTime() < deadline) {
+                try (ResultSet waiting = statement.executeQuery(
+                        "SELECT COUNT(*) FROM information_schema.innodb_trx WHERE trx_state = 'LOCK WAIT'")) {
+                    if (waiting.next() && waiting.getInt(1) > 0) {
+                        return true;
+                    }
+                }
+                Thread.sleep(200L);
+            }
+        }
+        return false;
+    }
+
+    @Test
     @DisplayName("补位回滚：补位会员的扣次流水写入失败，取消、返次与补位全部回滚")
     void cancel_whenPromotionLedgerFails_shouldRollbackEverything() {
         createForMember(OTHER_MEMBER_ID, OTHER_REQUEST_ID, SCHEDULE_FULL_ID, OTHER_MEMBER_CARD_ID, 1);
@@ -1103,8 +1174,8 @@ class ReservationServiceImplTest extends AbstractYogaIntegrationTest {
         assertEquals(Integer.valueOf(2), full.getQueueCount());
         assertEquals(Integer.valueOf(2), full.getQueueLimit());
         assertTrue(!full.getQueueable(), "排队已满不可排队");
-        assertMessage(409, "排队人数已满", () -> joinQueue(FOURTH_MEMBER_ID, FOURTH_REQUEST_ID, SCHEDULE_FULL_ID,
-                FOURTH_MEMBER_CARD_ID, 1));
+        assertMessage(409, "排队人数已满",
+                () -> joinQueue(FOURTH_MEMBER_ID, FOURTH_REQUEST_ID, SCHEDULE_FULL_ID, FOURTH_MEMBER_CARD_ID, 1));
 
         reservationService.cancel(MEMBER_ID, firstQueuedId);
         assertTrue(scheduleService.publicDetail(SCHEDULE_FULL_ID).getQueueable(), "有人取消排队后恢复可排队");
@@ -1113,8 +1184,8 @@ class ReservationServiceImplTest extends AbstractYogaIntegrationTest {
 
         configureQueue(SCHEDULE_FULL_ID, 0, 110);
         assertTrue(!scheduleService.publicDetail(SCHEDULE_FULL_ID).getQueueable(), "上限为 0 不开放排队");
-        assertMessage(409, "该课程不开放排队", () -> joinQueue(MEMBER_ID, SECOND_REQUEST_ID, SCHEDULE_FULL_ID,
-                TIMES_CARD_ID, 1));
+        assertMessage(409, "该课程不开放排队",
+                () -> joinQueue(MEMBER_ID, SECOND_REQUEST_ID, SCHEDULE_FULL_ID, TIMES_CARD_ID, 1));
         assertAccountingConsistent();
     }
 
@@ -1146,8 +1217,8 @@ class ReservationServiceImplTest extends AbstractYogaIntegrationTest {
         assertTrue(scheduleService.publicDetail(SCHEDULE_QUEUE_OPEN_ID).getQueueable(), "停止排队时间之前可排队");
         assertTrue(!scheduleService.publicDetail(SCHEDULE_QUEUE_STOPPED_ID).getQueueable(), "停止排队时间之后不可排队");
         joinQueue(MEMBER_ID, REQUEST_ID, SCHEDULE_QUEUE_OPEN_ID, TIMES_CARD_ID, 1);
-        assertMessage(409, "已超过停止排队时间，不能排队", () -> joinQueue(MEMBER_ID, SECOND_REQUEST_ID,
-                SCHEDULE_QUEUE_STOPPED_ID, TIMES_CARD_ID, 1));
+        assertMessage(409, "已超过停止排队时间，不能排队",
+                () -> joinQueue(MEMBER_ID, SECOND_REQUEST_ID, SCHEDULE_QUEUE_STOPPED_ID, TIMES_CARD_ID, 1));
 
         configureQueue(SCHEDULE_QUEUE_STOPPED_ID, 3, 30);
         assertTrue(scheduleService.publicDetail(SCHEDULE_QUEUE_STOPPED_ID).getQueueable(),
@@ -1167,8 +1238,7 @@ class ReservationServiceImplTest extends AbstractYogaIntegrationTest {
     @DisplayName("过了停止排队时间不再补位：取消已预约仍在取消截止前，名额释放但排队记录不转预约，显示为排队失败")
     void cancel_afterQueueStop_shouldSkipPromotion() {
         LocalDateTime now = LocalDateTime.now().withSecond(0).withNano(0);
-        insertSchedule(SCHEDULE_LATE_PROMOTION_ID, COURSE_ID, 1, now.plusMinutes(130), now.plusMinutes(190), 1, 0,
-                2);
+        insertSchedule(SCHEDULE_LATE_PROMOTION_ID, COURSE_ID, 1, now.plusMinutes(130), now.plusMinutes(190), 1, 0, 2);
         configureQueue(SCHEDULE_LATE_PROMOTION_ID, 3, 150);
         createForMember(OTHER_MEMBER_ID, OTHER_REQUEST_ID, SCHEDULE_LATE_PROMOTION_ID, OTHER_MEMBER_CARD_ID, 1);
         Long seatId = reservationId();

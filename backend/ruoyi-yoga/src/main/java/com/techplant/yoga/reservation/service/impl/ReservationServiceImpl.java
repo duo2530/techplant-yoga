@@ -17,6 +17,7 @@ import java.util.function.Function;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.ruoyi.common.exception.ServiceException;
@@ -97,13 +98,13 @@ public class ReservationServiceImpl implements ReservationService {
     private final ClassroomService classroomService;
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
+    @Transactional(rollbackFor = Exception.class, isolation = Isolation.READ_COMMITTED)
     public void create(Long memberId, ReservationCreateDTO dto) {
         submit(memberId, dto, ReservationStatusEnum.RESERVED);
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
+    @Transactional(rollbackFor = Exception.class, isolation = Isolation.READ_COMMITTED)
     public void joinQueue(Long memberId, ReservationCreateDTO dto) {
         submit(memberId, dto, ReservationStatusEnum.QUEUED);
     }
@@ -178,7 +179,7 @@ public class ReservationServiceImpl implements ReservationService {
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
+    @Transactional(rollbackFor = Exception.class, isolation = Isolation.READ_COMMITTED)
     public void cancel(Long memberId, Long reservationId) {
         Long id = requirePositiveId(reservationId, "预约ID");
         ReservationDO preview = requireOwnedReservation(id, memberId);
@@ -223,7 +224,7 @@ public class ReservationServiceImpl implements ReservationService {
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
+    @Transactional(rollbackFor = Exception.class, isolation = Isolation.READ_COMMITTED)
     public boolean cancelUnderstaffedSchedule(Long scheduleId) {
         // 锁顺序：排课 → 预约 → 会员卡
         ScheduleBookingSnapshot schedule = scheduleBookingService.lockForBooking(scheduleId);
@@ -317,7 +318,7 @@ public class ReservationServiceImpl implements ReservationService {
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
+    @Transactional(rollbackFor = Exception.class, isolation = Isolation.READ_COMMITTED)
     public void checkIn(Long memberId, Long reservationId) {
         Long id = requirePositiveId(reservationId, "预约ID");
         ReservationDO preview = requireOwnedReservation(id, memberId);
