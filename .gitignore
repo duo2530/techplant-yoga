@@ -18,3 +18,6 @@ docs/原型/_工具/对比/
 /tools/java-style/.classpath
 /tools/java-style/.settings/
 .verify
+
+# TLC 工具与输出缓存：tools/formal/*/run.sh 按需下载并校验
+/tools/formal/.cache/
