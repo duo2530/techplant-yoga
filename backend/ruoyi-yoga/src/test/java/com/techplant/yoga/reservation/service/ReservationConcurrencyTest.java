@@ -12,10 +12,13 @@ import java.sql.Statement;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
@@ -87,6 +90,13 @@ class ReservationConcurrencyTest extends AbstractYogaIntegrationTest {
     private static final String OK = "OK";
 
     private static final String UNEXPECTED = "UNEXPECTED";
+
+    /** 持排课锁后的名额校验给出的冲突；条件更新兜底给出的“剩余名额不足，预约失败”说明锁没有串行化 */
+    private static final String SEATS_FULL = "409:剩余名额不足，不能预约";
+
+    /** 混合场景的合法冲突：都来自加锁后的业务校验，不含“状态已变更”“名额释放失败”等条件更新兜底 */
+    private static final Set<String> MIXED_CONFLICTS = new HashSet<String>(
+            Arrays.asList(SEATS_FULL, "409:您已预约该课程", "409:您已在排队中", "409:课程还有空位，请直接预约", "409:排队人数已满"));
 
     private static final long TIMEOUT_SECONDS = 120L;
 
@@ -163,11 +173,10 @@ class ReservationConcurrencyTest extends AbstractYogaIntegrationTest {
         Map<String, Long> outcomes = race("1 抢名额", actions);
 
         assertRound(outcomes, () -> assertEquals(10L, countOf(outcomes, OK::equals), "恰好 10 人预约成功：" + outcomes),
-                () -> assertEquals(40L, countOf(outcomes, o -> o.startsWith("409:剩余名额不足")),
-                        "其余 40 人提示名额不足：" + outcomes),
+                () -> assertEquals(40L, countOf(outcomes, SEATS_FULL::equals), "其余 40 人在加锁后的名额校验处被拒：" + outcomes),
                 () -> assertEquals(10, intOf("SELECT booked_persons FROM t_schedule WHERE id = ?", scheduleId),
                         "排课占满 10 人"),
-                () -> assertEquals(10, intOf("SELECT COUNT(*) FROM t_reservation")));
+                () -> assertEquals(10, intOf("SELECT COUNT(*) FROM t_reservation"), "只写入 10 条预约"));
     }
 
     @RepeatedTest(value = ROUNDS, name = ROUND_NAME)
@@ -206,7 +215,8 @@ class ReservationConcurrencyTest extends AbstractYogaIntegrationTest {
         assertRound(outcomes, () -> assertEquals(20L, countOf(outcomes, OK::equals), "幂等重试都按成功返回：" + outcomes),
                 () -> assertEquals(1, intOf("SELECT COUNT(*) FROM t_reservation"), "只写入一条预约"),
                 () -> assertEquals(1, intOf("SELECT COUNT(*) FROM t_member_card_transaction"), "只写入一条扣次流水"),
-                () -> assertEquals(1, intOf("SELECT booked_persons FROM t_schedule WHERE id = ?", scheduleId)),
+                () -> assertEquals(1, intOf("SELECT booked_persons FROM t_schedule WHERE id = ?", scheduleId),
+                        "只占一个名额"),
                 () -> assertEquals(9, intOf("SELECT remaining_times FROM t_member_card WHERE id = ?", cardOf(memberId)),
                         "只扣一次"));
     }
@@ -227,7 +237,7 @@ class ReservationConcurrencyTest extends AbstractYogaIntegrationTest {
                 () -> assertEquals(5L, countOf(outcomes, "409:会员卡剩余次数不足"::equals), "其余提示次数不足：" + outcomes),
                 () -> assertEquals(0, intOf("SELECT remaining_times FROM t_member_card WHERE id = ?", cardOf(memberId)),
                         "余额扣到 0"),
-                () -> assertEquals(5, intOf("SELECT COUNT(*) FROM t_reservation")));
+                () -> assertEquals(5, intOf("SELECT COUNT(*) FROM t_reservation"), "只写入 5 条预约"));
     }
 
     @RepeatedTest(value = ROUNDS, name = ROUND_NAME)
@@ -248,7 +258,7 @@ class ReservationConcurrencyTest extends AbstractYogaIntegrationTest {
         Map<String, Long> outcomes = race("5 跨课跨人", actions);
 
         assertRound(outcomes, () -> assertEquals(100L, countOf(outcomes, OK::equals), "名额充足时全部成功：" + outcomes),
-                () -> assertEquals(100, intOf("SELECT COUNT(*) FROM t_reservation")),
+                () -> assertEquals(100, intOf("SELECT COUNT(*) FROM t_reservation"), "写入 100 条预约"),
                 () -> assertEquals(0, intOf("SELECT COUNT(*) FROM t_schedule WHERE booked_persons <> 5"), "每节排课各 5 人"));
     }
 
@@ -295,8 +305,9 @@ class ReservationConcurrencyTest extends AbstractYogaIntegrationTest {
 
         Map<String, Long> outcomes = race("6 混合", actions);
 
-        assertRound(outcomes, () -> assertEquals(0L, countOf(outcomes, o -> !OK.equals(o) && !o.startsWith("409:")),
-                "只应出现成功或业务冲突（seed=" + seed + "）：" + outcomes));
+        assertRound(outcomes,
+                () -> assertEquals(0L, countOf(outcomes, o -> !OK.equals(o) && !MIXED_CONFLICTS.contains(o)),
+                        "只应出现成功或加锁后业务校验给出的冲突（seed=" + seed + "）：" + outcomes));
     }
 
     private static Map<String, String> invariants() {
