@@ -1,0 +1,19 @@
+目标库: mysql-cn-shanghai-yogalt.yogalt:3306/yoga
+binlog_format = ROW
+innodb_buffer_pool_size = 2147483648
+innodb_flush_log_at_trx_commit = 1
+innodb_lock_wait_timeout = 50
+log_bin = ON
+max_connections = 500
+sync_binlog = 1
+transaction_isolation = REPEATABLE-READ
+version = 8.0.29
+Innodb_row_lock_current_waits = 0
+Innodb_row_lock_time = 208724
+Innodb_row_lock_time_avg = 25
+Innodb_row_lock_time_max = 636
+Innodb_row_lock_waits = 8300
+Max_used_connections = 24
+Threads_connected = 11
+Uptime = 15657
+最近一次死锁: 无

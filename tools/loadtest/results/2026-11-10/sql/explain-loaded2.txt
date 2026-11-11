@@ -1,0 +1,19 @@
+目标库: mysql-cn-shanghai-yogalt.yogalt:3306/yoga
+t_reservation: 228002 行
+  索引 PRIMARY 列 id 序号 1 基数 210885
+  索引 uk_member_request 列 member_id 序号 1 基数 2473
+  索引 uk_member_request 列 request_id 序号 2 基数 213335
+  索引 idx_reservation_member_status 列 member_id 序号 1 基数 2475
+  索引 idx_reservation_member_status 列 status 序号 2 基数 2542
+  索引 idx_reservation_schedule 列 schedule_id 序号 1 基数 416
+t_member_card_transaction: 228002 行
+  索引 PRIMARY 列 id 序号 1 基数 228591
+  索引 uk_reservation_type 列 reservation_id 序号 1 基数 233257
+  索引 uk_reservation_type 列 change_type 序号 2 基数 218025
+  索引 idx_transaction_card 列 member_card_id 序号 1 基数 2475
+== 幂等键查询
+   {'table': None, 'type': None, 'possible_keys': None, 'key': None, 'key_len': None, 'rows': None, 'filtered': None, 'Extra': 'no matching row in const table'}
+== 同人同课有效预约（加锁）
+   {'table': 't_reservation', 'type': 'ref', 'possible_keys': 'uk_member_request,idx_reservation_member_status,idx_reservation_schedule', 'key': 'uk_member_request', 'key_len': '8', 'rows': 92, 'filtered': 0.08, 'Extra': 'Using where'}
+== 排课加锁
+   {'table': 't_schedule', 'type': 'const', 'possible_keys': 'PRIMARY', 'key': 'PRIMARY', 'key_len': '8', 'rows': 1, 'filtered': 100.0, 'Extra': None}

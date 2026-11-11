@@ -1,0 +1,213 @@
+{
+ "name": "B-burst",
+ "k6_exit": 0,
+ "env": {
+  "BASE_URL": "http://backend-cn-shanghai-yogalt.yogalt:8080",
+  "SCENARIO": "B",
+  "TOKENS_FILE": "/loadtest/data/tokens.json",
+  "SCHEDULE_BASE": 9700000000,
+  "SCHEDULE_COUNT": 400,
+  "B_SCHEDULE_ID": 9700009999,
+  "B_MEMBERS": 500,
+  "B_SECONDS": 0
+ },
+ "started": 1794319334.6718562,
+ "ended": 1794319340.2588868,
+ "k6": {
+  "http_reqs": 500,
+  "qps": 204.98,
+  "iterations": 500,
+  "dropped_iterations": 0,
+  "p50_ms": 1470.73,
+  "p90_ms": 2202.65,
+  "p95_ms": 2298.66,
+  "p99_ms": 2366.08,
+  "max_ms": 2388.67,
+  "avg_ms": 1429.6,
+  "error_rate": 0,
+  "errors": 0,
+  "reserved": 20,
+  "unexpected": 0,
+  "conflict_total": 480,
+  "conflicts": {
+   "conflict_seats_full": 480
+  },
+  "reserved_p95_ms": 345.27,
+  "vus_max": 500
+ },
+ "mysql_delta": {
+  "Innodb_row_lock_waits": 496,
+  "Innodb_row_lock_time": 34161,
+  "Innodb_row_lock_time_max": 174,
+  "Com_commit": 20,
+  "Com_rollback": 480,
+  "Innodb_rows_inserted": 40,
+  "Innodb_rows_updated": 40,
+  "Innodb_data_fsyncs": 242,
+  "Innodb_os_log_fsyncs": 172,
+  "row_lock_time_avg_ms_in_run": 68.87,
+  "Innodb_row_lock_time_max_global": 194
+ },
+ "Innodb_row_lock_time_avg_global": 68,
+ "monitor": {
+  "samples": 3,
+  "druid.ActiveCount": {
+   "max": 20,
+   "avg": 6.667,
+   "p50": 0,
+   "n": 3
+  },
+  "druid.WaitThreadCount": {
+   "max": 129,
+   "avg": 43.0,
+   "p50": 0,
+   "n": 3
+  },
+  "druid.PoolingCount": {
+   "max": 20,
+   "avg": 10.0,
+   "p50": 10,
+   "n": 3
+  },
+  "tomcat.currentThreadsBusy": {
+   "max": 150,
+   "avg": 50.0,
+   "p50": 0,
+   "n": 3
+  },
+  "tomcat.currentThreadCount": {
+   "max": 452,
+   "avg": 336.333,
+   "p50": 452,
+   "n": 3
+  },
+  "tomcat.connectionCount": {
+   "max": 502,
+   "avg": 335.333,
+   "p50": 502,
+   "n": 3
+  },
+  "jvm.ProcessCpuLoad": {
+   "max": 0.625,
+   "avg": 0.267,
+   "p50": 0.1625,
+   "n": 3
+  },
+  "jvm.SystemCpuLoad": {
+   "max": 0.62865844525,
+   "avg": 0.268,
+   "p50": 0.16173135925,
+   "n": 3
+  },
+  "threads.ThreadCount": {
+   "max": 484,
+   "avg": 368.333,
+   "p50": 484,
+   "n": 3
+  },
+  "mysql.Threads_running": {
+   "max": 20,
+   "avg": 8.0,
+   "p50": 2,
+   "n": 3
+  },
+  "mysql.Threads_connected": {
+   "max": 22,
+   "avg": 18.667,
+   "p50": 22,
+   "n": 3
+  },
+  "mysql.Innodb_row_lock_current_waits": {
+   "max": 18,
+   "avg": 6.0,
+   "p50": 0,
+   "n": 3
+  },
+  "sample_errors": 0,
+  "druid.NotEmptyWaitCount.delta": 827,
+  "druid.NotEmptyWaitMillis.delta": 365156,
+  "druid.ActivePeak.end": 20
+ },
+ "reconcile": {
+  "violations": {
+   "排课占位等于有效预约人数": {
+    "count": 0,
+    "sample": []
+   },
+   "已预约人数不超过最大人数": {
+    "count": 0,
+    "sample": []
+   },
+   "同一会员同一排课至多一条有效记录": {
+    "count": 0,
+    "sample": []
+   },
+   "次数卡剩余次数非负": {
+    "count": 0,
+    "sample": []
+   },
+   "流水余额守恒": {
+    "count": 0,
+    "sample": []
+   },
+   "占位的次数卡预约恰有一条等额扣次流水": {
+    "count": 0,
+    "sample": []
+   },
+   "已取消且扣过次的预约已等额返次": {
+    "count": 0,
+    "sample": []
+   },
+   "每条预约至多一条返次流水": {
+    "count": 0,
+    "sample": []
+   },
+   "排队中与排队失败没有次数流水": {
+    "count": 0,
+    "sample": []
+   },
+   "次数卡余额等于初始次数加流水变动": {
+    "count": 0,
+    "sample": []
+   },
+   "有空位时不应仍有人排队": {
+    "count": 0,
+    "sample": []
+   },
+   "排队人数不超过上限": {
+    "count": 0,
+    "sample": []
+   }
+  },
+  "violation_total": 0,
+  "totals": {
+   "预约按状态": [
+    {
+     "status": 1,
+     "n": 20,
+     "persons": "20"
+    }
+   ],
+   "扣次流水": [
+    {
+     "change_type": 1,
+     "n": 20,
+     "times": "-20"
+    }
+   ],
+   "排课占位合计": [
+    {
+     "booked": "20"
+    }
+   ],
+   "场景B排课": [
+    {
+     "id": 9700009999,
+     "max_persons": 20,
+     "booked_persons": 20,
+     "reserved": 20
+    }
+   ]
+  }
+ }
+}

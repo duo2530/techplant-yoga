@@ -1,0 +1,155 @@
+{
+ "name": "C2/rate-0460",
+ "k6_exit": 0,
+ "env": {
+  "BASE_URL": "http://backend-cn-shanghai-yogalt.yogalt:8080",
+  "SCENARIO": "C",
+  "TOKENS_FILE": "/loadtest/data/tokens.json",
+  "SCHEDULE_BASE": 9700000000,
+  "SCHEDULE_COUNT": 400,
+  "B_SCHEDULE_ID": 9700009999,
+  "RATE": 460,
+  "DURATION": "2m",
+  "OFFSET": 204003
+ },
+ "started": 1794322395.241398,
+ "ended": 1794322528.5001354,
+ "k6": {
+  "http_reqs": 51629,
+  "qps": 397.14,
+  "iterations": 51629,
+  "dropped_iterations": 3571,
+  "p50_ms": 6096.57,
+  "p90_ms": 9999.39,
+  "p95_ms": 10000.22,
+  "p99_ms": 10000.81,
+  "max_ms": 10044.65,
+  "avg_ms": 5805.15,
+  "error_rate": 0.2110829185147882,
+  "errors": 10898,
+  "reserved": 40731,
+  "unexpected": 0,
+  "conflict_total": 0,
+  "conflicts": {},
+  "reserved_p95_ms": 9399.55,
+  "vus_max": 4436
+ },
+ "mysql_delta": {
+  "Innodb_row_lock_waits": 2721,
+  "Innodb_row_lock_time": 59688,
+  "Innodb_row_lock_time_max": 0,
+  "Com_commit": 51191,
+  "Com_rollback": 0,
+  "Innodb_rows_inserted": 102387,
+  "Innodb_rows_updated": 102385,
+  "Innodb_data_fsyncs": 128206,
+  "Innodb_os_log_fsyncs": 109654,
+  "row_lock_time_avg_ms_in_run": 21.94,
+  "Innodb_row_lock_time_max_global": 194
+ },
+ "Innodb_row_lock_time_avg_global": 29,
+ "monitor": {
+  "samples": 43,
+  "druid.ActiveCount": {
+   "max": 20,
+   "avg": 19.161,
+   "p50": 20,
+   "n": 31
+  },
+  "druid.WaitThreadCount": {
+   "max": 779,
+   "avg": 573.742,
+   "p50": 764,
+   "n": 31
+  },
+  "druid.PoolingCount": {
+   "max": 20,
+   "avg": 0.839,
+   "p50": 0,
+   "n": 31
+  },
+  "tomcat.currentThreadsBusy": {
+   "max": 800,
+   "avg": 657.814,
+   "p50": 800,
+   "n": 43
+  },
+  "tomcat.currentThreadCount": {
+   "max": 800,
+   "avg": 696.465,
+   "p50": 800,
+   "n": 43
+  },
+  "tomcat.connectionCount": {
+   "max": 5145,
+   "avg": 1974.116,
+   "p50": 1477,
+   "n": 43
+  },
+  "jvm.ProcessCpuLoad": {
+   "max": 0.91,
+   "avg": 0.81,
+   "p50": 0.82,
+   "n": 43
+  },
+  "jvm.SystemCpuLoad": {
+   "max": 0.9134614545,
+   "avg": 0.81,
+   "p50": 0.8206669374,
+   "n": 43
+  },
+  "threads.ThreadCount": {
+   "max": 832,
+   "avg": 728.767,
+   "p50": 832,
+   "n": 43
+  },
+  "mysql.Threads_running": {
+   "max": 20,
+   "avg": 7.326,
+   "p50": 7,
+   "n": 43
+  },
+  "mysql.Threads_connected": {
+   "max": 22,
+   "avg": 22.0,
+   "p50": 22,
+   "n": 43
+  },
+  "mysql.Innodb_row_lock_current_waits": {
+   "max": 2,
+   "avg": 0.419,
+   "p50": 0,
+   "n": 43
+  },
+  "sample_errors": 12,
+  "first_sample_error": {
+   "t": 1794322463.4743202,
+   "druid": {
+    "error": "HTTPConnectionPool(host='backend-cn-shanghai-yogalt.yogalt', port=8080): Read timed out. (read timeout=5)"
+   },
+   "tomcat": {
+    "currentThreadsBusy": 800,
+    "currentThreadCount": 800,
+    "maxThreads": 800,
+    "connectionCount": 2910
+   },
+   "jvm": {
+    "ProcessCpuLoad": 0.7911764705882353,
+    "SystemCpuLoad": 0.7916741124509804,
+    "AvailableProcessors": 2
+   },
+   "threads": {
+    "ThreadCount": 832
+   },
+   "mysql": {
+    "Innodb_row_lock_current_waits": 1,
+    "Threads_connected": 22,
+    "Threads_running": 8
+   }
+  },
+  "druid.NotEmptyWaitCount.delta": 102052,
+  "druid.NotEmptyWaitMillis.delta": 90853038,
+  "druid.ActivePeak.end": 20
+ }
+}

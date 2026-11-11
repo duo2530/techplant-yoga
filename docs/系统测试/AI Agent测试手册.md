@@ -60,6 +60,19 @@ mvn -f backend/pom.xml -pl ruoyi-yoga -am test '-Dtest=ReservationServiceImplTes
 
 将示例替换为实际受影响的测试类或方法。`surefire.failIfNoSpecifiedTests=false` 用于允许依赖模块没有匹配的测试；必须检查业务模块报告，确认指定用例确实执行，不能仅凭 Maven 成功退出判断通过。push 前的全量命令不使用 `-Dtest` 筛选。
 
+### 预约并发正确性测试
+
+[ReservationConcurrencyTest](../../backend/ruoyi-yoga/src/test/java/com/techplant/yoga/reservation/service/ReservationConcurrencyTest.java) 用多线程同时发起预约、排队与取消，每轮结束后按对账 SQL 校验名额、次数与流水。该类默认跳过，push 前的全量测试只把它计为 1 个跳过；修改预约、排课锁、会员卡扣返次或事务配置后手动执行：
+
+```powershell
+mvn -B -f backend/pom.xml -pl ruoyi-yoga -am test '-Dtest=ReservationConcurrencyTest' '-Dyoga.concurrency=true' -Dsurefire.failIfNoSpecifiedTests=false
+```
+
+- `yoga.concurrency=true` 启用并发测试，未传入时整个类跳过。
+- 混合场景每轮打印 `随机种子`，复现失败轮次时加 `-Dyoga.concurrency.seed=<种子>` 固定。
+- 六个场景各 10 轮，共 60 个用例，单次运行约 5 分钟。任一轮出现对账失败、死锁或锁等待超时等非业务异常即判失败，出现死锁时打印 InnoDB 最近一次死锁信息。
+- 输出末尾的 `[累计]` 行是各场景跨轮次的结果分布，用于前后对比；报告时给出 Surefire 计数和该分布。
+
 ### 配置与数据
 
 - 测试入口位于 `backend/ruoyi-yoga/src/test/`，公共装配位于 `common/testcontainers/`。

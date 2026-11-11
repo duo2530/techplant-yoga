@@ -1,0 +1,5 @@
+ARG BASE=mysql:8.0.29
+FROM ${BASE}
+COPY 01-ry.sql /docker-entrypoint-initdb.d/01-ry.sql
+COPY 02-quartz.sql /docker-entrypoint-initdb.d/02-quartz.sql
+COPY 03-yoga.sql /docker-entrypoint-initdb.d/03-yoga.sql
