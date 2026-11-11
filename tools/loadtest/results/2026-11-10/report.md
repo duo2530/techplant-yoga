@@ -34,7 +34,7 @@ A 和 B 全部达标。C 的拐点 420 QPS 是 A 目标的 4.2 倍。拐点之�
 | 目标库 | `mysql-cn-shanghai-yogalt.yogalt:3306/yoga`。hostname `yogalt-mysql-9ec264b0-…-jhxcg`，server_uuid `6ee40c88-dcfb-11f1-b4a6-00163e268ba8`。连接前已经由你确认，没有连接开发库或生产库 |
 | 数据 | 2500 个会员，每人一张 500 次的团课次数卡。场景 A/C 用 400 节排课，名额 2500；场景 B 用 1 节 20 人排课。请求的会员与排课组合互不重复，所以 A/C 不会产生 409 |
 
-压测结束后，4 个 SAE 应用都已停止，CLB `lb-uf66pyfc2edaoou7hjqfm` 和 ACL `acl-uf66nmzuupyk4irq0xx64` 都已删除。cleanup 输出中，剩余 CLB、EIP 和仍在运行的应用都为空。
+压测结束后，4 个 SAE 应用都已停止，压测用的公网 CLB 和 ACL 都已删除。cleanup 输出中，剩余 CLB、EIP 和仍在运行的应用都为空。
 
 ## 各轮明细
 
