@@ -1,0 +1,123 @@
+{
+  "_说明": "复制为 .local/sae.config.json 并填入尖括号内的值，供 ~/.claude/skills/sae-microservice-deploy/scripts/sae.py 读取；密码来自项目根 .env 的 YOGALT_MYSQL_PASSWORD 与 YOGALT_AGENT_TOKEN。",
+  "project_root": "../../..",
+  "region": "cn-shanghai",
+  "namespace": "<region>:<命名空间>",
+  "app_prefix": "yogalt-",
+  "network": {
+    "vpc": "<vpc-id>",
+    "vswitch": "<vsw-id>",
+    "security_group": "<sg-id>"
+  },
+  "registry": {
+    "push_host": "<ACR 公网域名>/<命名空间>",
+    "pull_host": "<ACR -vpc 域名>/<命名空间>",
+    "pull_secret_name": "<镜像拉取凭证>"
+  },
+  "config": {
+    "env_file": ".env",
+    "configmap_name": "yogalt-env",
+    "secret_name": "yogalt-secrets",
+    "secret_mount": "/etc/yogalt-secrets",
+    "configmap_fixed": {
+      "TZ": "Asia/Shanghai"
+    },
+    "secret_map": {
+      "mysql.root.password": "YOGALT_MYSQL_PASSWORD",
+      "spring.datasource.druid.master.password": "YOGALT_MYSQL_PASSWORD",
+      "agent.token": "YOGALT_AGENT_TOKEN"
+    }
+  },
+  "expose": {
+    "clb_name": "yogalt",
+    "acl_name": "yogalt-acl",
+    "ports": {
+      "loadgen": [
+        8000
+      ]
+    }
+  },
+  "defaults": {
+    "sae_version": "std",
+    "envs": {
+      "TZ": "Asia/Shanghai"
+    }
+  },
+  "apps": {
+    "mysql": {
+      "kind": "middleware",
+      "layer": 1,
+      "image": "yogalt:mysql-8.0.29-init",
+      "cpu": 2000,
+      "mem": 4096,
+      "ports": [
+        3306
+      ],
+      "live_delay": 300,
+      "secret": true,
+      "envs": {
+        "MYSQL_ROOT_PASSWORD_FILE": "/etc/yogalt-secrets/mysql.root.password",
+        "MYSQL_DATABASE": "yoga"
+      },
+      "command": "docker-entrypoint.sh",
+      "command_args": [
+        "mysqld",
+        "--character-set-server=utf8mb4",
+        "--collation-server=utf8mb4_general_ci",
+        "--innodb-buffer-pool-size=2G",
+        "--max-connections=500"
+      ]
+    },
+    "redis": {
+      "kind": "middleware",
+      "layer": 1,
+      "image": "default-images-house:redis-7.0.4",
+      "cpu": 1000,
+      "mem": 2048,
+      "ports": [
+        6379
+      ],
+      "live_delay": 60
+    },
+    "backend": {
+      "kind": "middleware",
+      "layer": 2,
+      "image": "yogalt:backend",
+      "cpu": 2000,
+      "mem": 4096,
+      "ports": [
+        8080,
+        8778
+      ],
+      "live_delay": 300,
+      "secret": true,
+      "envs": {
+        "SPRING_DATASOURCE_DRUID_MASTER_URL": "jdbc:mysql://{svc:mysql}:3306/yoga?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=true&serverTimezone=GMT%2B8",
+        "SPRING_CONFIG_IMPORT": "optional:configtree:/etc/yogalt-secrets/",
+        "SPRING_REDIS_HOST": "{svc:redis}",
+        "SPRING_DEVTOOLS_RESTART_ENABLED": "false",
+        "SERVER_TOMCAT_MBEANREGISTRY_ENABLED": "true",
+        "RUOYI_PROFILE": "/tmp/uploadPath"
+      }
+    },
+    "loadgen": {
+      "kind": "middleware",
+      "layer": 3,
+      "image": "yogalt:loadgen",
+      "cpu": 4000,
+      "mem": 8192,
+      "ports": [
+        8000
+      ],
+      "live_delay": 60,
+      "secret": true,
+      "envs": {
+        "LT_MYSQL_HOST": "{svc:mysql}",
+        "LT_MYSQL_PASSWORD_FILE": "/etc/yogalt-secrets/mysql.root.password",
+        "LT_AGENT_TOKEN_FILE": "/etc/yogalt-secrets/agent.token",
+        "LT_BASE_URL": "http://{svc:backend}:8080",
+        "LT_JOLOKIA_URL": "http://{svc:backend}:8778/jolokia"
+      }
+    }
+  }
+}

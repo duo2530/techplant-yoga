@@ -69,6 +69,18 @@ bash tools/formal/reservation/run.sh
 ```
 
 需要 Docker，约 1 分钟。模型只覆盖其范围内的交错，间隙锁与真实数据库行为仍以该并发测试为准；范围、已知发现与维护方法见该 skill。
+### 预约并发正确性测试
+
+[ReservationConcurrencyTest](../../backend/ruoyi-yoga/src/test/java/com/techplant/yoga/reservation/service/ReservationConcurrencyTest.java) 用多线程同时发起预约、排队与取消，每轮结束后按对账 SQL 校验名额、次数与流水。该类默认跳过，push 前的全量测试只把它计为 1 个跳过；修改预约、排课锁、会员卡扣返次或事务配置后手动执行：
+
+```powershell
+mvn -B -f backend/pom.xml -pl ruoyi-yoga -am test '-Dtest=ReservationConcurrencyTest' '-Dyoga.concurrency=true' -Dsurefire.failIfNoSpecifiedTests=false
+```
+
+- `yoga.concurrency=true` 启用并发测试，未传入时整个类跳过。
+- 混合场景每轮打印 `随机种子`，复现失败轮次时加 `-Dyoga.concurrency.seed=<种子>` 固定。
+- 六个场景各 10 轮，共 60 个用例，单次运行约 5 分钟。任一轮出现对账失败、死锁或锁等待超时等非业务异常即判失败，出现死锁时打印 InnoDB 最近一次死锁信息。
+- 输出末尾的 `[累计]` 行是各场景跨轮次的结果分布，用于前后对比；报告时给出 Surefire 计数和该分布。
 
 ### 配置与数据
 
