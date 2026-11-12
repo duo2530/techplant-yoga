@@ -50,6 +50,12 @@
             <version>1.6.2</version>
         </dependency>
 
+        <!-- 业务图片存储 -->
+        <dependency>
+            <groupId>com.aliyun.oss</groupId>
+            <artifactId>aliyun-sdk-oss</artifactId>
+        </dependency>
+
         <!-- 集成测试：Spring 测试上下文与 JUnit 5，不引入模拟对象库 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

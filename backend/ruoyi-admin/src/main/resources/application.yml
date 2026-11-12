@@ -113,6 +113,18 @@ sms:
     # 开发固定验证码：非空时统一使用该码（6 位），便于本机联调；上线前置空即走随机 6 位数字
     fixedCode: 888888
 
+# 业务图片存储（阿里云 OSS）：门店图片、教练头像与相册、课程封面
+yoga:
+  oss:
+    # 后端访问 OSS 的节点；SAE 上通过环境变量 YOGA_OSS_ENDPOINT 改为内网节点
+    endpoint: oss-cn-shanghai.aliyuncs.com
+    bucket: techplant-yoga-images
+    # 图片公网地址前缀，库里保存 {public-base-url}/{对象键}
+    public-base-url: https://techplant-yoga-images.oss-cn-shanghai.aliyuncs.com
+    # 访问密钥只从环境变量或部署密钥读取；为空时应用照常启动，上传返回「图片存储未配置」
+    access-key-id: ${YOGA_OSS_ACCESS_KEY_ID:}
+    access-key-secret: ${YOGA_OSS_ACCESS_KEY_SECRET:}
+
 # MyBatis配置
 mybatis:
   # 搜索指定包别名（业务模块的 domain 包也要进来，MyBatis-Plus 实体同样注册别名）
