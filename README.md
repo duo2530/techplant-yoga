@@ -113,9 +113,9 @@ techplant-yoga/
 | Maven | 3.3.9 及以上 |
 | MySQL | 5.7 / 8.0，字符集建议 `utf8mb4` |
 | Redis | 5.0 及以上，默认 `localhost:6379`、无密码 |
-| Node.js | 18 及以上（管理端使用 Vite 6） |
-| HBuilderX | 最新稳定版，用于编译用户端小程序 |
-| 微信开发者工具 | 最新稳定版，并在「设置 → 安全设置」中开启服务端口 |
+| Node.js | 管理端需 18 及以上（Vite 6）；用户端 npm 命令需 20.19 及以上 |
+| HBuilderX | 可选：使用 IDE 方式编译用户端小程序时需要；npm CLI 方式不依赖 HBuilderX |
+| 微信开发者工具 | 调试微信小程序时需要；使用 HBuilderX 联动时在「设置 → 安全设置」中开启服务端口 |
 
 **用 Docker 启动 MySQL 与 Redis（可选）**：仓库根目录的 `docker-compose.yml` 提供与 `application*.yml` 默认值一致的 MySQL 8.0（`root`／`123456`，库名 `yoga`）和 Redis 7，首次启动会按顺序自动导入下面三个 SQL 脚本，可跳过第 1 步：
 
