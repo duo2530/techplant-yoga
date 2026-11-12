@@ -4,7 +4,7 @@
 
 瑜伽普拉提预约与运营管理项目，包含管理端、用户端小程序、Java 后端和项目设计文档。
 
-项目当前以 MVP 和可验收的业务垂直切片为主，已落地课程、教练、门店等基础业务模块，并持续补充排班、预约等业务能力。
+项目当前以 MVP 和可验收的业务垂直切片为主，已落地门店、教室、教练、课程、排课、会员、会员卡和预约等业务模块。
 
 ## 项目组成
 
@@ -49,7 +49,7 @@
 - 微信小程序
 - HBuilderX
 
-用户端页面只依赖 `api` 层：门店与排课已经接真实后端（`frontend/uni-app/api/store.js`、`api/schedule.js` → `GET /api/stores`、`GET /api/schedules`），其余业务域仍是 mock 数据。接入真实后端时，按同样方式替换 `frontend/uni-app/api` 下对应业务接口即可。
+用户端页面只依赖 `api` 层：门店、排课、教练、预约、账号登录和会员卡列表已经接真实后端（`frontend/uni-app/api/store.js`、`schedule.js`、`coach.js`、`booking.js`、`auth.js`，以及 `member.js` 中的 `GET /api/member-cards`），课程、首页、活动、消息、体验课和会员中心其余数据仍是 mock。接入真实后端时，按同样方式替换 `frontend/uni-app/api` 下对应业务接口即可。
 
 ## 项目结构
 
@@ -79,13 +79,12 @@ techplant-yoga/
 │     └─ static/         # 图片、字体和样式资源
 ├─ docs/
 │  ├─ 需求分析/          # 需求分析、用例总览与 9 条用例
-│  ├─ 需求文档/          # 业务规则（BR-*）、全局说明、功能清单汇总、业务流程图
+│  ├─ 需求文档/          # 全局说明、功能清单汇总、业务流程图、状态流转图
 │  │  ├─ 管理端/         # 管理端功能清单、页面结构图与管理端原型
 │  │  └─ 用户端/         # 用户端功能清单、结构图与高保真原型
 │  ├─ 产品分析/          # 真实 App 实测截图、页面与对象、页面与跳转梳理
 │  ├─ 概要设计/          # 概要设计
-│  ├─ 详细设计/          # 详细设计总览与各模块详细设计
-│  ├─ 项目管理/          # 一期开发路线图、活动清单、二期方案
+│  ├─ 详细设计/          # 各模块详细设计
 │  ├─ 编码开发/          # 项目基础设施、AI Agent 开发手册
 │  └─ 模板/              # 各类文档模板
 ├─ .gitignore
@@ -134,7 +133,7 @@ docker compose down -v        # 停止并删除数据卷，下次启动重新初
 | --- | --- | --- |
 | 1 | `backend/sql/ry_20260417.sql` | 若依基础表与种子数据（`sys_user` 含 `admin` 账号、`sys_menu`、字典等） |
 | 2 | `backend/sql/quartz.sql` | Quartz 定时任务表（`QRTZ_*`） |
-| 3 | `backend/sql/yoga.sql` | 瑜伽业务表（`t_store`、`t_classroom`、`t_coach`、`t_course`、`t_schedule`）+ 业务菜单（2001~2005，二期预留 2006~2009）+ `store_region` 区域字典 + 示例数据 |
+| 3 | `backend/sql/yoga.sql` | 10 张瑜伽业务表（`t_store`、`t_store_no_counter`、`t_classroom`、`t_coach`、`t_course`、`t_schedule`、`t_member`、`t_member_card`、`t_reservation`、`t_member_card_transaction`）+ 业务菜单（2001~2008）+ `store_region` 区域字典、`member_level` 会员等级字典 + 定时任务 + 示例数据 |
 
 `ry_20260417.sql` 和 `quartz.sql` 里**没有 `CREATE DATABASE` 和 `use` 语句**，所以要自己先建库再导入。库名默认用 `yoga`，与 `application-druid.yml` 保持一致：
 
@@ -168,11 +167,11 @@ source backend/sql/yoga.sql;
 ```sql
 USE yoga;
 SELECT COUNT(*) FROM sys_user;                                  -- 应至少有 admin 账号
-SELECT menu_name FROM sys_menu WHERE menu_id BETWEEN 2000 AND 2005;   -- 应返回「经营基础」与 5 个业务菜单
-SELECT COUNT(*) FROM t_store;                                   -- 5 张业务表已建好
+SELECT menu_name FROM sys_menu WHERE menu_id BETWEEN 2000 AND 2008;   -- 应返回「经营基础」与 8 个业务菜单
+SELECT COUNT(*) FROM t_store;                                   -- 10 张业务表已建好
 ```
 
-`yoga.sql` 可以重复执行：业务表都是 `DROP TABLE IF EXISTS` 后重建，菜单只清理并重写 2000~2009（2006~2009 为二期预留），不影响若依自带的「系统管理」菜单；但**重建业务表会清空业务数据**。
+`yoga.sql` 可以重复执行：业务表都是 `DROP TABLE IF EXISTS` 后重建，菜单清理 2000~2010 后重写 2000~2008，不影响若依自带的「系统管理」菜单；但**重建业务表会清空业务数据**。
 
 ### 2. 修改后端配置文件
 
@@ -233,7 +232,7 @@ npm run dev
 - 开发端口是 **80**，访问地址为 `http://localhost`；若提示端口占用或需要权限，临时改 `frontend/pc/vite.config.js` 的 `server.port`。
 - 开发环境接口通过 `/dev-api` 代理到 `http://localhost:8080`，后端换个地址就改 `frontend/pc/vite.config.js` 顶部的 `baseUrl`。
 - 打开管理端后，输入用户名 **`admin`**、密码 **`admin123`** 登录（验证码是数学计算题，按提示填写结果）。
-- 登录成功后，左侧菜单「经营基础」下应能看到门店管理、教室管理、教练管理、课程管理、排课管理；如果菜单为空，说明 `yoga.sql` 的菜单数据没导入成功或未重新登录。
+- 登录成功后，左侧菜单「经营基础」下应能看到门店管理、教室管理、教练管理、课程管理、排课管理、会员管理、会员卡管理、预约管理；如果菜单为空，说明 `yoga.sql` 的菜单数据没导入成功或未重新登录。
 - 只改前端不启后端也能打开登录页，但登录会失败，所以请先完成第 3 步。
 
 ### 5. 运行用户端小程序
@@ -259,7 +258,7 @@ H5 默认地址为 `http://localhost:9090`。微信开发者工具导入 `dist/d
 3. **准备微信开发者工具**：先在 HBuilderX「工具 → 设置 → 运行配置」里把「微信开发者工具路径」指向本机安装目录，并确认微信开发者工具「设置 → 安全设置 → 服务端口」处于打开状态，否则 HBuilderX 无法把编译结果推给它。
 4. **运行到小程序**：回到 HBuilderX，点击**左上角的「运行」→「运行到小程序模拟器」→「微信开发者工具」**，等待首次编译完成（第一次会慢一些），微信开发者工具会自动打开并加载小程序。
 5. 开发阶段建议在微信开发者工具「详情 → 本地设置」里勾选「不校验合法域名」。
-6. 用户端目前是「部分接后端、部分 mock」的状态：门店与排课走真实接口（`/api/stores`、`/api/schedules`，地址取 `frontend/uni-app/config.js` 里的 `baseUrl`，默认 `http://localhost:8080`），其余业务域仍是 mock 数据。因此想让首页门店、约课页有真实数据，请先完成第 3 步把后端启动起来；后端未启动时这些页面只会显示空态。
+6. 用户端目前是「部分接后端、部分 mock」的状态：门店、排课、教练、预约、账号登录和会员卡列表走真实接口（`/api/stores`、`/api/schedules`、`/api/coaches`、`/api/reservations`、`/api/auth`、`/api/member-cards`，地址取 `frontend/uni-app/config.js` 里的 `baseUrl`，默认 `http://localhost:8080`），其余业务域仍是 mock 数据。因此想让首页门店、约课页、我的预约有真实数据，请先完成第 3 步把后端启动起来；后端未启动时这些页面只会显示空态。
 7. 只想快速看页面时，也可以「运行 → 运行到浏览器」，H5 端口默认 `9090`。
 
 > 改过 `manifest.json` / `pages.json` 后需要重新编译，个别情况要重启微信开发者工具。
@@ -268,12 +267,12 @@ H5 默认地址为 `http://localhost:9090`。微信开发者工具导入 `dist/d
 
 | 检查项 | 期望结果 |
 | --- | --- |
-| 数据库 | `yoga` 库中存在 `sys_*`、`QRTZ_*` 与 `t_store` 等 5 张业务表 |
+| 数据库 | `yoga` 库中存在 `sys_*`、`QRTZ_*` 与 `t_store` 等 10 张业务表 |
 | 后端 | 日志出现「若依启动成功」，`http://localhost:8080` 可访问 |
 | 管理端 | `npm install` 与 `npm run dev` 无报错，`http://localhost` 能打开登录页 |
-| 登录 | `admin / admin123` 登录成功，能看到「经营基础」下的 5 个业务菜单 |
-| 业务页面 | 门店/教室/教练/课程/排课页面能正常分页查询、新增和修改 |
-| 用户端 | HBuilderX 编译无报错，微信开发者工具中能看到 4 个 tabBar 页面 |
+| 登录 | `admin / admin123` 登录成功，能看到「经营基础」下的 8 个业务菜单 |
+| 业务页面 | 门店/教室/教练/课程/排课/会员/会员卡/预约页面能正常分页查询，并按页面功能新增和修改 |
+| 用户端 | `npm run dev:h5`、`npm run build:mp-weixin` 或 HBuilderX 编译无报错，微信开发者工具中能看到 4 个 tabBar 页面 |
 
 ### 常见问题
 
@@ -351,12 +350,10 @@ npm run build:prod
 
 | 内容 | 唯一出处 | 其它文档怎么写 |
 | --- | --- | --- |
-| 业务口径 | `docs/需求文档/业务规则.md`（`BR-*`） | **只引用编号，不复制条文** |
-| 一期功能范围与优先级 | `docs/需求文档/功能清单汇总.md`（`F-*`，一期 51 项） | 只引用 `F-*` 编号 |
+| 功能范围与分期 | `docs/需求文档/功能清单汇总.md`（按「版本」列分期：v1.0 一期、v2.0 二期、v3.0 三期） | 引用模块与功能名，不复制功能清单 |
 | 用户端界面与跳转 | `docs/产品分析/用户端页面与跳转梳理.md`（P/T/C 编号） | 只引用编号 |
 | 用户端接口契约 | `docs/详细设计/用户端接口详细设计.md` | 模块详细设计只写管理端接口，用户端接口在此定义一次 |
-| 全局技术约定 | `backend/AGENTS.md`、`frontend/uni-app/AGENTS.md` | `docs/详细设计/详细设计总览.md` 只做索引，不另起一套 |
-| 设计决策登记 | `docs/详细设计/详细设计总览.md` §5 | 新决策追加编号，不改旧决策 |
+| 全局技术约定 | `backend/AGENTS.md`、`frontend/uni-app/AGENTS.md` | 只引用，不另起一套 |
 
 维护三条硬性要求：
 
