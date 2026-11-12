@@ -15,60 +15,39 @@
 
 ## 开发与推送时机
 
-- 每个功能实现或缺陷修复完成后，必须新增或更新对应的集成测试，并实际执行受影响的测试；涉及公共配置、身份隔离、事务或跨模块调用链时，同时运行相关回归测试。不得把测试编写和首次执行推迟到 push 前。
-- 涉及前端行为时，按本手册的前端测试策略补充并运行对应的 Playwright 端到端测试。
-- 对应测试通过后才可报告功能完成；失败时修复并重新执行。环境不可用时报告阻塞原因和未验证范围，不得报告已完成验证。
-- 每次 `git push` 前，由仓库的 [pre-push](../../.githooks/pre-push) 钩子重新执行全量后端集成测试，不按本次改动文件筛选，也不复用此前测试通过的结果；仅修改文档或前端时同样执行。
-- 本手册的“全量集成测试”指 `ruoyi-yoga` 中的全部后端集成测试及其 Maven 依赖模块测试，不包含 Playwright 端到端测试和真机验收。前端测试仍按改动范围执行。
+- 每个功能实现或缺陷修复都要新增或更新对应的后端集成测试；涉及公共配置、身份隔离、事务或跨模块调用链时，同时补充相关回归测试。
+- 后端集成测试只在 GitHub Actions 上执行，本地不运行。推送分支、创建 PR 后，以 PR 上的检查结果为准，用 `gh pr checks <PR号>` 查看。
+- 涉及前端行为时，按本手册的前端测试策略补充 Playwright 端到端测试，并在本地连接隔离后端运行。
+- 对应测试通过后才可报告功能完成；CI 失败时根据 Actions 日志和 Surefire 报告修复后重新推送。环境不可用时报告阻塞原因和未验证范围，不得报告已完成验证。
+- 本手册的“全量集成测试”指 `ruoyi-yoga` 中的全部后端集成测试及其 Maven 依赖模块测试，不包含 Playwright 端到端测试和真机验收。
 
-### push 前自动检查
+### CI 检查
 
-使用 Git `pre-push` 作为统一入口，终端、IDE 和 Agent 发起的正常 Git 推送共用同一检查。钩子启用方式见[开发手册](../编码开发/AI%20Agent开发手册.md)；新克隆需要单独启用。
+工作流定义在 [backend-integration-test.yml](../../.github/workflows/backend-integration-test.yml)，在推送到 `master` 和向 `master` 发起 PR 时触发，包含三个检查：
 
-钩子在仓库根目录执行以下命令，使用 `clean` 清除旧测试产物，并显式关闭跳过测试和忽略失败的选项：
+- `Detect backend changes`：判断本次改动是否影响后端测试，范围包括后端源码、POM、SQL、`docker-compose.yml`、工作流本身和 Java 格式配置。
+- `Run backend integration tests`：受影响时由 Testcontainers 启动 MySQL 8 与 Redis 7，执行全量集成测试，Surefire 报告作为 `backend-test-reports` 产物保留 14 天。仅修改文档或前端时跳过。
+- `CI Gate`：需要测试时要求测试通过，无需测试时要求测试被跳过，作为合并前的统一检查。
 
-```powershell
-mvn -B -f backend/pom.xml -pl ruoyi-yoga -am clean test -DskipTests=false -Dmaven.test.skip=false -Dmaven.test.failure.ignore=false
-```
-
-Maven、JDK 或 Docker 不可用、测试失败或构建失败时，钩子以非零退出码阻止推送；修复后重新 push 会重新执行全量测试。测试命令不接收 Git 传给钩子的标准输入。
-
-钩子验证的是当前工作区。推送前应提交或清理相关改动，并推送当前检出的提交；推送其他提交时，应先检出该提交再执行验证，避免把工作区测试结果当成其他提交的验证结果。
-
-本地 Git hook 可被 `--no-verify` 或修改 Git 配置绕过，不能充当服务端强制门禁。项目约定不绕过检查；若需强制所有推送或合并均通过验证，应在 CI 和分支保护中增加相同检查。
+`ReservationConcurrencyTest` 默认不执行；需要时在 Actions 页面手动触发该工作流并勾选 `run_concurrency_tests`。
+需要强制所有合并都通过检查时，在分支保护中把 `CI Gate` 设为必需检查。
 
 ## 后端集成测试
 
 ### 环境与运行
 
-需要 JDK 8、Maven 和可用的 Docker。依赖版本以 [父 POM](../../backend/pom.xml) 为准，容器镜像与启动配置以 [YogaMySqlContainer](../../backend/ruoyi-yoga/src/test/java/com/techplant/yoga/common/testcontainers/YogaMySqlContainer.java) 为准。
+CI 使用 JDK 8、Maven 和 Docker。依赖版本以 [父 POM](../../backend/pom.xml) 为准，容器镜像与启动配置以 [YogaMySqlContainer](../../backend/ruoyi-yoga/src/test/java/com/techplant/yoga/common/testcontainers/YogaMySqlContainer.java) 为准。CI 在 `backend` 目录执行：
 
-在仓库根目录执行：
-
-```powershell
-mvn -f backend/pom.xml -pl ruoyi-yoga -am test
+```bash
+mvn -B -ntp -pl ruoyi-yoga -am -DfailIfNoTests=false test
 ```
 
-删除或重命名测试、调整测试资源后，使用 `clean test` 排除旧产物影响。测试报告位于 `backend/ruoyi-yoga/target/surefire-reports/`，确认实际执行的用例、失败和跳过情况。
-
-功能完成后可指定对应的测试类或方法，例如：
-
-```powershell
-mvn -f backend/pom.xml -pl ruoyi-yoga -am test '-Dtest=ReservationServiceImplTest,ReservationControllerTest' -Dsurefire.failIfNoSpecifiedTests=false
-mvn -f backend/pom.xml -pl ruoyi-yoga -am test '-Dtest=ReservationServiceImplTest#方法名' -Dsurefire.failIfNoSpecifiedTests=false
-```
-
-将示例替换为实际受影响的测试类或方法。`surefire.failIfNoSpecifiedTests=false` 用于允许依赖模块没有匹配的测试；必须检查业务模块报告，确认指定用例确实执行，不能仅凭 Maven 成功退出判断通过。push 前的全量命令不使用 `-Dtest` 筛选。
+失败时下载 `backend-test-reports` 产物，确认实际执行的用例、失败和跳过情况，不能仅凭检查状态判断哪些用例执行过。
 
 ### 预约并发正确性测试
 
-[ReservationConcurrencyTest](../../backend/ruoyi-yoga/src/test/java/com/techplant/yoga/reservation/service/ReservationConcurrencyTest.java) 用多线程同时发起预约、排队与取消，每轮结束后按对账 SQL 校验名额、次数与流水。该类默认跳过，push 前的全量测试只把它计为 1 个跳过；修改预约、排课锁、会员卡扣返次或事务配置后手动执行：
+[ReservationConcurrencyTest](../../backend/ruoyi-yoga/src/test/java/com/techplant/yoga/reservation/service/ReservationConcurrencyTest.java) 用多线程同时发起预约、排队与取消，每轮结束后按对账 SQL 校验名额、次数与流水。该类默认跳过，全量测试只把它计为 1 个跳过；修改预约、排课锁、会员卡扣返次或事务配置后，在 Actions 页面手动触发工作流并勾选 `run_concurrency_tests`，CI 会追加 `-Dyoga.concurrency=true` 执行。
 
-```powershell
-mvn -B -f backend/pom.xml -pl ruoyi-yoga -am test '-Dtest=ReservationConcurrencyTest' '-Dyoga.concurrency=true' -Dsurefire.failIfNoSpecifiedTests=false
-```
-
-- `yoga.concurrency=true` 启用并发测试，未传入时整个类跳过。
 - 混合场景每轮打印 `随机种子`，复现失败轮次时加 `-Dyoga.concurrency.seed=<种子>` 固定。
 - 六个场景各 10 轮，共 60 个用例，单次运行约 5 分钟。任一轮出现对账失败、死锁或锁等待超时等非业务异常即判失败，出现死锁时打印 InnoDB 最近一次死锁信息。
 - 输出末尾的 `[累计]` 行是各场景跨轮次的结果分布，用于前后对比；报告时给出 Surefire 计数和该分布。
@@ -84,7 +63,7 @@ mvn -B -f backend/pom.xml -pl ruoyi-yoga -am test '-Dtest=ReservationConcurrency
 
 - 数据与业务：MyBatis 装配、教练／会员／排课数据访问、会员／会员卡／预约 HTTP 接口及预约事务。
 - 接口与身份：真实安全链下的管理端／会员身份隔离、公开 GET 白名单，以及参数绑定、请求体校验和服务端配置异常。教练等级维护覆盖普通管理员可操作、游客和会员不可操作。
-- 图片上传：`/admin/images` 的认证隔离与大小、格式、文件头校验，见 [ImageUploadHttpTest](../../backend/ruoyi-yoga/src/test/java/com/techplant/yoga/image/controller/ImageUploadHttpTest.java)。设置 `YOGA_OSS_ACCESS_KEY_ID`／`YOGA_OSS_ACCESS_KEY_SECRET` 后真实上传到 OSS、匿名读回并删除对象；未设置时该用例跳过，改为验证「图片存储未配置」。
+- 图片上传：`/admin/images` 的认证隔离与大小、格式、文件头校验，见 [ImageUploadHttpTest](../../backend/ruoyi-yoga/src/test/java/com/techplant/yoga/image/controller/ImageUploadHttpTest.java)。设置 `YOGA_OSS_ACCESS_KEY_ID`／`YOGA_OSS_ACCESS_KEY_SECRET` 后真实上传到 OSS、匿名读回并删除对象；未设置时该用例跳过，改为验证「图片存储未配置」。CI 未配置这两个变量，只覆盖未配置分支。
 - 数据库初始化：`yoga.sql` 首次导入与重复重建、教练等级默认值、种子排课关联及业务菜单绑定，见 [SqlInitializationTest](../../backend/ruoyi-yoga/src/test/java/com/techplant/yoga/common/sql/SqlInitializationTest.java)。
 
 预约并发与故障回滚的用例映射及未覆盖项见[预约并发与事务核对](预约并发与事务核对.md)。相关改动应补充测试或报告验证缺口。
