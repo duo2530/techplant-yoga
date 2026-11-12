@@ -64,7 +64,6 @@ jobs:
       id-token: write
     env:
       ACR_INSTANCE_ID: ${{ vars.ACR_INSTANCE_ID }}
-      SAE_PC_URL: ${{ vars.SAE_PC_URL }}
     steps:
       - uses: actions/checkout@v4
         with:

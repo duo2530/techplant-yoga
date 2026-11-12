@@ -69,6 +69,49 @@ ensure_running() {
   die "$app has no running instance"
 }
 
+publish_management_url() {
+  local app_id=${app_ids[web-pc]} binding order_id attempt address listener scheme port url
+  binding=$(sae DescribeApplicationSlbs --AppId "$app_id")
+  if jq -e '.InternetSlbExpired == true' <<< "$binding" >/dev/null; then
+    die "管理端的公网 CLB 已失效，请先在 SAE 解除旧绑定再重试"
+  fi
+  if ! jq -e '(.InternetSlbId // "") != ""' <<< "$binding" >/dev/null; then
+    order_id=$(sae BindSlb --AppId "$app_id" --InternetSlbChargeType PayByCLCU \
+      --Internet '[{"port":80,"targetPort":80,"protocol":"TCP"}]' | jq -er '.ChangeOrderId')
+    wait_order web-pc "$order_id"
+    for ((attempt = 0; attempt < 12; attempt++)); do
+      binding=$(sae DescribeApplicationSlbs --AppId "$app_id")
+      if jq -e '(.InternetIp // "") != "" and (.Internet | length) > 0' <<< "$binding" >/dev/null; then
+        break
+      fi
+      sleep 5
+    done
+  fi
+
+  address=$(jq -er '.InternetIp | select(type == "string" and length > 0)' <<< "$binding") \
+    || die "SAE 尚未返回管理端的公网 IP"
+  listener=$(jq -er '
+    [(.Internet // [])[] | select(.TargetPort == 80) | select(.Protocol | IN("TCP", "HTTP", "HTTPS"))]
+    | sort_by(.Port != 80, .Port) | first | select(. != null)
+    | [(.Protocol | if . == "HTTPS" then "https" else "http" end), .Port] | @tsv
+  ' <<< "$binding") || die "公网 CLB 缺少转发到管理端容器端口 80 的监听"
+  IFS=$'\t' read -r scheme port <<< "$listener"
+  local host=$address
+  if [[ $address == *:* ]]; then
+    host="[$address]"
+  fi
+  url="$scheme://$host:$port"
+
+  curl --fail --silent --show-error --retry 8 --retry-all-errors --max-time 15 -o /dev/null "$url/login"
+  curl --fail --silent --show-error --retry 8 --retry-all-errors --max-time 15 "$url/prod-api/captchaImage" \
+    | jq -e '.code == 200' >/dev/null
+  printf '管理端登录地址 %s/login\n' "$url"
+  if [[ -n ${GITHUB_STEP_SUMMARY:-} ]]; then
+    printf '\n### 公网访问\n\n[打开管理端登录页](%s/login)\n\n公网 IP `%s` · CLB `%s`\n' \
+      "$url" "$address" "$(jq -r '.InternetSlbId' <<< "$binding")" >> "$GITHUB_STEP_SUMMARY"
+  fi
+}
+
 apps=$(sae ListApplications --RegionId "$region" --NamespaceId "$namespace" \
   --FieldType appName --FieldValue "$prefix" --CurrentPage 1 --PageSize 50)
 for app in "${services[@]}"; do
@@ -129,10 +172,4 @@ for app in "${release_apps[@]}"; do
   fi
 done
 
-if [[ -n ${SAE_PC_URL:-} ]]; then
-  pc_url=${SAE_PC_URL%/}
-  curl --fail --silent --show-error --retry 8 --max-time 15 -o /dev/null "$pc_url/login"
-  curl --fail --silent --show-error --retry 8 --max-time 15 "$pc_url/prod-api/captchaImage" \
-    | jq -e '.code == 200' >/dev/null
-  echo "管理端登录页及验证码接口检查通过"
-fi
+publish_management_url
