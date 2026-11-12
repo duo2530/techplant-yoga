@@ -3,7 +3,8 @@ set -euo pipefail
 
 config=.claude/skills/yoga-cloud-deploy/config/sae.config.json
 images_dir=${1:?Missing image artifact directory}
-: "${ACR_INSTANCE_ID:?Set the sae environment variable ACR_INSTANCE_ID}"
+: "${ACR_USERNAME:?Set the sae environment secret ACR_USERNAME}"
+: "${ACR_PASSWORD:?Set the sae environment secret ACR_PASSWORD}"
 : "${GITHUB_SHA:?}" "${GITHUB_RUN_ID:?}" "${GITHUB_RUN_ATTEMPT:?}"
 
 region=$(jq -er '.region' "$config")
@@ -124,11 +125,8 @@ for app in "${services[@]}"; do
     <<< "$status" >/dev/null || die "$name has a change in progress or an unknown state"
 done
 
-auth=$(aliyun cr GetAuthorizationToken --region "$region" --InstanceId "$ACR_INSTANCE_ID")
-jq -e '.IsSuccess == true' <<< "$auth" >/dev/null || die "ACR rejected the login request"
-user=$(jq -er '.TempUsername' <<< "$auth")
-jq -er '.AuthorizationToken' <<< "$auth" | docker login "$registry" --username "$user" --password-stdin
-unset auth
+printf '%s' "$ACR_PASSWORD" | docker login "$registry" --username "$ACR_USERNAME" --password-stdin
+unset ACR_PASSWORD ACR_USERNAME
 trap 'docker logout "$registry" >/dev/null' EXIT
 
 for app in "${release_apps[@]}"; do
@@ -160,7 +158,7 @@ ensure_running redis
 
 for app in "${release_apps[@]}"; do
   args=(DeployApplication --AppId "${app_ids[$app]}" --ImageUrl "${image_urls[$app]}"
-    --AcrInstanceId "$ACR_INSTANCE_ID" --ChangeOrderDesc "GitHub $release_tag")
+    --ChangeOrderDesc "GitHub $release_tag")
   if [[ -n ${pull_secrets[$app]} ]]; then
     args+=(--ImagePullSecrets "${pull_secrets[$app]}")
   fi

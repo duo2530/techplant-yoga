@@ -62,9 +62,25 @@ jobs:
     permissions:
       contents: read
       id-token: write
-    env:
-      ACR_INSTANCE_ID: ${{ vars.ACR_INSTANCE_ID }}
     steps:
+      - name: Check SAE environment configuration
+        env:
+          ALIYUN_OIDC_PROVIDER_ARN: ${{ vars.ALIYUN_OIDC_PROVIDER_ARN }}
+          ALIYUN_ROLE_ARN: ${{ vars.ALIYUN_ROLE_ARN }}
+          ACR_USERNAME: ${{ secrets.ACR_USERNAME }}
+          ACR_PASSWORD: ${{ secrets.ACR_PASSWORD }}
+        run: |
+          missing=()
+          for name in ALIYUN_OIDC_PROVIDER_ARN ALIYUN_ROLE_ARN ACR_USERNAME ACR_PASSWORD; do
+            if [[ -z ${!name} ]]; then
+              missing+=("$name")
+            fi
+          done
+          if (( ${#missing[@]} )); then
+            echo "::error::Configure the following in Settings > Environments > sae: ${missing[*]}"
+            exit 1
+          fi
+
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
@@ -86,4 +102,7 @@ jobs:
           role-session-expiration: '3600'
 
       - name: Publish images and deploy
+        env:
+          ACR_USERNAME: ${{ secrets.ACR_USERNAME }}
+          ACR_PASSWORD: ${{ secrets.ACR_PASSWORD }}
         run: bash tools/sae/deploy.sh images
