@@ -84,6 +84,7 @@ mvn -B -f backend/pom.xml -pl ruoyi-yoga -am test '-Dtest=ReservationConcurrency
 
 - 数据与业务：MyBatis 装配、教练／会员／排课数据访问、会员／会员卡／预约 HTTP 接口及预约事务。
 - 接口与身份：真实安全链下的管理端／会员身份隔离、公开 GET 白名单，以及参数绑定、请求体校验和服务端配置异常。教练等级维护覆盖普通管理员可操作、游客和会员不可操作。
+- 图片上传：`/admin/images` 的认证隔离与大小、格式、文件头校验，见 [ImageUploadHttpTest](../../backend/ruoyi-yoga/src/test/java/com/techplant/yoga/image/controller/ImageUploadHttpTest.java)。设置 `YOGA_OSS_ACCESS_KEY_ID`／`YOGA_OSS_ACCESS_KEY_SECRET` 后真实上传到 OSS、匿名读回并删除对象；未设置时该用例跳过，改为验证「图片存储未配置」。
 - 数据库初始化：`yoga.sql` 首次导入与重复重建、教练等级默认值、种子排课关联及业务菜单绑定，见 [SqlInitializationTest](../../backend/ruoyi-yoga/src/test/java/com/techplant/yoga/common/sql/SqlInitializationTest.java)。
 
 预约并发与故障回滚的用例映射及未覆盖项见[预约并发与事务核对](预约并发与事务核对.md)。相关改动应补充测试或报告验证缺口。

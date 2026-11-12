@@ -57,7 +57,7 @@ const props = defineProps({
   // 上传接口地址
   action: {
     type: String,
-    default: "/common/upload"
+    default: "/admin/images"
   },
   // 上传携带的参数
   data: {
@@ -173,7 +173,7 @@ function handleExceed() {
 // 上传成功回调
 function handleUploadSuccess(res, file) {
   if (res.code === 200) {
-    uploadList.value.push({ name: res.fileName, url: res.fileName })
+    uploadList.value.push({ name: res.url, url: res.url })
     uploadedSuccessfully()
   } else {
     number.value--

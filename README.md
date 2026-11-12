@@ -178,7 +178,7 @@ SELECT COUNT(*) FROM t_store;                                   -- 10 张业务�
 | 配置文件 | 需要修改的内容 |
 | --- | --- |
 | `backend/ruoyi-admin/src/main/resources/application-druid.yml` | `spring.datasource.druid.master.url`（默认 `jdbc:mysql://localhost:3306/yoga`）、`username`（默认 `root`）、`password`（默认 `123456`） |
-| `backend/ruoyi-admin/src/main/resources/application.yml` | `spring.redis.host / port / password`（默认 `localhost:6379`、空密码）、`server.port`（默认 `8080`）、`ruoyi.profile` 上传目录（默认 `D:/ruoyi/uploadPath`，Windows 下请确认该目录已存在） |
+| `backend/ruoyi-admin/src/main/resources/application.yml` | `spring.redis.host / port / password`（默认 `localhost:6379`、空密码）、`server.port`（默认 `8080`）、`ruoyi.profile` 上传目录（默认 `D:/ruoyi/uploadPath`，Windows 下请确认该目录已存在）、`yoga.oss` 业务图片存储（访问密钥从环境变量 `YOGA_OSS_ACCESS_KEY_ID`／`YOGA_OSS_ACCESS_KEY_SECRET` 读取，不配置时门店／教练／课程图片无法上传） |
 
 几点提示：
 
