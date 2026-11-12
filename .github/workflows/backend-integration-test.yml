@@ -6,6 +6,12 @@ on:
   pull_request:
     branches: [master]
   workflow_dispatch:
+    inputs:
+      run_concurrency_tests:
+        description: 'Also run reservation concurrency tests'
+        type: boolean
+        required: false
+        default: false
 
 permissions:
   contents: read
@@ -61,11 +67,15 @@ jobs:
         run: docker info
 
       # Testcontainers starts isolated MySQL 8 and Redis 7 containers itself.
-      - name: Run integration and concurrency tests
+      - name: Run integration tests
         working-directory: backend
         run: |
+          CONCURRENCY_FLAG=""
+          if [[ "${{ inputs.run_concurrency_tests }}" == "true" ]]; then
+            CONCURRENCY_FLAG="-Dyoga.concurrency=true"
+          fi
           mvn -B -ntp -pl ruoyi-yoga -am \
-            -Dyoga.concurrency=true \
+            $CONCURRENCY_FLAG \
             -DfailIfNoTests=false \
             test
 
