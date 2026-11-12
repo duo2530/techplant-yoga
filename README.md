@@ -32,10 +32,10 @@
 
 ### 运营管理端
 
-- Vue 3.5
-- Vite 6
-- Element Plus 2.13
-- Pinia 3
+- Vue 3.5.26
+- Vite 6.4.1
+- Element Plus 2.13.1
+- Pinia 3.0.4
 - Axios
 - Vue Router 4
 
@@ -282,7 +282,7 @@ H5 默认地址为 `http://localhost:9090`。微信开发者工具导入 `dist/d
 | 后端启动报数据库连接失败 | MySQL 未启动、库名/账号/密码不对，或 MySQL 8 的 SSL 参数问题（见第 2 步） |
 | 管理端登录报接口错误 / 404 | 后端未启动，或后端端口不是 `8080`（端口改了要同步改 `vite.config.js` 的 `baseUrl`） |
 | 登录后左侧没有业务菜单 | `backend/sql/yoga.sql` 未执行成功，或执行后未重新登录 |
-| `npm run dev` 启动失败 | Node.js 版本过低（需 18+），或 80 端口被占用（改 `server.port`） |
+| `npm run dev` 启动失败 | 检查子项目的 Node.js 要求（用户端需 >=20.19.0），或管理端 80 端口被占用（改 `server.port`） |
 | 微信开发者工具提示 AppID 无效 | 第 5 步的 AppID 还是占位值 `touristappid`，需替换成自己的 AppID |
 | 小程序接口请求失败 | 开发阶段勾选「不校验合法域名」，并确认后端已启动 |
 
