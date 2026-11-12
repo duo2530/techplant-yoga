@@ -30,8 +30,12 @@ FROM nginx:1.26-alpine AS nginx-runtime
 ENV NGINX_ENVSUBST_FILTER='^GATEWAY_UPSTREAM$'
 
 FROM nginx-runtime AS web-pc
+ARG H5_UPSTREAM
+ENV H5_UPSTREAM=${H5_UPSTREAM} NGINX_ENVSUBST_FILTER='^(GATEWAY_UPSTREAM|H5_UPSTREAM)$'
 COPY --from=build-web-pc /src/dist/ /usr/share/nginx/html/
 COPY .claude/skills/yoga-cloud-deploy/config/nginx/web-pc.conf.template /etc/nginx/templates/default.conf.template
+COPY tools/sae/h5-proxy.conf.template /etc/nginx/templates/h5-proxy.conf.template
+EXPOSE 8081
 
 FROM nginx-runtime AS web-h5
 COPY --from=build-web-h5 /src/dist/build/h5/ /usr/share/nginx/html/
