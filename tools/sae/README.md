@@ -1,19 +1,21 @@
 # 用 GitHub Actions 发布到 SAE
 
-工作流会从 `master` 当前提交构建后端、管理端和 H5 镜像，推送到现有 ACR 企业版仓库，更新 SAE 上的三个业务应用。发布使用仓库里已有的 [SAE 配置](../../.claude/skills/yoga-cloud-deploy/config/sae.config.json) 定位地域、命名空间和应用。MySQL 和 Redis 停机时会先启动，后续按后端、管理端、H5 的顺序发布。PR 检查只构建镜像和验证 Nginx 配置。
+工作流会从 `master` 当前提交构建后端、管理端和 H5 镜像，推送到现有 ACR 个人版仓库，更新 SAE 上的三个业务应用。发布使用仓库里已有的 [SAE 配置](../../.claude/skills/yoga-cloud-deploy/config/sae.config.json) 定位地域、命名空间和应用。MySQL 和 Redis 停机时会先启动，后续按后端、管理端、H5 的顺序发布。PR 检查只构建镜像和验证 Nginx 配置。
 
 ## 一次性配置 GitHub 与阿里云
 
 1. 在 GitHub 仓库的 **Settings → Environments** 创建 `sae`，部署分支限制为 `master`。
 2. 在阿里云 RAM 创建 GitHub OIDC 身份提供商和用于发布的角色。签发者为 `https://token.actions.githubusercontent.com`，受众为 `sts.aliyuncs.com`。角色信任策略用 `StringEquals` 匹配此仓库的 `sae` 环境 subject。使用不可变 subject 的仓库，格式是 `repo:<owner>@<owner_id>/<repo>@<repo_id>:environment:sae`。使用旧格式的仓库，格式是 `repo:<owner>/<repo>:environment:sae`。 [阿里云 RAM 角色配置](https://help.aliyun.com/zh/ram/user-guide/create-a-ram-role-for-a-trusted-idp) · [GitHub OIDC subject](https://docs.github.com/en/actions/reference/security/oidc)
-3. 角色需要 `cr:GetAuthorizationToken`，以及发布仓库的 `cr:PullRepository`、`cr:PushRepository`。SAE 权限需要 `sae:ListApplications`、`sae:DescribeApplicationConfig`、`sae:DescribeApplicationStatus`、`sae:DeployApplication`、`sae:DescribeChangeOrder`、`sae:StartApplication`、`sae:DescribeApplicationSlbs` 和 `sae:BindSlb`。GitHub 托管运行器需能连接 ACR 的公网推送地址，SAE 通过现有 VPC 拉取地址获取镜像。 [ACR 登录凭证](https://help.aliyun.com/zh/acr/user-guide/configure-access-credentials)
-4. 在 GitHub 的 `sae` 环境添加以下变量。
+3. OIDC 角色需要 `sae:ListApplications`、`sae:DescribeApplicationConfig`、`sae:DescribeApplicationStatus`、`sae:DeployApplication`、`sae:DescribeChangeOrder`、`sae:StartApplication`、`sae:DescribeApplicationSlbs` 和 `sae:BindSlb`。
+4. 在 ACR 个人版的 **仓库管理 → 访问凭证** 获取有镜像推送权限的仓库登录名和固定密码。GitHub 托管运行器使用此凭证连接 ACR 的公网推送地址，SAE 通过现有 VPC 拉取地址和镜像拉取凭证获取镜像。 [ACR 个人版推拉镜像](https://help.aliyun.com/zh/acr/user-guide/use-a-container-registry-personal-edition-instance-to-push-and-pull-images)
+5. 在 GitHub 的 `sae` 环境添加以下变量和密钥。
 
-| 变量 | 值 |
-| --- | --- |
-| `ALIYUN_OIDC_PROVIDER_ARN` | GitHub OIDC 身份提供商 ARN |
-| `ALIYUN_ROLE_ARN` | 发布角色 ARN |
-| `ACR_INSTANCE_ID` | 配置中推送仓库所属的 ACR 企业版实例 ID，格式为 `cri-…` |
+| 名称 | 类型 | 值 |
+| --- | --- | --- |
+| `ALIYUN_OIDC_PROVIDER_ARN` | Variable | GitHub OIDC 身份提供商 ARN |
+| `ALIYUN_ROLE_ARN` | Variable | 发布角色 ARN |
+| `ACR_USERNAME` | Secret | ACR 镜像仓库登录名 |
+| `ACR_PASSWORD` | Secret | ACR 镜像仓库固定密码 |
 
 ## 获取管理端的公网 IP
 
