@@ -1,0 +1,92 @@
+{
+  "_说明": "瑜伽项目 SAE 环境(cn-shanghai:yoga),由 ~/.claude/skills/sae-microservice-deploy/scripts/sae.py 读取。只放资源 ID 和非密钥配置,密码来自项目根 .env(已 gitignore)。VPC/交换机/安全组/NAS 与天机学堂共用,本项目只写 NAS 的 /yoga/* 子目录。",
+  "project_root": "../../../..",
+  "region": "cn-shanghai",
+  "namespace": "cn-shanghai:yoga",
+  "app_prefix": "yoga-",
+  "network": {
+    "vpc": "vpc-uf6di68weekxptacmx4gf",
+    "vswitch": "vsw-uf63gcgnayf8gy5ftty36",
+    "security_group": "sg-uf6g1yn7m43vnv5bzk4l"
+  },
+  "registry": {
+    "push_host": "crpi-eka315e4kto4gpp9.cn-shanghai.personal.cr.aliyuncs.com/default-images-space",
+    "pull_host": "crpi-eka315e4kto4gpp9-vpc.cn-shanghai.personal.cr.aliyuncs.com/default-images-space",
+    "pull_secret_name": "acr-personal-pull"
+  },
+  "nas": { "id": "031v1ru2rle6vnbjgge", "domain": "031v1ru2rle6vnbjgge-bxd4.cn-shanghai.nas.aliyuncs.com" },
+  "java_base": "eclipse-temurin:8-jre-jammy",
+  "web_base": "crpi-eka315e4kto4gpp9.cn-shanghai.personal.cr.aliyuncs.com/default-images-space/default-images-house:base-nginx-1.26-alpine",
+  "build_cmd": "mvn -q -DskipTests -f backend/pom.xml package",
+  "config": {
+    "env_file": ".env",
+    "configmap_name": "yoga-env",
+    "secret_name": "yoga-secrets",
+    "secret_mount": "/etc/yoga-secrets",
+    "configmap_fixed": { "TZ": "Asia/Shanghai" },
+    "secret_map": {
+      "mysql.root.password": "YOGA_MYSQL_ROOT_PASSWORD",
+      "spring.datasource.druid.master.password": "YOGA_MYSQL_ROOT_PASSWORD",
+      "redis.password": "YOGA_REDIS_PASSWORD",
+      "spring.redis.password": "YOGA_REDIS_PASSWORD",
+      "token.secret": "YOGA_TOKEN_SECRET"
+    },
+    "configmap_files": [
+      { "name": "yoga-mysql-conf", "files": [".claude/skills/yoga-cloud-deploy/config/mysql/yoga.cnf"] },
+      { "name": "yoga-mysql-init", "files": [
+        ".claude/skills/yoga-cloud-deploy/.generated/mysql-init/01-ry.sql",
+        ".claude/skills/yoga-cloud-deploy/.generated/mysql-init/02-quartz.sql",
+        ".claude/skills/yoga-cloud-deploy/.generated/mysql-init/03-yoga.sql"
+      ] },
+      { "name": "yoga-redis-conf", "files": [".claude/skills/yoga-cloud-deploy/config/redis/redis.conf"] }
+    ]
+  },
+  "defaults": { "sae_version": "std", "envs": { "TZ": "Asia/Shanghai" } },
+  "apps": {
+    "mysql": {
+      "kind": "middleware", "layer": 1, "image": "default-images-house:mysql-8.0.29", "cpu": 1000, "mem": 2048,
+      "ports": [3306], "live_delay": 300, "secret": true,
+      "envs": { "MYSQL_ROOT_PASSWORD_FILE": "/etc/yoga-secrets/mysql.root.password", "MYSQL_DATABASE": "yoga" },
+      "config_files": [
+        { "configmap": "yoga-mysql-conf", "mount": "/etc/mysql/conf.d" },
+        { "configmap": "yoga-mysql-init", "mount": "/docker-entrypoint-initdb.d" }
+      ],
+      "nas": { "path": "/yoga/mysql", "mount": "/var/lib/mysql", "owner": "999:999" }
+    },
+    "redis": {
+      "kind": "middleware", "layer": 1, "image": "default-images-house:redis-7.0.4", "cpu": 500, "mem": 1024,
+      "ports": [6379], "live_delay": 60, "secret": true,
+      "command": "sh",
+      "command_args": ["-c", "exec docker-entrypoint.sh redis-server /etc/redis/redis.conf --requirepass \"$(cat /etc/yoga-secrets/redis.password)\""],
+      "config_files": [{ "configmap": "yoga-redis-conf", "mount": "/etc/redis" }],
+      "nas": { "path": "/yoga/redis", "mount": "/data", "owner": "999:999" }
+    },
+    "backend": {
+      "kind": "java", "layer": 2, "image": "yoga:backend", "cpu": 1000, "mem": 2048,
+      "ports": [8080], "live_delay": 300, "secret": true,
+      "envs": {
+        "JAVA_OPTS": "-Duser.timezone=Asia/Shanghai -Dfile.encoding=UTF-8 -Dsun.stdout.encoding=UTF-8 -Xms512m -Xmx1200m -XX:MaxMetaspaceSize=384m",
+        "SPRING_CONFIG_IMPORT": "optional:configtree:/etc/yoga-secrets/",
+        "SPRING_DATASOURCE_DRUID_MASTER_URL": "jdbc:mysql://{svc:mysql}:3306/yoga?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=GMT%2B8",
+        "SPRING_DATASOURCE_DRUID_STATVIEWSERVLET_ENABLED": "false",
+        "SPRING_REDIS_HOST": "{svc:redis}",
+        "SPRING_DEVTOOLS_RESTART_ENABLED": "false",
+        "RUOYI_PROFILE": "/home/ruoyi/uploadPath"
+      },
+      "nas": { "path": "/yoga/upload", "mount": "/home/ruoyi/uploadPath", "owner": "0:0" },
+      "build": { "jar": "backend/ruoyi-admin/target/ruoyi-admin.jar" }
+    },
+    "web-pc": {
+      "kind": "web", "layer": 3, "image": "yoga:web-pc", "cpu": 500, "mem": 1024, "ports": [80], "live_delay": 30,
+      "envs": { "GATEWAY_UPSTREAM": "{svc_fqdn:backend}:8080" },
+      "build": { "dir": "frontend/pc", "cmd": "npm run build:prod", "dist": "dist",
+                 "nginx_template": ".claude/skills/yoga-cloud-deploy/config/nginx/web-pc.conf.template" }
+    },
+    "web-h5": {
+      "kind": "web", "layer": 3, "image": "yoga:web-h5", "cpu": 500, "mem": 1024, "ports": [80], "live_delay": 30,
+      "envs": { "GATEWAY_UPSTREAM": "{svc_fqdn:backend}:8080" },
+      "build": { "dir": "frontend/uni-app", "cmd": "npx cross-env UNI_INPUT_DIR=%CD% VITE_API_BASE_URL= uni build -p h5", "dist": "dist/build/h5",
+                 "nginx_template": ".claude/skills/yoga-cloud-deploy/config/nginx/web-h5.conf.template" }
+    }
+  }
+}
