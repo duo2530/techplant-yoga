@@ -1,5 +1,5 @@
 # 行政区划数据
 
-`china-area-data.json` 用于门店管理表单的省、市、区三级选择器，不作为业务数据表使用。
+`china-area-data.json` 当前未被任何源码引用；门店管理的所在区域使用字典 `store_region`（`useDict('store_region')`），不读取该文件。
 
-数据来源：`china-area-data` 5.0.1，许可证为 MIT。后续如果行政区划编码发生调整，需要同步更新该静态数据，并评估已保存门店的 code 是否需要迁移。
+数据来源：`china-area-data` 5.0.1，许可证为 MIT。后续如果重新启用该静态数据，需要先确认行政区划编码是否已调整。

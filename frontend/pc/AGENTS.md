@@ -4,7 +4,7 @@
 
 ## 1. 这是什么
 
-管理端 Web 应用，基于 **RuoYi-Vue3 3.9.2**。瑜伽业务页面位于 `src/views/`：`course`、`coach`、`store`、`schedule`、`classroom`、`member`、`membercard`、`reservation`，对应 `sys_menu` 2001~2008，路由前缀为 `/operation`。旧页 `views/booking` 无菜单入口，依赖的 `/admin/bookings` 已移除，不再维护。
+管理端 Web 应用，基于 **RuoYi-Vue3 3.9.2**。瑜伽业务页面位于 `src/views/`：`course`、`coach`、`store`、`schedule`、`classroom`、`member`、`membercard`、`reservation`，对应 `sys_menu` 2001~2008，路由前缀为 `/operation`。
 
 ## 2. 技术栈（已核对 package.json）
 
@@ -72,7 +72,7 @@ npm run preview
 
 - `vite.config.js` 第 55~59 行的 `^/v3/api-docs/(.*)` 代理是给 springdoc 留的，而后端用的是 **springfox**（`swagger.pathMapping=/dev-api`）。本地看接口文档直接开后端端口（`http://localhost:8080/swagger-ui/index.html`）。
 - dev 端口是 80：需要管理员权限或存在占用时，临时改 `vite.config.js` 的 `server.port`。
-- 首页 `src/views/index.vue`、登录页文案、`src/settings.js` 的 `footerContent`、`.env.*` 的 `VITE_APP_TITLE` 仍是"若依管理系统"，品牌化时统一替换。
+- `.env.*` 的 `VITE_APP_TITLE` 已改为"瑜伽约课管理"；首页 `src/views/index.vue` 与 `src/settings.js` 的 `footerContent` 仍是若依文案，品牌化时统一替换。
 - 根 `.gitignore` 只忽略 `docs/原型/_工具/{渲染,对比}`，`src/assets` 下的 png/svg 正常入库；新增静态资源直接提交即可。
 - `frontend/pc/.gitignore` 忽略了 `package-lock.json`（依赖版本靠 package.json 精确锁定）。
 
