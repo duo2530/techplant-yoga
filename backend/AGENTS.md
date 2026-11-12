@@ -22,7 +22,7 @@
 | `ruoyi-yoga/` | 本项目业务模块与公共业务基础设施 |
 | `ruoyi-quartz/` | 定时任务 |
 | `ruoyi-generator/` | 代码生成器与模板 |
-| `sql/` | 系统种子、任务和业务 SQL |
+| `sql/` | 系统种子、任务和业务 SQL；`sql/migrations/` 为已建库的增量脚本 |
 | `bin/`、`ry.bat`、`ry.sh` | 构建与启动脚本 |
 
 ## 业务与公共设施
@@ -33,7 +33,8 @@
 |---|---|
 | `store/`、`classroom/`、`coach/`、`course/`、`schedule/` | 门店、教室、教练、课程、排课 |
 | `member/` | 会员与用户端账号：`t_member`、会员 token 登录态（Redis 前缀 `member_tokens:`）、发码／注册／登录／忘记密码／退出（[用户端接口详细设计](../docs/详细设计/用户端接口详细设计.md) ）、管理端会员管理 `/admin/members`（建档／编辑／删除，[会员管理详细设计](../docs/详细设计/会员管理详细设计.md)） |
-| `booking/` | 既有预约代码；当前交付范围见详细设计 |
+| `reservation/` | 预约：`t_reservation`，管理端 `/admin/reservations`，用户端 `/api/reservations` |
+| `membercard/` | 会员卡：`t_member_card`、`t_member_card_transaction`，管理端 `/admin/member-cards`，用户端 `/api/member-cards` |
 | `common/config/` | ID 序列化、MyBatis-Plus 等配置 |
 | `common/mybatis/` | 审计字段填充 |
 | `common/log/` | 链路标识 |
@@ -51,4 +52,5 @@
 | `ruoyi-yoga/src/main/resources/mapper/` | 业务 Mapper XML |
 | `ruoyi-yoga/src/test/` | 后端集成测试 |
 | `sql/yoga.sql` | 业务表、字典和菜单 SQL |
+| `sql/migrations/` | 已导入旧版 `yoga.sql` 的库按日期顺序执行的增量脚本，可重复执行 |
 | `ruoyi-admin/target/ruoyi-admin.jar` | 构建产物 |

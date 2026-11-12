@@ -12,7 +12,7 @@
 - 使用 Lombok 的 `@Getter`、`@Setter` 替代直接读写字段的 getter/setter；包含默认值、校验或转换逻辑的访问器保留显式实现。
 - 使用 `@RequiredArgsConstructor` 与 `final` 字段完成 Bean 注入。
 - `ruoyi-yoga/lombok.config` 将字段上的 `@Lazy`、`@Value` 复制到生成的构造器参数，保留延迟依赖和配置值注入。
-- 使用 MapStruct 完成 DTO、DO、VO 转换。
+- DTO、DO、VO 转换写在模块 `convert` 包的手写静态转换类中，范例：`course/convert/CourseConverter.java`。
 - 基础设施位置见[项目基础设施](项目基础设施.md)，技术版本见本手册 §5。
 - 业务规则、接口和数据模型以[各模块详细设计](../详细设计/)为准。
 
@@ -63,7 +63,7 @@ IntelliJ IDEA 可通过 Eclipse Code Formatter 插件导入格式化规则，通
 | service | `<模块>.service` / `service.impl` | 业务规则、存在性校验、跨模块业务调用、事务边界；**出参一律 VO，DO 不出 service 层**；`IPage` 也不出 service 层 |
 | dao | `<模块>.dao` | 数据访问，面向业务语义，屏蔽 mapper 细节；只被 service 调用 |
 | mapper | `<模块>.mapper` | MyBatis-Plus `BaseMapper<XxxDO>`；复杂 SQL 写 XML，不用注解堆 SQL |
-| domain / dto / vo / query / convert | 同名包 | 对象只用这五种：DO 对应表、DTO 是 service 入参、Query 承载查询条件、VO 是出参、Converter 使用 MapStruct 做转换。**不用 PO / BO / AO** |
+| domain / dto / vo / query / convert | 同名包 | 对象只用这五种：DO 对应表、DTO 是 service 入参、Query 承载查询条件、VO 是出参、Converter 是手写静态转换类。**不用 PO / BO / AO** |
 | 公共设施 | `common.*` | `response` / `config` / `mybatis` / `log` / `util`，见第 4 节 |
 
 - 中文提示语保持一致；源码注释遵循根目录 `AGENTS.md`，仅说明必要的业务含义、外部约束或调用边界，不引用设计章节号或其他易变定位信息。
@@ -231,7 +231,7 @@ java -jar backend/ruoyi-admin/target/ruoyi-admin.jar
 
 - Windows 下也有 `backend/bin/*.bat`（clean/package/run）和 `backend/ry.bat`；Linux 用 `backend/ry.sh {start|stop|restart|status}`。**这些 .bat 是 GBK 编码，别用 UTF-8 工具直接改写。**
 - **JDK 必须是 8**：本机 `JAVA_HOME=D:\Develop\Java\jdk1.8.0_202`，命令行/IDEA 都用这个 SDK。
-- 启动前置条件：**MySQL 和 Redis 都必须可用**，且 `backend/sql/ry_20260417.sql`、`backend/sql/quartz.sql`、`backend/sql/yoga.sql` 三个脚本都已导入目标库。前两个 SQL 里没有 `CREATE DATABASE`/`use`，必须先自己建库（当前工作区的库名是 `yoga`，见 `application-druid.yml`）再导入；`yoga.sql` 在已有基础库上执行，建 5 张业务表 + `store_region` 字典 16 条 + 业务菜单 2000~2005。
+- 启动前置条件：**MySQL 和 Redis 都必须可用**，且 `backend/sql/ry_20260417.sql`、`backend/sql/quartz.sql`、`backend/sql/yoga.sql` 三个脚本都已导入目标库。前两个 SQL 里没有 `CREATE DATABASE`/`use`，必须先自己建库（当前工作区的库名是 `yoga`，见 `application-druid.yml`）再导入；`yoga.sql` 在已有基础库上执行，建 10 张业务表 + `store_region` 字典 16 条、`member_level` 字典 5 条 + 业务菜单 2000~2008。
 - 业务模块的表的脚本：`backend/sql/yoga.sql`；已导入旧版脚本的库按日期顺序执行 `backend/sql/migrations/` 下的增量脚本补齐表结构，脚本可重复执行。
 - 默认端口 8080，默认账号 `admin / admin123`。
 

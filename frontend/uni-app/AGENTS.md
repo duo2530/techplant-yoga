@@ -24,7 +24,7 @@
 | 状态 | **Pinia**（`store/index.js` 导出 `useUserStore`/`useConfigStore`，另有 `store/modules/dict.js`） |
 | 请求 | `uni.request` 封装在 `utils/request.js`，地址取自 `config.js` |
 | 路由守卫 | `permission.js`（拦截 `navigateTo/redirectTo/reLaunch/switchTab`） |
-| UI 组件 | `uni_modules/**`（插件市场引入，含 `uni-icons`/`uni-grid`/`uni-section`/`uni-popup` 等） |
+| UI 组件 | `uni_modules/**`（插件市场引入，含 `uni-icons`/`uni-grid`/`uni-popup` 等；`uni-section` 位于 `components/uni-section`） |
 | 目标端 | `mp-weixin`（appid `touristappid`，`urlCheck: false`）；H5 devServer 端口 9090 |
 
 ## 4. 目录与职责
@@ -38,12 +38,13 @@
 | `permission.js` | 页面导航拦截器，当前放行所有跳转 |
 | `pages/**` | 用户端页面，登记在 `pages.json`；业务页面清单见第 6 节 |
 | `mock/**` | 尚未接入后端的业务数据与 `MOCK.delay`、`MOCK.empty.*` 配置 |
-| `api/**` | 页面数据访问层，按业务域封装真实请求或 mock；`api/login.js`、`api/system/**` 为未使用的脚手架接口 |
+| `api/**` | 页面数据访问层，按业务域封装真实请求或 mock；`api/login.js`、`api/system/**` 为脚手架接口，仅被 `store/modules/user.js`、`utils/dict.js` 引用，页面不要直接调用 |
 | `components/ys-*/` | 自写业务组件（easycom 自动注册）：`ys-nav-brand`、`ys-section-head`、`ys-notice-bar`、`ys-empty`、`ys-course-card`、`ys-booking-card`、`ys-member-card` |
 | `store/modules/**` | `user`（会员会话）、`config`（应用配置）、`dict`（字典缓存） |
 | `utils/**` | `request`、`session`（**本地登录态唯一来源**：`isSessionValid` / `saveSession` / `clearSessionStorage` / `LOGIN_PAGE`）、`auth`（token 与会员展示信息存取）、`dict`（`useDict`）、`storage`、`permission`、`upload`、`validate`、`common`（`toast`/`showConfirm`/`tansParams`）、`constant`、`errorCode` |
 | `plugins/**` | `proxy.$tab`、`proxy.$auth`、`proxy.$modal` |
-| `static/**` | 静态资源（`images/` 业务资产 + 清单 `images/README.md`、字体、`scss/index.scss`、`uni.scss` 设计 token、`static/index.html` H5 模板） |
+| `static/**` | 静态资源（`images/` 业务资产 + 清单 `images/README.md`、字体、`scss/index.scss`、`static/index.html` H5 模板） |
+| `uni.scss` | 工程根目录的全局 SCSS 变量，末尾为设计 token（`$ys-*`） |
 | `uni_modules/**` | 第三方插件代码，**不要手改** |
 | `scripts/check-static.js` | 本工程静态自检脚本（使用本地 Vue 编译器和 Sass，见测试手册） |
 | `scripts/check-request.js` | 请求与会话逻辑的本地自检，运行方式见测试手册 |
@@ -70,13 +71,13 @@
 | 类型 | 页面 |
 |---|---|
 | tabBar 一级页（4） | `pages/home/index` 首页（`navigationStyle:custom`，用 `<ys-nav-brand>`）、`pages/booking/index` 约课、`pages/my-bookings/index` 我的预约、`pages/profile/index` 我的 |
-| 二级页（15） | `settings` 设置、`trial-apply` 申请体验、`my-trials` 我的体验课、`coaches` 约教练、`activities` 活动列表、`messages` 消息、`member-cards` 我的会员卡、`booking-confirm` 立即预约、`booking-success` 预约成功、`share-poster` 分享海报、`terms` 用户协议、`privacy` 隐私政策、`auth/quick-login` 快速登录、`auth/phone-auth` 手机号登录/注册、`auth/forgot-password` 忘记密码 |
+| 二级页（16） | `detail` 课程详情、`settings` 设置、`trial-apply` 申请体验、`my-trials` 我的体验课、`coaches` 约教练、`activities` 活动列表、`messages` 消息、`member-cards` 我的会员卡、`booking-confirm` 立即预约、`booking-success` 预约成功、`share-poster` 分享海报、`terms` 用户协议、`privacy` 隐私政策、`auth/quick-login` 快速登录、`auth/phone-auth` 手机号登录/注册、`auth/forgot-password` 忘记密码 |
 
 设置页由「我的」页头像进入，含退出登录；会员卡入口为「我的」页四宫格第一项。预约入口为约课卡或课程详情页，提交成功后通过 `redirectTo` 进入成功页，可查看我的预约或返回首页。设置、会员卡和预约入口均要求登录。
 
 **数据来源**：
 
-- 真实接口：`api/auth.js` 对接 `/api/auth/**`，`api/member.js` 查询 `GET /api/member-cards`，`api/schedule.js` 对接排课，`api/booking.js` 对接预约。契约见[用户端接口详细设计](../../docs/详细设计/用户端接口详细设计.md)。
+- 真实接口：`api/auth.js` 对接 `/api/auth/**`，`api/member.js` 查询 `GET /api/member-cards`，`api/schedule.js` 对接排课，`api/booking.js` 对接预约，`api/coach.js` 对接 `/api/coaches/**`，`api/store.js` 查询 `GET /api/stores`。契约见[用户端接口详细设计](../../docs/详细设计/用户端接口详细设计.md)。
 - 会员显示名与手机号来自本地有效会话，其余未接入业务使用 `mock/`；协议正文位于 `mock/auth.js`。
 - `mock/config.js`：`MOCK.delay` 控制模拟延迟；`MOCK.empty.*` 默认 `true` 显示空态，设为 `false` 显示 mock 列表。
 - 会员卡等需要身份的页面自行校验会员会话，真实接口由后端鉴权。
@@ -87,9 +88,9 @@
 
 **已知缺口 / 偏差**（详见 `static/images/README.md` 与各页面注释）：
 
-- 课程详情页、优惠券、礼包、积分、合同、体测等子页面暂未实现；「我的」页对应菜单项提示“该功能页面暂未提供”。
+- 优惠券、礼包、积分、合同、体测等子页面暂未实现；「我的」页对应菜单项提示“该功能页面暂未提供”。
 - 会员卡截图中的次数卡有两种配色，页面统一使用蓝色渐变，期限卡使用米金渐变。
-- 门店定位不跳地图（mock 没有经纬度）、约课页品类 Tab 与日期条的选中态、部分图标用 `uni-icons` 近似原型线稿（原型是内联 SVG，小程序不支持）。
+- 门店定位暂不跳地图、约课页品类 Tab 与日期条的选中态、部分图标用 `uni-icons` 近似原型线稿（原型是内联 SVG，小程序不支持）。
 - 几个页面在原型里是**空态**，有数据时的卡片样式是按设计 token 推导的（已在组件与页面注释里标明）。
 
 ## 7. 小程序联调 / 发布注意

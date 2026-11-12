@@ -4,7 +4,7 @@
 
 A yoga & pilates booking and operations management project, consisting of an admin web console, a user-facing mini program, a Java backend, and the project design documents.
 
-The project focuses on an MVP built from verifiable business vertical slices. Store, coach, and course modules are already in place, and scheduling and booking capabilities are being added incrementally.
+The project focuses on an MVP built from verifiable business vertical slices. Store, classroom, coach, course, schedule, member, membership card, and reservation modules are in place.
 
 ## Repository Layout
 
@@ -49,7 +49,7 @@ The console is based on the RuoYi Vue3 scaffold. Business pages live in `fronten
 - WeChat Mini Program
 - HBuilderX
 
-User-facing pages depend only on the `api` layer: stores and schedules already call the real backend (`frontend/uni-app/api/store.js`, `api/schedule.js` → `GET /api/stores`, `GET /api/schedules`), while the remaining business domains still use mock data. When connecting the real backend, replace the corresponding files under `frontend/uni-app/api` the same way.
+User-facing pages depend only on the `api` layer: stores, schedules, coaches, reservations, account sign-in, and the membership card list already call the real backend (`frontend/uni-app/api/store.js`, `schedule.js`, `coach.js`, `booking.js`, `auth.js`, and `GET /api/member-cards` in `member.js`), while courses, the home page, activities, messages, trial classes, and the rest of the member center still use mock data. When connecting the real backend, replace the corresponding files under `frontend/uni-app/api` the same way.
 
 ## Project Structure
 
@@ -79,13 +79,12 @@ techplant-yoga/
 │     └─ static/         # Images, fonts, and style assets
 ├─ docs/
 │  ├─ 需求分析/          # Requirements analysis, use-case index and 9 use cases
-│  ├─ 需求文档/          # Business rules (BR-*), global overview, feature inventory, process flows
+│  ├─ 需求文档/          # Global overview, feature inventory, process flows, state transition diagrams
 │  │  ├─ 管理端/         # Admin feature list, page structure diagram, admin prototype
 │  │  └─ 用户端/         # User-side feature list, structure diagrams, hi-fi prototype
 │  ├─ 产品分析/          # Real-app screenshots, page/object inventory, navigation analysis
 │  ├─ 概要设计/          # High-level design
-│  ├─ 详细设计/          # Detailed design overview and per-module detailed designs
-│  ├─ 项目管理/          # Phase-1 roadmap, activity list, phase-2 plan
+│  ├─ 详细设计/          # Per-module detailed designs
 │  ├─ 编码开发/          # Project infrastructure, AI agent development handbook
 │  └─ 模板/              # Document templates
 ├─ .gitignore
@@ -118,6 +117,14 @@ Follow the steps below in order to get the full "database → backend → admin 
 | HBuilderX | Latest stable release, used to compile the user mini program                           |
 | WeChat DevTools | Latest stable release, with the service port enabled in "Settings → Security Settings" |
 
+**Start MySQL and Redis with Docker (optional)**: `docker-compose.yml` at the repository root provides MySQL 8.0 (`root` / `123456`, database `yoga`) and Redis 7, matching the defaults in `application*.yml`. On first start it imports the three SQL scripts below in order, so you can skip step 1:
+
+```powershell
+docker compose up -d --wait   # start the dependencies
+start.bat                     # build and start the backend on 8080, admin console on 80, user app H5 on 9090
+docker compose down -v        # stop and delete the data volumes; the next start re-initializes
+```
+
 ### 1. Import the Three SQL Scripts into the Database
 
 The backend depends on three bootstrap scripts, all located in `backend/sql`. They **must be executed in order**:
@@ -126,7 +133,7 @@ The backend depends on three bootstrap scripts, all located in `backend/sql`. Th
 | --- | --- | --- |
 | 1 | `backend/sql/ry_20260417.sql` | RuoYi base tables and seed data (`sys_user` including the `admin` account, `sys_menu`, dictionaries, etc.) |
 | 2 | `backend/sql/quartz.sql` | Quartz scheduled task tables (`QRTZ_*`) |
-| 3 | `backend/sql/yoga.sql` | Yoga business tables (`t_store`, `t_classroom`, `t_coach`, `t_course`, `t_schedule`), business menus (2001–2005, with 2006–2009 reserved for phase 2), the `store_region` dictionary, and sample data |
+| 3 | `backend/sql/yoga.sql` | 10 yoga business tables (`t_store`, `t_store_no_counter`, `t_classroom`, `t_coach`, `t_course`, `t_schedule`, `t_member`, `t_member_card`, `t_reservation`, `t_member_card_transaction`), business menus (2001–2008), the `store_region` region and `member_level` member level dictionaries, a scheduled job, and sample data |
 
 `ry_20260417.sql` and `quartz.sql` contain **no `CREATE DATABASE` or `use` statement**, so create the database yourself first. The default database name is `yoga`, matching `application-druid.yml`:
 
@@ -160,11 +167,11 @@ source backend/sql/yoga.sql;
 ```sql
 USE yoga;
 SELECT COUNT(*) FROM sys_user;                                  -- should contain at least the admin account
-SELECT menu_name FROM sys_menu WHERE menu_id BETWEEN 2000 AND 2005;
-SELECT COUNT(*) FROM t_store;                                   -- the 5 business tables exist
+SELECT menu_name FROM sys_menu WHERE menu_id BETWEEN 2000 AND 2008;   -- should return "经营基础" and 8 business menus
+SELECT COUNT(*) FROM t_store;                                   -- the 10 business tables exist
 ```
 
-`yoga.sql` is re-runnable: business tables are dropped with `DROP TABLE IF EXISTS` and recreated, and menus only clean up and rewrite IDs 2000–2009 (2006–2009 are reserved for phase 2) without touching RuoYi's built-in "System Management" menus. Note that **recreating the business tables wipes business data**.
+`yoga.sql` is re-runnable: business tables are dropped with `DROP TABLE IF EXISTS` and recreated, and menus clean up IDs 2000–2010 and rewrite 2000–2008 without touching RuoYi's built-in "System Management" menus. Note that **recreating the business tables wipes business data**.
 
 ### 2. Update the Backend Configuration
 
@@ -180,6 +187,16 @@ A few notes:
 - `token.secret`, the `/druid/*` console credentials (default `ruoyi/123456`), and `ruoyi.profile` are all scaffold defaults intended for local development. They must be changed before going to production.
 
 ### 3. Build and Start the Backend
+
+**One-click start and stop on Windows (after the environment, database, and configuration steps above)**
+
+Double-click `start.bat` at the repository root to start the backend (8080), the admin console (80), and the user app H5 (9090) together. Double-click `stop.bat` to shut these services and their child processes down.
+
+- Start first runs a Maven package (tests skipped), and runs `npm ci` for a frontend that has no `node_modules`. The first start needs network access to download dependencies.
+- MySQL and Redis must already be running. The scripts do not initialize the database and do not launch WeChat DevTools.
+- The services run in the background and keep running after the start window closes. Logs and process records live in `.tmp/dev/`. If start fails, the services started in that run are shut down and the logs are kept.
+- A repeated start skips services the script already started. A port held by another program is reported as an error. Stop only handles processes the script recorded, not services started from an IDE or another terminal.
+- After changing backend code, stop and start again to repackage. You can also run `powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\dev.ps1 -Action Start` in PowerShell (replace `Start` with `Stop` to shut down).
 
 **Option A: start from an IDE**
 
@@ -215,12 +232,24 @@ npm run dev
 - The dev port is **80**, so the URL is `http://localhost`. If the port is occupied or requires privileges, temporarily change `server.port` in `frontend/pc/vite.config.js`.
 - In development, API calls are proxied from `/dev-api` to `http://localhost:8080`. To point at a different backend, change `baseUrl` at the top of `frontend/pc/vite.config.js`.
 - On the login page, enter the username **`admin`** and password **`admin123`** (the captcha is a math question — enter the computed result).
-- After signing in, the "经营基础" (Business Foundation) menu group should contain store, classroom, coach, course, and schedule management. If the group is empty, the menu data in `yoga.sql` was not imported successfully, or you need to sign in again.
+- After signing in, the "经营基础" (Business Foundation) menu group should contain store, classroom, coach, course, schedule, member, membership card, and reservation management. If the group is empty, the menu data in `yoga.sql` was not imported successfully, or you need to sign in again.
 - You can open the login page with the backend stopped, but signing in will fail, so complete step 3 first.
 
 ### 5. Run the User Mini Program
 
-`frontend/uni-app` is an HBuilderX project. It **has no `package.json`, so it cannot and need not be started with npm**.
+`frontend/uni-app` can be started and built from the npm command line, and needs Node.js >= 20.19.
+
+```powershell
+cd frontend/uni-app
+npm ci
+npm run dev:h5
+# WeChat Mini Program development: npm run dev:mp-weixin
+# Production build: npm run build:h5 or npm run build:mp-weixin
+```
+
+The H5 dev server runs at `http://localhost:9090` by default. Import `dist/dev/mp-weixin` into WeChat DevTools to debug; production output goes to `dist/build/h5` and `dist/build/mp-weixin`. See the [user app README](frontend/uni-app/README.md) for details.
+
+You can also keep using HBuilderX:
 
 1. **Open the project in HBuilderX**: HBuilderX → File → Open Directory → select the `frontend/uni-app` directory.
 2. **Set the AppID**: double-click `manifest.json` in the project and choose "WeChat Mini Program Configuration" (微信小程序配置) in the visual editor on the left, then fill in your own WeChat Mini Program AppID. You can also edit `mp-weixin.appid` in `manifest.json` directly (it currently holds the placeholder `touristappid`, which **must be replaced**, otherwise WeChat DevTools reports an invalid AppID).
@@ -229,7 +258,7 @@ npm run dev
 3. **Prepare WeChat DevTools**: in HBuilderX, set "Tools → Settings → Run Configuration → WeChat DevTools path" to your local installation, and make sure the service port is enabled in WeChat DevTools under "Settings → Security Settings". Otherwise HBuilderX cannot push the build output to it.
 4. **Run to the mini program**: back in HBuilderX, click **"Run" (运行) in the top-left corner → "Run to Mini Program Simulator" (运行到小程序模拟器) → "WeChat DevTools"**, then wait for the first build to finish (it is slower the first time). WeChat DevTools opens automatically and loads the mini program.
 5. During development, tick "Do not verify valid domains" (不校验合法域名) under "Details → Local Settings" in WeChat DevTools.
-6. The user app is currently split: stores and schedules use real APIs (`/api/stores`, `/api/schedules`, with the address taken from `baseUrl` in `frontend/uni-app/config.js`, default `http://localhost:8080`), while the remaining domains still use mock data. To see real data on the home and booking pages, complete step 3 and start the backend first; without it, those pages only show empty states.
+6. The user app is currently split: stores, schedules, coaches, reservations, account sign-in, and the membership card list use real APIs (`/api/stores`, `/api/schedules`, `/api/coaches`, `/api/reservations`, `/api/auth`, `/api/member-cards`, with the address taken from `baseUrl` in `frontend/uni-app/config.js`, default `http://localhost:8080`), while the remaining domains still use mock data. To see real data on the home, booking, and my-reservations pages, complete step 3 and start the backend first; without it, those pages only show empty states.
 7. To just look at the pages quickly, choose "Run → Run to Browser" instead; the H5 port is `9090` by default.
 
 > After changing `manifest.json` or `pages.json`, recompile; in some cases WeChat DevTools must be restarted.
@@ -238,12 +267,12 @@ npm run dev
 
 | Check | Expected result |
 | --- | --- |
-| Database | The `yoga` database contains the `sys_*` and `QRTZ_*` tables plus the 5 business tables such as `t_store` |
+| Database | The `yoga` database contains the `sys_*` and `QRTZ_*` tables plus the 10 business tables such as `t_store` |
 | Backend | The log shows a successful RuoYi start, and `http://localhost:8080` is reachable |
 | Admin console | `npm install` and `npm run dev` finish without errors, and `http://localhost` opens the login page |
-| Sign-in | `admin / admin123` signs in successfully and shows the 5 business menus under "经营基础" |
-| Business pages | Store / classroom / coach / course / schedule pages can page through, create, and edit records |
-| User app | HBuilderX compiles without errors and WeChat DevTools shows the 4 tabBar pages |
+| Sign-in | `admin / admin123` signs in successfully and shows the 8 business menus under "经营基础" |
+| Business pages | Store / classroom / coach / course / schedule / member / membership card / reservation pages can page through records, and create and edit them where the page supports it |
+| User app | `npm run dev:h5`, `npm run build:mp-weixin`, or HBuilderX compiles without errors and WeChat DevTools shows the 4 tabBar pages |
 
 ### Troubleshooting
 
@@ -321,12 +350,10 @@ Each kind of content has exactly one source of truth; other documents reference 
 
 | Content | Single source of truth | How other documents refer to it |
 | --- | --- | --- |
-| Business rules | `docs/需求文档/业务规则.md` (`BR-*`) | **Cite the rule ID only; never copy the rule text** |
-| Phase-1 feature scope and priority | `docs/需求文档/功能清单汇总.md` (`F-*`, 51 items) | Cite `F-*` IDs only |
+| Feature scope and phasing | `docs/需求文档/功能清单汇总.md` (phased by the "版本" column: v1.0 phase 1, v2.0 phase 2, v3.0 phase 3) | Cite the module and feature name; never copy the feature list |
 | User-facing screens and navigation | `docs/产品分析/用户端页面与跳转梳理.md` (P/T/C IDs) | Cite IDs only |
 | User-facing API contract | `docs/详细设计/用户端接口详细设计.md` | Module designs cover admin APIs only; user-facing APIs are defined once, there |
-| Global technical conventions | `backend/AGENTS.md`, `frontend/uni-app/AGENTS.md` | `docs/详细设计/详细设计总览.md` only indexes them |
-| Design decision log | `docs/详细设计/详细设计总览.md` §5 | Append new decisions; never rewrite old ones |
+| Global technical conventions | `backend/AGENTS.md`, `frontend/uni-app/AGENTS.md` | Reference them; never start a parallel set |
 
 Three hard requirements:
 
