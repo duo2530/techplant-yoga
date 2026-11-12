@@ -29,7 +29,9 @@
       "spring.datasource.druid.master.password": "YOGA_MYSQL_ROOT_PASSWORD",
       "redis.password": "YOGA_REDIS_PASSWORD",
       "spring.redis.password": "YOGA_REDIS_PASSWORD",
-      "token.secret": "YOGA_TOKEN_SECRET"
+      "token.secret": "YOGA_TOKEN_SECRET",
+      "yoga.oss.access-key-id": "YOGA_OSS_ACCESS_KEY_ID",
+      "yoga.oss.access-key-secret": "YOGA_OSS_ACCESS_KEY_SECRET"
     },
     "configmap_files": [
       { "name": "yoga-mysql-conf", "files": [".claude/skills/yoga-cloud-deploy/config/mysql/yoga.cnf"] },
@@ -71,7 +73,8 @@
         "SPRING_DATASOURCE_DRUID_STATVIEWSERVLET_ENABLED": "false",
         "SPRING_REDIS_HOST": "{svc:redis}",
         "SPRING_DEVTOOLS_RESTART_ENABLED": "false",
-        "RUOYI_PROFILE": "/home/ruoyi/uploadPath"
+        "RUOYI_PROFILE": "/home/ruoyi/uploadPath",
+        "YOGA_OSS_ENDPOINT": "oss-cn-shanghai-internal.aliyuncs.com"
       },
       "nas": { "path": "/yoga/upload", "mount": "/home/ruoyi/uploadPath", "owner": "0:0" },
       "build": { "jar": "backend/ruoyi-admin/target/ruoyi-admin.jar" }
