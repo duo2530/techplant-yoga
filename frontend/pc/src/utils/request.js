@@ -41,6 +41,7 @@ service.interceptors.request.use(config => {
   if (!isRepeatSubmit && (config.method === 'post' || config.method === 'put')) {
     const requestObj = {
       url: config.url,
+      params: config.params ? JSON.stringify(config.params) : undefined,
       data: typeof config.data === 'object' ? JSON.stringify(config.data) : config.data,
       time: new Date().getTime()
     }
@@ -55,9 +56,10 @@ service.interceptors.request.use(config => {
       cache.session.setJSON('sessionObj', requestObj)
     } else {
       const s_url = sessionObj.url                // 请求地址
+      const s_params = sessionObj.params
       const s_data = sessionObj.data              // 请求数据
       const s_time = sessionObj.time              // 请求时间
-      if (s_data === requestObj.data && requestObj.time - s_time < interval && s_url === requestObj.url) {
+      if (s_data === requestObj.data && s_params === requestObj.params && requestObj.time - s_time < interval && s_url === requestObj.url) {
         const message = '数据正在处理，请勿重复提交'
         console.warn(`[${s_url}]: ` + message)
         return Promise.reject(new Error(message))
