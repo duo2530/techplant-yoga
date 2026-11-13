@@ -70,46 +70,69 @@ ensure_running() {
   die "$app has no running instance"
 }
 
-publish_management_url() {
-  local app_id=${app_ids[web-pc]} binding order_id attempt address listener scheme port url
+ensure_public_binding() {
+  local app_id=${app_ids[web-pc]} binding clb_id charge_type listeners order_id attempt
   binding=$(sae DescribeApplicationSlbs --AppId "$app_id")
   if jq -e '.InternetSlbExpired == true' <<< "$binding" >/dev/null; then
-    die "管理端的公网 CLB 已失效，请先在 SAE 解除旧绑定再重试"
+    die "公网 CLB 已失效，请先在 SAE 解除旧绑定再重试"
   fi
-  if ! jq -e '(.InternetSlbId // "") != ""' <<< "$binding" >/dev/null; then
-    order_id=$(sae BindSlb --AppId "$app_id" --InternetSlbChargeType PayByCLCU \
-      --Internet '[{"port":80,"targetPort":80,"protocol":"TCP"}]' | jq -er '.ChangeOrderId')
-    wait_order web-pc "$order_id"
+  clb_id=$(jq -r '.InternetSlbId // empty' <<< "$binding")
+  if [[ -z $clb_id ]] || ! jq -e 'any((.Internet // [])[]; .TargetPort == 8081)' <<< "$binding" >/dev/null; then
+    listeners=$(jq -cer '
+      (.Internet // [])
+      | if length == 0 then [{Port:80,TargetPort:80,Protocol:"TCP"}] else . end
+      | select(all(.[]; .Port != 8081))
+      | . + [{Port:8081,TargetPort:8081,Protocol:"TCP"}]
+      | map(del(.CreateTime) | with_entries(.key |= (.[0:1] | ascii_downcase) + .[1:]))
+    ' <<< "$binding") || die "公网端口 8081 已被现有监听使用"
+    local args=(BindSlb --AppId "$app_id" --Internet "$listeners")
+    charge_type=$(jq -r '.InternetSlbChargeType // empty' <<< "$binding")
+    if [[ -n $clb_id && -z $charge_type ]]; then
+      args+=(--InternetSlbId "$clb_id")
+    else
+      args+=(--InternetSlbChargeType "${charge_type:-PayByCLCU}")
+    fi
+    order_id=$(sae "${args[@]}" | jq -er '.ChangeOrderId')
+    wait_order web-pc "$order_id" >&2
     for ((attempt = 0; attempt < 12; attempt++)); do
       binding=$(sae DescribeApplicationSlbs --AppId "$app_id")
-      if jq -e '(.InternetIp // "") != "" and (.Internet | length) > 0' <<< "$binding" >/dev/null; then
+      if jq -e '(.InternetIp // "") != "" and any(.Internet[]; .TargetPort == 8081)' <<< "$binding" >/dev/null; then
         break
       fi
       sleep 5
     done
+    if [[ -n $clb_id ]] && ! jq -e --arg id "$clb_id" '.InternetSlbId == $id' <<< "$binding" >/dev/null; then
+      die "更新监听后，SAE 返回的 CLB 实例与发布前不一致"
+    fi
   fi
+  printf '%s\n' "$binding"
+}
 
+public_url() {
+  local binding=$1 target_port=$2 address listener scheme port host
   address=$(jq -er '.InternetIp | select(type == "string" and length > 0)' <<< "$binding") \
-    || die "SAE 尚未返回管理端的公网 IP"
-  listener=$(jq -er '
-    [(.Internet // [])[] | select(.TargetPort == 80) | select(.Protocol | IN("TCP", "HTTP", "HTTPS"))]
-    | sort_by(.Port != 80, .Port) | first | select(. != null)
+    || die "SAE 尚未返回公网 IP"
+  listener=$(jq -er --argjson target "$target_port" '
+    [(.Internet // [])[] | select(.TargetPort == $target) | select(.Protocol | IN("TCP", "HTTP", "HTTPS"))]
+    | sort_by(.Port != $target, .Port) | first | select(. != null)
     | [(.Protocol | if . == "HTTPS" then "https" else "http" end), .Port] | @tsv
-  ' <<< "$binding") || die "公网 CLB 缺少转发到管理端容器端口 80 的监听"
+  ' <<< "$binding") || die "公网 CLB 缺少转发到容器端口 $target_port 的监听"
   IFS=$'\t' read -r scheme port <<< "$listener"
-  local host=$address
+  host=$address
   if [[ $address == *:* ]]; then
     host="[$address]"
   fi
-  url="$scheme://$host:$port"
+  printf '%s://%s:%s\n' "$scheme" "$host" "$port"
+}
 
-  curl --fail --silent --show-error --retry 8 --retry-all-errors --max-time 15 -o /dev/null "$url/login"
-  curl --fail --silent --show-error --retry 8 --retry-all-errors --max-time 15 "$url/prod-api/captchaImage" \
-    | jq -e '.code == 200' >/dev/null
-  printf '管理端登录地址 %s/login\n' "$url"
+report_public_url() {
+  local label=$1 url=$2 api_url=$3
+  local curl_options=(--fail --silent --show-error --retry 8 --retry-all-errors --max-time 15)
+  curl "${curl_options[@]}" -o /dev/null "$url"
+  curl "${curl_options[@]}" "$api_url" | jq -e '.code == 200' >/dev/null
+  printf '%s %s\n' "$label" "$url"
   if [[ -n ${GITHUB_STEP_SUMMARY:-} ]]; then
-    printf '\n### 公网访问\n\n[打开管理端登录页](%s/login)\n\n公网 IP `%s` · CLB `%s`\n' \
-      "$url" "$address" "$(jq -r '.InternetSlbId' <<< "$binding")" >> "$GITHUB_STEP_SUMMARY"
+    printf -- '- [%s](%s)\n' "$label" "$url" >> "$GITHUB_STEP_SUMMARY"
   fi
 }
 
@@ -170,4 +193,12 @@ for app in "${release_apps[@]}"; do
   fi
 done
 
-publish_management_url
+binding=$(ensure_public_binding)
+pc_url=$(public_url "$binding" 80)
+h5_url=$(public_url "$binding" 8081)
+if [[ -n ${GITHUB_STEP_SUMMARY:-} ]]; then
+  printf '\n### 公网访问\n\n公网 IP `%s` · CLB `%s`\n\n' \
+    "$(jq -r '.InternetIp' <<< "$binding")" "$(jq -r '.InternetSlbId' <<< "$binding")" >> "$GITHUB_STEP_SUMMARY"
+fi
+report_public_url '打开管理端登录页' "$pc_url/login" "$pc_url/prod-api/captchaImage"
+report_public_url '打开 H5 用户端' "$h5_url/" "$h5_url/api/coaches/featured"
