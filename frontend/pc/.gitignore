@@ -19,7 +19,4 @@ selenium-debug.log
 *.sln
 *.local
 
-package-lock.json
-# 端到端测试独立依赖目录：保留 lockfile 以便 npm ci 复现
-!tests/e2e/package-lock.json
 yarn.lock

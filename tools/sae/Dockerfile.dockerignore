@@ -12,6 +12,9 @@
 !.claude/skills/yoga-cloud-deploy/config/
 !.claude/skills/yoga-cloud-deploy/config/nginx/
 !.claude/skills/yoga-cloud-deploy/config/nginx/*.conf.template
+!tools/
+!tools/sae/
+!tools/sae/h5-proxy.conf.template
 **/node_modules/
 **/dist/
 **/target/

@@ -32,7 +32,17 @@ jobs:
           persist-credentials: false
 
       - name: Build image
-        run: docker build --file tools/sae/Dockerfile --target "$APP" --tag "yoga-release:$APP" .
+        run: |
+          args=()
+          if [[ "$APP" == web-pc ]]; then
+            upstream=$(jq -er '
+              (.namespace | split(":")[1]) as $namespace
+              | (.service_suffix // "\(.region)-\($namespace)") as $suffix
+              | "web-h5-\($suffix).\($namespace).svc.cluster.local.\(.region):80"
+            ' .claude/skills/yoga-cloud-deploy/config/sae.config.json)
+            args+=(--build-arg "H5_UPSTREAM=$upstream")
+          fi
+          docker build --file tools/sae/Dockerfile --target "$APP" --tag "yoga-release:$APP" "${args[@]}" .
 
       - name: Check frontend image
         if: matrix.app != 'backend'
