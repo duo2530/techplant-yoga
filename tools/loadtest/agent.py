@@ -80,7 +80,8 @@ class Handler(BaseHTTPRequestHandler):
             code = job["proc"].poll()
             text = job["log"].read_text(encoding="utf-8", errors="replace")
             return self.reply(200, {"script": job["script"], "args": job["args"],
-                                    "running": code is None, "exit": code, "output": text[-20000:]})
+                                    "running": code is None, "exit": code, "output": text[-20000:],
+                                    "size": len(text)})
         if self.path.startswith("/files/"):
             root = data_dir().resolve()
             target = (root / self.path[len("/files/"):]).resolve()
