@@ -24,7 +24,7 @@ k6 和控制脚本运行在云上的压测机里，本机只经 CLB 下发任务
 | `export_tokens.py` | 逐个登录造数会员；默认写 `data/tokens.json`，`--set bulk` 写 `data/tokens-bulk.json` |
 | `run_scenario.py` | 跑一个场景：记录 MySQL 计数器差值，每 2 秒采样 Druid、Tomcat、JVM、MySQL，结束后对账；`READ`、`MIXED` 走 `capacity.js` |
 | `compare.py` | 汇总多次运行的 `result.json`，输出规模对比 CSV 与 HTML，可设阈值使退出码非 0 |
-| `cloud.py` | 工作流用的云操作：启动 SAE 应用，给压测机绑只放行 runner IP 的临时 CLB，清理 |
+| `cloud.py` | 工作流用的云操作：启动 SAE 应用，给压测机绑只放行 runner IP 的临时 CLB（`expose`、`verify`），清理。每次 aliyun CLI 调用都检查退出码和返回码，失败即报错 |
 | `reconcile.py` | 对账 SQL，与 `ReservationConcurrencyTest` 的不变量一致，任一条查到行即退出码 1 |
 | `check_target.py`、`mysql_status.py` | 只读，打印目标库地址、版本、binlog 与锁统计 |
 | `init_schema.py` | 在空库上按顺序执行镜像内的 `ry_20260417.sql`、`quartz.sql`、`yoga.sql`；库里已有表时拒绝执行 |
@@ -152,6 +152,7 @@ ID 区间见 `common.BULK_BASE`：每张表在 8.1e12～8.9e12 之间各占 1e11
 - 历史排课以首轮造数那天为基准日期。每次运行（包括 `--skip-history`）都会补齐“今天起 14 天”里历史排课没有覆盖的日期：每店每天按历史日均节数生成不带预约的排课，编号由日期和门店决定，用 `INSERT IGNORE` 写入，重复执行不会产生重复行。补齐的排课不计入 `--target-rows`。
 - `--rows-per-sec` 限制写入速度（单位为行/秒），避免把 RDS 的 IOPS 打满。
 - `agent.py` 上，写库与施压的任务（`seed`、`bulk_seed`、`run_scenario`）互斥，同一时间只能跑一个。
+- `agent.py` 把每个请求写成一行访问日志，同时输出到标准输出（SAE 实时日志可见）和 `LT_DATA_DIR/agent-access.log`。每行包含 UTC 时间、对端 IP、方法、去掉查询串的路径、状态码，有 `X-Forwarded-For` 时附上其中合法的 IP，不记录 token。
 
 ### 本机运行
 
@@ -217,7 +218,7 @@ python -X utf8 compare.py "data/results/*/result.json" --out .local/compare --ma
 
 1. 校验输入。
 2. 启动 SAE 上的 Redis、后端和压测机。RDS 不由工作流启停。
-3. 新建公网 CLB 与 ACL，ACL 只放行 runner 出口 IP。压测机 8000 端口在绑定过程中就开启白名单。
+3. `cloud.py expose`：先建 ACL，确认条目只有 runner 出口 IP；再建公网 CLB 并设为 inactive，然后让 SAE 绑定。SAE 创建的监听一出现就先停止，再开启白名单；读回 `AclStatus=on`、`AclType=white` 和本次的 `AclId` 之后，才启动监听、把 CLB 设回 active，然后再复查一次。随后的 `cloud.py verify` 步骤再查一遍。任何云 API 调用失败或复查不符，都立即删除本次的 CLB 与 ACL，并以失败退出。
 4. 经 `ctl.py` 运行 `check_target`，打印的目标必须等于 `LT_DB_TARGET`。
 5. 运行 `bulk_seed`，然后 `export_tokens --set bulk`，最后 `run_scenario`。
 6. 取回 `bulk_seed.json`、`result.json` 等文件，执行 `rds_metrics.py` 和 `compare.py`，作为 artifact 上传并保留 30 天。

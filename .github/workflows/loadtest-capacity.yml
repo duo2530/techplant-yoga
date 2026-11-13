@@ -143,6 +143,10 @@ jobs:
           python -X utf8 cloud.py expose --app "${{ vars.SAE_LOADGEN_APP_ID }}" --port 8000 --ip "$ip" \
             --name "yogalt-lt-${{ github.run_id }}" --state "$STATE_FILE" ${{ vars.LT_CLB_ZONE && format('--zone {0}', vars.LT_CLB_ZONE) || '' }}
 
+      - name: Verify CLB listener ACL
+        working-directory: tools/loadtest
+        run: python -X utf8 cloud.py verify --state "$STATE_FILE"
+
       - name: Safety check target database
         working-directory: tools/loadtest
         env:
