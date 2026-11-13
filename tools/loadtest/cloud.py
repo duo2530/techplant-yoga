@@ -10,6 +10,7 @@ cleanup 只删除 state 文件里记录的、本次创建的 CLB 与 ACL。
 import argparse
 import json
 import os
+import re
 import subprocess
 import sys
 import time
@@ -101,6 +102,8 @@ def guard(lb, port, acl):
 
 
 def cmd_expose(a):
+    if not re.fullmatch(r"\d{1,3}(\.\d{1,3}){3}", a.ip or ""):
+        sys.exit(f"--ip 不是 IPv4 地址: {a.ip!r}")
     state = {"app": a.app}
     acl = aliyun("slb", "CreateAccessControlList", "--RegionId", region(), "--AclName", a.name,
                  "--AddressIPVersion", "ipv4")
