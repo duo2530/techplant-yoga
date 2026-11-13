@@ -6,6 +6,9 @@
      或到达率不足目标的 99% 时停止，该级的前一级即拐点
   READ / MIXED：capacity.js 对 bulk_seed 数据压读接口或按 --mix 混合读写，按接口分别统计
 
+--warmup-duration 不为 0 时，正式运行前先按 --warmup-rate 跑 capacity.js 的 MIXED（权重同 --mix），
+结果不计入，参数与摘要写入 result.json 的 warmup；READ / MIXED 的 OFFSET 跳过预热用掉的可消耗池数据。
+
 result.json 带上代码 commit、环境规格（LT_SPEC_* 环境变量）、各表行数、最近一次造数摘要与运行参数。
 """
 import argparse
@@ -273,18 +276,23 @@ def main():
     p.add_argument("--read-mix", help="读请求在各读接口之间的权重，缺省用 capacity.js 的默认值")
     p.add_argument("--commit", help="被测代码的 commit；缺省取 LT_COMMIT 或本目录的 git HEAD")
     p.add_argument("--rate-limit", type=int, default=2000, help="--rate 的安全上限")
+    p.add_argument("--warmup-rate", type=int, default=50)
+    p.add_argument("--warmup-duration", default="0", help="如 2m；0 不预热")
     a = p.parse_args()
-    if a.rate > a.rate_limit:
-        sys.exit(f"--rate {a.rate} 超过上限 {a.rate_limit}")
+    if max(a.rate, a.warmup_rate) > a.rate_limit:
+        sys.exit(f"--rate / --warmup-rate 超过上限 {a.rate_limit}")
+    warmup = run_warmup(a)
     if a.scenario in ("READ", "MIXED"):
-        sys.exit(run_capacity(a))
+        sys.exit(run_capacity(a, warmup))
     tokens = data_dir() / "tokens.json"
     if not tokens.is_file():
         sys.exit("缺少 tokens.json，先运行 export_tokens.py")
 
     if a.scenario in ("A", "WARMUP"):
-        run_once(a.name, {**base_env(a.scenario, tokens), "RATE": a.rate, "DURATION": a.duration,
-                          "OFFSET": a.offset})
+        result = run_once(a.name, {**base_env(a.scenario, tokens), "RATE": a.rate, "DURATION": a.duration,
+                                   "OFFSET": a.offset})
+        if warmup:
+            write_json(data_dir() / "results" / a.name / "result.json", {**result, "warmup": warmup})
     elif a.scenario == "B":
         result = run_once(a.name, {**base_env("B", tokens), "B_MEMBERS": a.b_members, "B_SECONDS": a.b_seconds})
         result["reconcile"] = reconcile(connect())
@@ -324,17 +332,43 @@ def main():
     print(json.dumps({"reconcile_violations": rec["violation_total"]}, ensure_ascii=False))
 
 
-def run_capacity(a):
+def capacity_env(a, rate, duration, offset, mix):
     tokens = data_dir() / "tokens-bulk.json"
     if not tokens.is_file():
         sys.exit("缺少 tokens-bulk.json，先运行 export_tokens.py --set bulk")
-    meta = run_meta(connect(), a)
-    k6_env = {"BASE_URL": env("LT_BASE_URL").rstrip("/"), "TOKENS_FILE": str(tokens), "RATE": a.rate,
-              "DURATION": a.duration, "OFFSET": a.offset, "MIX": "read=100" if a.scenario == "READ" else a.mix}
+    k6_env = {"BASE_URL": env("LT_BASE_URL").rstrip("/"), "TOKENS_FILE": str(tokens), "RATE": rate,
+              "DURATION": duration, "OFFSET": offset, "MIX": mix}
     if a.read_mix:
         k6_env["READ_MIX"] = a.read_mix
+    return k6_env
+
+
+def run_warmup(a):
+    """按低速率跑 MIXED 预热缓存与连接，返回参数与摘要。"""
+    if a.warmup_duration in ("0", "0s", "0m"):
+        return None
+    k6_env = capacity_env(a, a.warmup_rate, a.warmup_duration, a.offset, a.mix)
+    started = time.time()
+    code, k = run_k6(data_dir() / "results" / a.name / "warmup", k6_env, "capacity.js",
+                     duration_seconds(a.warmup_duration))
+    used = k["iterations"] + k["dropped_iterations"]
+    if a.scenario in ("READ", "MIXED"):
+        a.offset += used
+    warmup = {"scenario": "MIXED", "rate": a.warmup_rate, "duration": a.warmup_duration, "mix": a.mix,
+              "offset": k6_env["OFFSET"], "iterations_used": used, "k6_exit": code,
+              "started_at": time.strftime("%Y-%m-%dT%H:%M:%S%z", time.localtime(started)),
+              **{x: k[x] for x in ("qps", "p95_ms", "p99_ms", "error_rate")}}
+    print(json.dumps({"warmup": warmup}, ensure_ascii=False), flush=True)
+    return warmup
+
+
+def run_capacity(a, warmup=None):
+    meta = run_meta(connect(), a)
+    k6_env = capacity_env(a, a.rate, a.duration, a.offset, "read=100" if a.scenario == "READ" else a.mix)
     result = run_once(a.name, k6_env, "capacity.js", meta)
     result["reconcile"] = reconcile(connect())
+    if warmup:
+        result["warmup"] = warmup
     write_json(data_dir() / "results" / a.name / "result.json", result)
     for ep, x in sorted(result["k6"]["endpoints"].items()):
         print(f"{ep:18s} qps={x['qps']:8.2f} p95={x['p95_ms']:8.2f}ms p99={x['p99_ms']:8.2f}ms"

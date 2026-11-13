@@ -114,6 +114,8 @@ sae cleanup --delete-clb <lb-id> --delete-acl <acl-id>
 
 目标是在不同数据规模下压同一组接口，比较性能怎样随数据量退化。流程是：`bulk_seed` 造数（含对账与 `ANALYZE TABLE`）→ `export_tokens --set bulk` 预热登录 → `run_scenario READ|MIXED` → `compare.py` 汇总。当前测的是不加 #42 索引的现状基线。
 
+`run_scenario` 的 `--warmup-duration`（如 `2m`）让正式运行前先按 `--warmup-rate` 跑一段 MIXED，权重同 `--mix`，用来预热 buffer pool 和连接池，结果不计入。预热参数与 QPS、p95、p99、错误率写入 `result.json` 的 `warmup`。READ / MIXED 的 OFFSET 会跳过预热用掉的可消耗池数据。RDS 重启后不预热直接压，曾出现 p95 超过 8 秒。workflow 的 `warmup` 输入写作 `速率/时长`，默认 `50/2m`，填 `0` 不预热。
+
 ### 数据规模与 profile
 
 `--target-rows` 是压测 ID 区间内 `t_reservation` 的目标行数，取值 1～10000000，其他表按 profile 推导。`booking-heavy` 的比例如下：

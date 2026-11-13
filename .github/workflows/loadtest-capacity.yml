@@ -39,6 +39,10 @@ on:
         description: 'MIXED weights'
         required: false
         default: 'read=80,reserve=10,cancel=5,queue=3,checkin=2'
+      warmup:
+        description: 'MIXED warm-up before the measured run, rate/duration (not measured); 0 to skip'
+        required: true
+        default: '50/2m'
       run_seed:
         description: 'Generate / top up data'
         type: boolean
@@ -78,6 +82,7 @@ jobs:
       IN_RATE: ${{ inputs.rate }}
       IN_DURATION: ${{ inputs.duration }}
       IN_MIX: ${{ inputs.mix }}
+      IN_WARMUP: ${{ inputs.warmup }}
     steps:
       - name: Validate inputs
         env:
@@ -92,6 +97,13 @@ jobs:
           secs=${BASH_REMATCH[1]}; [[ ${BASH_REMATCH[2]} == m ]] && secs=$((secs * 60))
           (( secs >= 10 && secs <= 3600 )) || fail "duration must be 10s ~ 60m"
           [[ "$IN_MIX" =~ ^[a-z]+=[0-9]+(,[a-z]+=[0-9]+)*$ ]] || fail "mix format: read=80,reserve=10"
+          if [[ "$IN_WARMUP" == 0 ]]; then
+            echo "WARMUP_RATE=1" >> "$GITHUB_ENV"; echo "WARMUP_DURATION=0" >> "$GITHUB_ENV"
+          else
+            [[ "$IN_WARMUP" =~ ^([0-9]+)/([0-9]+[sm])$ ]] || fail "warmup must look like 50/2m or 0"
+            (( BASH_REMATCH[1] >= 1 && BASH_REMATCH[1] <= MAX_RATE )) || fail "warmup rate must be 1 ~ $MAX_RATE"
+            echo "WARMUP_RATE=${BASH_REMATCH[1]}" >> "$GITHUB_ENV"; echo "WARMUP_DURATION=${BASH_REMATCH[2]}" >> "$GITHUB_ENV"
+          fi
           [[ -n "$LT_DB_TARGET" ]] || fail "vars.LT_DB_TARGET is not set in environment loadtest"
           if [[ "$IN_MODE" == rebuild ]]; then
             [[ "$IN_CONFIRM_REBUILD" == "$LT_DB_TARGET" ]] || fail "rebuild requires confirm_rebuild == $LT_DB_TARGET"
@@ -168,7 +180,7 @@ jobs:
           fi
           python -X utf8 ctl.py --agent "$AGENT" run export_tokens --set bulk
           python -X utf8 ctl.py --agent "$AGENT" run run_scenario "$IN_SCENARIO" --name "$RUN_NAME" \
-            --rate "$IN_RATE" --duration "$IN_DURATION" --mix "$IN_MIX" --commit "$GITHUB_SHA"
+            --rate "$IN_RATE" --duration "$IN_DURATION" --mix "$IN_MIX" --commit "$GITHUB_SHA"             --warmup-rate "$WARMUP_RATE" --warmup-duration "$WARMUP_DURATION"
 
       - name: Fetch results
         if: ${{ always() && steps.expose.outputs.agent != '' }}
