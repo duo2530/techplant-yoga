@@ -369,7 +369,8 @@ CREATE TABLE `t_member_card` (
   `update_by`          bigint unsigned DEFAULT NULL COMMENT '更新人ID',
   `update_time`        datetime     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_card_no` (`card_no`)
+  UNIQUE KEY `uk_card_no` (`card_no`),
+  KEY `idx_member_card_member_type` (`member_id`, `card_type`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='会员卡表';
 
 -- ----------------------------
