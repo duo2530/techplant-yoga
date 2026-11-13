@@ -4,9 +4,14 @@
   B：--b-members 个会员在 --b-seconds 秒内抢同一节 20 人排课
   C：从 --rate 起每级加 --step，每级 --duration，某级 p95 超过 --p95-limit-ms、错误率达到 --error-limit
      或到达率不足目标的 99% 时停止，该级的前一级即拐点
+  READ / MIXED：capacity.js 对 bulk_seed 数据压读接口或按 --mix 混合读写，按接口分别统计
+
+result.json 带上代码 commit、环境规格（LT_SPEC_* 环境变量）、各表行数、最近一次造数摘要与运行参数。
 """
 import argparse
 import json
+import os
+import re
 import subprocess
 import sys
 import threading
@@ -16,7 +21,7 @@ from pathlib import Path
 import requests
 
 from common import (B_SCHEDULE_ID, SCHEDULE_BASE, SCHEDULE_COUNT, connect, data_dir, env, global_status, query,
-                    write_json)
+                    table_counts, write_json)
 from reconcile import reconcile
 
 LT_DIR = Path(__file__).resolve().parent
@@ -34,7 +39,7 @@ class Sampler(threading.Thread):
         super().__init__(daemon=True)
         self.path, self.interval, self.stop = path, interval, threading.Event()
         self.backend = env("LT_BASE_URL").rstrip("/")
-        self.jolokia = env("LT_JOLOKIA_URL").rstrip("/")
+        self.jolokia = env("LT_JOLOKIA_URL", "").rstrip("/")
         self.http = requests.Session()
         self.druid_login()
 
@@ -50,6 +55,8 @@ class Sampler(threading.Thread):
                                              "ConnectCount", "ErrorCount")}
 
     def jmx(self, mbean, attrs):
+        if not self.jolokia:
+            raise RuntimeError("未配置 LT_JOLOKIA_URL")
         r = self.http.post(self.jolokia + "/", timeout=5,
                            json=[{"type": "read", "mbean": mbean, "attribute": a} for a in attrs]).json()
         return {a: x.get("value") for a, x in zip(attrs, r)}
@@ -129,19 +136,93 @@ def k6_metrics(summary):
     }
 
 
-def run_k6(out_dir, env_vars):
+def endpoint_metrics(summary, duration_s):
+    """capacity.js 按 ep 标签拆分的子指标：每个接口的 QPS、分位数、HTTP 错误率、业务错误率与 409 分类。"""
+    m = summary["metrics"]
+    out = {}
+    for key, value in m.items():
+        hit = re.fullmatch(r"http_req_duration\{ep:(\w+)\}", key)
+        if not hit:
+            continue
+        ep = hit.group(1)
+        reqs = (m.get(f"http_reqs{{ep:{ep}}}") or {}).get("count", 0)
+        if not reqs:
+            continue
+        out[ep] = {"requests": reqs, "qps": round(reqs / duration_s, 2),
+                   "p50_ms": round(value["med"], 2), "p95_ms": round(value["p(95)"], 2),
+                   "p99_ms": round(value["p(99)"], 2), "max_ms": round(value["max"], 2),
+                   "avg_ms": round(value["avg"], 2),
+                   "http_error_rate": round((m.get(f"http_errors{{ep:{ep}}}") or {}).get("value", 0), 6),
+                   "biz_error_rate": round((m.get(f"biz_errors{{ep:{ep}}}") or {}).get("value", 0), 6)}
+    for key, value in m.items():
+        hit = re.fullmatch(r"(conflict_\w+)\{ep:(\w+)\}", key)
+        if hit and hit.group(2) in out and value.get("count"):
+            out[hit.group(2)].setdefault("conflicts", {})[hit.group(1)] = value["count"]
+    return out
+
+
+def capacity_metrics(summary, duration_s):
+    m = summary["metrics"]
+    d = m["http_req_duration"]
+
+    def val(name, key="count"):
+        return (m.get(name) or {}).get(key, 0)
+
+    return {
+        "http_reqs": val("http_reqs"), "qps": round(val("http_reqs", "rate"), 2),
+        "iterations": val("iterations"), "dropped_iterations": val("dropped_iterations"),
+        "p50_ms": round(d["med"], 2), "p95_ms": round(d["p(95)"], 2), "p99_ms": round(d["p(99)"], 2),
+        "max_ms": round(d["max"], 2), "avg_ms": round(d["avg"], 2),
+        "error_rate": val("http_errors", "value"), "biz_error_rate": val("biz_errors", "value"),
+        "conflicts": {k: v.get("count", 0) for k, v in m.items() if k.startswith("conflict_") and "{" not in k},
+        "vus_max": val("vus_max", "value"), "endpoints": endpoint_metrics(summary, duration_s),
+    }
+
+
+def run_k6(out_dir, env_vars, script="reservation.js", duration_s=None):
     out_dir.mkdir(parents=True, exist_ok=True)
     cmd = ["k6", "run", "--quiet", "--no-color", "--summary-export", str(out_dir / "k6-summary.json"),
-           str(LT_DIR / "reservation.js")]
+           str(LT_DIR / script)]
     for k, v in env_vars.items():
         cmd[2:2] = ["-e", f"{k}={v}"]
     with open(out_dir / "k6-stdout.txt", "w", encoding="utf-8") as log:
         code = subprocess.run(cmd, stdout=log, stderr=subprocess.STDOUT).returncode
     summary = json.loads((out_dir / "k6-summary.json").read_text(encoding="utf-8"))
+    if script == "capacity.js":
+        return code, capacity_metrics(summary, duration_s)
     return code, k6_metrics(summary)
 
 
-def run_once(name, k6_env):
+def git_commit(explicit=None):
+    if explicit:
+        return explicit
+    if os.environ.get("LT_COMMIT"):
+        return os.environ["LT_COMMIT"]
+    try:
+        return subprocess.run(["git", "rev-parse", "HEAD"], cwd=LT_DIR, capture_output=True, text=True,
+                              timeout=10).stdout.strip() or None
+    except OSError:
+        return None
+
+
+def run_meta(conn, args):
+    """运行环境与数据规模，供 compare.py 横向对比不同规模的结果。"""
+    seed = None
+    if query(conn, "SHOW TABLES LIKE 'lt_seed_progress'"):
+        rows = query(conn, "SELECT info FROM lt_seed_progress WHERE name = 'last_run'")
+        if rows:
+            info = rows[0]["info"]
+            info = json.loads(info) if isinstance(info, str) else info
+            seed = {k: info.get(k) for k in ("target_rows", "profile", "seed", "mode", "seconds", "phases",
+                                             "base_date", "reconcile_violations")}
+    mysql = query(conn, "SELECT @@version AS version, @@innodb_buffer_pool_size AS buffer_pool,"
+                        " @@max_connections AS max_connections")[0]
+    spec = {k[len("LT_SPEC_"):].lower(): v for k, v in os.environ.items() if k.startswith("LT_SPEC_")}
+    return {"commit": git_commit(args.commit), "spec": {**spec, "mysql": mysql}, "table_counts": table_counts(conn),
+            "seed": seed, "args": vars(args)}
+
+
+def run_once(name, k6_env, script="reservation.js", meta=None):
     out = data_dir() / "results" / name
     out.mkdir(parents=True, exist_ok=True)
     conn = connect()
@@ -149,7 +230,8 @@ def run_once(name, k6_env):
     sampler = Sampler(out / "samples.jsonl")
     sampler.start()
     started = time.time()
-    code, metrics = run_k6(out, k6_env)
+    duration_s = duration_seconds(k6_env["DURATION"]) if "DURATION" in k6_env else None
+    code, metrics = run_k6(out, k6_env, script, duration_s)
     ended = time.time()
     sampler.stop.set()
     sampler.join(timeout=10)
@@ -160,6 +242,8 @@ def run_once(name, k6_env):
     delta["Innodb_row_lock_time_max_global"] = after["Innodb_row_lock_time_max"]
     status_avg = query(conn, "SHOW GLOBAL STATUS LIKE 'Innodb_row_lock_time_avg'")[0]["Value"]
     result = {"name": name, "k6_exit": code, "env": k6_env, "started": started, "ended": ended,
+              "started_at": time.strftime("%Y-%m-%dT%H:%M:%S%z", time.localtime(started)),
+              "ended_at": time.strftime("%Y-%m-%dT%H:%M:%S%z", time.localtime(ended)), **(meta or {}),
               "k6": metrics, "mysql_delta": delta, "Innodb_row_lock_time_avg_global": int(status_avg),
               "monitor": summarize_samples(out / "samples.jsonl")}
     write_json(out / "result.json", result)
@@ -174,7 +258,7 @@ def base_env(scenario, tokens):
 
 def main():
     p = argparse.ArgumentParser()
-    p.add_argument("scenario", choices=["A", "B", "C", "WARMUP"])
+    p.add_argument("scenario", choices=["A", "B", "C", "WARMUP", "READ", "MIXED"])
     p.add_argument("--name", required=True)
     p.add_argument("--rate", type=int, default=100)
     p.add_argument("--duration", default="10m")
@@ -185,7 +269,15 @@ def main():
     p.add_argument("--max-rate", type=int, default=2000)
     p.add_argument("--p95-limit-ms", type=float, default=300)
     p.add_argument("--error-limit", type=float, default=0.001)
+    p.add_argument("--mix", default="read=80,reserve=10,cancel=5,queue=3,checkin=2", help="MIXED 的操作权重")
+    p.add_argument("--read-mix", help="读请求在各读接口之间的权重，缺省用 capacity.js 的默认值")
+    p.add_argument("--commit", help="被测代码的 commit；缺省取 LT_COMMIT 或本目录的 git HEAD")
+    p.add_argument("--rate-limit", type=int, default=2000, help="--rate 的安全上限")
     a = p.parse_args()
+    if a.rate > a.rate_limit:
+        sys.exit(f"--rate {a.rate} 超过上限 {a.rate_limit}")
+    if a.scenario in ("READ", "MIXED"):
+        sys.exit(run_capacity(a))
     tokens = data_dir() / "tokens.json"
     if not tokens.is_file():
         sys.exit("缺少 tokens.json，先运行 export_tokens.py")
@@ -230,6 +322,26 @@ def main():
     rec = reconcile(connect())
     write_json(data_dir() / "results" / a.name / "reconcile.json", rec)
     print(json.dumps({"reconcile_violations": rec["violation_total"]}, ensure_ascii=False))
+
+
+def run_capacity(a):
+    tokens = data_dir() / "tokens-bulk.json"
+    if not tokens.is_file():
+        sys.exit("缺少 tokens-bulk.json，先运行 export_tokens.py --set bulk")
+    meta = run_meta(connect(), a)
+    k6_env = {"BASE_URL": env("LT_BASE_URL").rstrip("/"), "TOKENS_FILE": str(tokens), "RATE": a.rate,
+              "DURATION": a.duration, "OFFSET": a.offset, "MIX": "read=100" if a.scenario == "READ" else a.mix}
+    if a.read_mix:
+        k6_env["READ_MIX"] = a.read_mix
+    result = run_once(a.name, k6_env, "capacity.js", meta)
+    result["reconcile"] = reconcile(connect())
+    write_json(data_dir() / "results" / a.name / "result.json", result)
+    for ep, x in sorted(result["k6"]["endpoints"].items()):
+        print(f"{ep:18s} qps={x['qps']:8.2f} p95={x['p95_ms']:8.2f}ms p99={x['p99_ms']:8.2f}ms"
+              f" http_err={x['http_error_rate']:.4f} biz_err={x['biz_error_rate']:.4f} {x.get('conflicts', '')}",
+              flush=True)
+    print(json.dumps({"reconcile_violations": result["reconcile"]["violation_total"]}, ensure_ascii=False))
+    return 1 if result["reconcile"]["violation_total"] or result["k6"]["error_rate"] > 0 else 0
 
 
 def duration_seconds(text):

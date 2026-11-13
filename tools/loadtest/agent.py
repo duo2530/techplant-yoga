@@ -17,7 +17,10 @@ from pathlib import Path
 from common import data_dir, env
 
 LT_DIR = Path(__file__).resolve().parent
-SCRIPTS = {"check_target", "seed", "export_tokens", "run_scenario", "reconcile", "mysql_status", "sql_stats"}
+SCRIPTS = {"check_target", "seed", "bulk_seed", "export_tokens", "run_scenario", "reconcile", "mysql_status",
+           "sql_stats"}
+# 写库或施压的脚本同一时间只允许一个在跑
+EXCLUSIVE = {"seed", "bulk_seed", "run_scenario"}
 JOBS = {}
 LOCK = threading.Lock()
 
@@ -58,6 +61,11 @@ class Handler(BaseHTTPRequestHandler):
         script, args = body.get("script"), body.get("args", [])
         if script not in SCRIPTS or not all(isinstance(x, str) for x in args):
             return self.reply(400, {"error": f"script 只能是 {sorted(SCRIPTS)}，args 为字符串数组"})
+        if script in EXCLUSIVE:
+            with LOCK:
+                busy = [k for k, j in JOBS.items() if j["script"] in EXCLUSIVE and j["proc"].poll() is None]
+            if busy:
+                return self.reply(409, {"error": f"任务 {busy} 仍在运行，等它结束后再提交"})
         self.reply(200, {"id": start_job(script, args)})
 
     def do_GET(self):

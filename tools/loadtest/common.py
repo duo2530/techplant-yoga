@@ -22,6 +22,24 @@ SCHEDULE_BASE = 9700000000
 B_SCHEDULE_ID = SCHEDULE_BASE + 9999
 MEMBER_PASSWORD = "Loadtest123"
 
+# bulk_seed.py 的 ID 区间：每张表占 [base, base + 1e11)，其中前 9e10 为历史数据，后 1e10 为压测可消耗池。
+# 区间高于 seed.py 的 9.1e9 段、低于业务雪花 ID，并且小于 2^53，k6 可以直接按数字计算。
+BULK_BASE = {
+    "t_store": 8_100_000_000_000, "t_classroom": 8_200_000_000_000, "t_coach": 8_300_000_000_000,
+    "t_course": 8_400_000_000_000, "t_schedule": 8_500_000_000_000, "t_member": 8_600_000_000_000,
+    "t_member_card": 8_700_000_000_000, "t_reservation": 8_800_000_000_000,
+    "t_member_card_transaction": 8_900_000_000_000,
+}
+BULK_SPAN = 100_000_000_000
+POOL_OFFSET = 90_000_000_000
+CORE_TABLES = ["t_member", "t_member_card", "t_schedule", "t_reservation", "t_member_card_transaction"]
+
+
+def local_now():
+    """与后端 JVM 时区一致的当前时间（默认东八区），不依赖容器是否装了 tzdata。"""
+    from datetime import datetime, timedelta, timezone
+    return datetime.now(timezone(timedelta(hours=float(env("LT_TZ_OFFSET", "8"))))).replace(tzinfo=None)
+
 
 def env(name, default=None):
     value = os.environ.get(name)
@@ -44,10 +62,11 @@ def db_target():
     return f"{env('LT_MYSQL_HOST')}:{env('LT_MYSQL_PORT', '3306')}/{env('LT_MYSQL_DB', 'yoga')}"
 
 
-def connect(confirm_target=None):
+def connect(confirm_target=None, quiet=False):
     """连接压测库。写操作必须传入与实际目标一致的 confirm_target，防止误连开发库或生产库。"""
     target = db_target()
-    print(f"目标库: {target}", flush=True)
+    if not quiet:
+        print(f"目标库: {target}", flush=True)
     if confirm_target is not None and confirm_target != target:
         sys.exit(f"--confirm-target 为 {confirm_target!r}，与实际目标 {target!r} 不一致，拒绝执行")
     return pymysql.connect(host=env("LT_MYSQL_HOST"), port=int(env("LT_MYSQL_PORT", "3306")),
@@ -70,3 +89,16 @@ def global_status(conn, *names):
 def write_json(path, obj):
     Path(path).parent.mkdir(parents=True, exist_ok=True)
     Path(path).write_text(json.dumps(obj, ensure_ascii=False, indent=1, default=str), encoding="utf-8")
+
+
+def table_counts(conn):
+    """各业务表总行数，以及落在 bulk_seed 压测区间内的行数。"""
+    out = {}
+    for t in CORE_TABLES + ["t_store", "t_classroom", "t_coach", "t_course"]:
+        total = query(conn, f"SELECT COUNT(*) AS n FROM {t}")[0]["n"]
+        base = BULK_BASE[t]
+        bulk = query(conn, f"SELECT COUNT(*) AS n FROM {t} WHERE id BETWEEN %s AND %s",
+                     (base, base + BULK_SPAN - 1))[0]["n"]
+        out[t] = {"total": total, "bulk": bulk}
+    conn.commit()
+    return out

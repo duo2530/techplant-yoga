@@ -1,0 +1,204 @@
+name: Loadtest Capacity
+
+# 只能手动触发：在隔离压测环境里补足业务数据并压测读接口与混合场景。步骤与所需 secret/variable 见 tools/loadtest/README.md。
+on:
+  workflow_dispatch:
+    inputs:
+      target_rows:
+        description: 'Target rows of t_reservation in the loadtest ID range (1 ~ 10000000)'
+        required: true
+        default: '1000000'
+      seed_profile:
+        description: 'Data distribution profile'
+        type: choice
+        options: [booking-heavy]
+        default: booking-heavy
+      seed_mode:
+        description: 'top-up keeps existing rows; rebuild deletes the loadtest ID range first'
+        type: choice
+        options: [top-up, rebuild]
+        default: top-up
+      confirm_rebuild:
+        description: 'Required for rebuild: must equal the target DB (vars.LT_DB_TARGET)'
+        required: false
+        default: ''
+      scenario:
+        description: 'READ = read endpoints only; MIXED = read/reserve/cancel/queue/check-in mix'
+        type: choice
+        options: [MIXED, READ]
+        default: MIXED
+      rate:
+        description: 'Constant arrival rate (requests/second)'
+        required: true
+        default: '100'
+      duration:
+        description: 'Load duration, e.g. 5m (max 60m)'
+        required: true
+        default: '5m'
+      mix:
+        description: 'MIXED weights'
+        required: false
+        default: 'read=80,reserve=10,cancel=5,queue=3,checkin=2'
+      run_seed:
+        description: 'Generate / top up data'
+        type: boolean
+        default: true
+      run_load_test:
+        description: 'Run the k6 load test'
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: loadtest-capacity
+  cancel-in-progress: false
+
+jobs:
+  capacity:
+    name: Seed and load test
+    runs-on: ubuntu-latest
+    environment: loadtest
+    timeout-minutes: 360
+    env:
+      TZ: Asia/Shanghai
+      ALIBABA_CLOUD_ACCESS_KEY_ID: ${{ secrets.ALIBABA_CLOUD_ACCESS_KEY_ID }}
+      ALIBABA_CLOUD_ACCESS_KEY_SECRET: ${{ secrets.ALIBABA_CLOUD_ACCESS_KEY_SECRET }}
+      ALIBABA_CLOUD_REGION_ID: ${{ vars.ALIBABA_CLOUD_REGION_ID }}
+      LT_AGENT_TOKEN: ${{ secrets.LT_AGENT_TOKEN }}
+      LT_DB_TARGET: ${{ vars.LT_DB_TARGET }}
+      SAE_APPS: ${{ vars.SAE_REDIS_APP_ID }} ${{ vars.SAE_BACKEND_APP_ID }} ${{ vars.SAE_LOADGEN_APP_ID }}
+      RUN_NAME: capacity-${{ github.run_id }}-${{ github.run_attempt }}
+      IN_TARGET_ROWS: ${{ inputs.target_rows }}
+      IN_PROFILE: ${{ inputs.seed_profile }}
+      IN_MODE: ${{ inputs.seed_mode }}
+      IN_CONFIRM_REBUILD: ${{ inputs.confirm_rebuild }}
+      IN_SCENARIO: ${{ inputs.scenario }}
+      IN_RATE: ${{ inputs.rate }}
+      IN_DURATION: ${{ inputs.duration }}
+      IN_MIX: ${{ inputs.mix }}
+    steps:
+      - name: Validate inputs
+        env:
+          MAX_RATE: ${{ vars.LT_MAX_RATE || '1000' }}
+        run: |
+          fail() { echo "::error::$1"; exit 1; }
+          [[ "$IN_TARGET_ROWS" =~ ^[0-9]+$ ]] || fail "target_rows must be an integer"
+          (( IN_TARGET_ROWS >= 1 && IN_TARGET_ROWS <= 10000000 )) || fail "target_rows must be 1 ~ 10000000"
+          [[ "$IN_RATE" =~ ^[0-9]+$ ]] || fail "rate must be an integer"
+          (( IN_RATE >= 1 && IN_RATE <= MAX_RATE )) || fail "rate must be 1 ~ $MAX_RATE"
+          [[ "$IN_DURATION" =~ ^([0-9]+)([sm])$ ]] || fail "duration must look like 90s or 5m"
+          secs=${BASH_REMATCH[1]}; [[ ${BASH_REMATCH[2]} == m ]] && secs=$((secs * 60))
+          (( secs >= 10 && secs <= 3600 )) || fail "duration must be 10s ~ 60m"
+          [[ "$IN_MIX" =~ ^[a-z]+=[0-9]+(,[a-z]+=[0-9]+)*$ ]] || fail "mix format: read=80,reserve=10"
+          [[ -n "$LT_DB_TARGET" ]] || fail "vars.LT_DB_TARGET is not set in environment loadtest"
+          if [[ "$IN_MODE" == rebuild ]]; then
+            [[ "$IN_CONFIRM_REBUILD" == "$LT_DB_TARGET" ]] || fail "rebuild requires confirm_rebuild == $LT_DB_TARGET"
+          fi
+          for v in ALIBABA_CLOUD_ACCESS_KEY_ID ALIBABA_CLOUD_ACCESS_KEY_SECRET LT_AGENT_TOKEN ALIBABA_CLOUD_REGION_ID; do
+            [[ -n "${!v}" ]] || fail "$v is not set"
+          done
+          [[ $(wc -w <<<"$SAE_APPS") -eq 3 ]] || fail "SAE_REDIS_APP_ID / SAE_BACKEND_APP_ID / SAE_LOADGEN_APP_ID must all be set"
+          echo "STATE_FILE=$RUNNER_TEMP/loadtest-cloud.json" >> "$GITHUB_ENV"
+          echo "OUT_DIR=$RUNNER_TEMP/loadtest-results" >> "$GITHUB_ENV"
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install aliyun CLI
+        run: |
+          curl -fsSL https://aliyuncli.alicdn.com/aliyun-cli-linux-latest-amd64.tgz | tar -xz -C "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP" >> "$GITHUB_PATH"
+          pip install --quiet requests==2.32.3
+
+      - name: Start SAE apps
+        working-directory: tools/loadtest
+        run: |
+          read -ra apps <<<"$SAE_APPS"
+          python -X utf8 cloud.py start "${apps[@]}"
+
+      - name: Expose loadgen through CLB (ACL = runner IP only)
+        id: expose
+        working-directory: tools/loadtest
+        run: |
+          ip=$(curl -fsS https://api.ipify.org)
+          python -X utf8 cloud.py expose --app "${{ vars.SAE_LOADGEN_APP_ID }}" --port 8000 --ip "$ip" \
+            --name "yogalt-ci-${{ github.run_id }}" --state "$STATE_FILE" ${{ vars.LT_CLB_ZONE && format('--zone {0}', vars.LT_CLB_ZONE) || '' }}
+
+      - name: Safety check target database
+        working-directory: tools/loadtest
+        env:
+          AGENT: ${{ steps.expose.outputs.agent }}
+        run: |
+          for _ in $(seq 1 30); do curl -fsS "$AGENT/health" >/dev/null && break; sleep 5; done
+          out=$(python -X utf8 ctl.py --agent "$AGENT" run check_target)
+          echo "$out"
+          grep -qxF "目标库: $LT_DB_TARGET" <<<"$out" || { echo "::error::agent target differs from LT_DB_TARGET"; exit 1; }
+
+      - name: Seed data (bulk_seed + reconcile + ANALYZE)
+        if: ${{ inputs.run_seed }}
+        working-directory: tools/loadtest
+        env:
+          AGENT: ${{ steps.expose.outputs.agent }}
+        run: |
+          args=(--target-rows "$IN_TARGET_ROWS" --profile "$IN_PROFILE" --mode "$IN_MODE" --confirm-target "$LT_DB_TARGET")
+          [[ "$IN_MODE" == rebuild ]] && args+=(--confirm-rebuild "$IN_CONFIRM_REBUILD")
+          python -X utf8 ctl.py --agent "$AGENT" run bulk_seed "${args[@]}"
+
+      - name: Verify data only
+        if: ${{ !inputs.run_seed }}
+        working-directory: tools/loadtest
+        run: python -X utf8 ctl.py --agent "${{ steps.expose.outputs.agent }}" run reconcile
+
+      - name: Load test
+        if: ${{ inputs.run_load_test }}
+        working-directory: tools/loadtest
+        env:
+          AGENT: ${{ steps.expose.outputs.agent }}
+        run: |
+          if ! ${{ inputs.run_seed }}; then
+            python -X utf8 ctl.py --agent "$AGENT" run bulk_seed --target-rows "$IN_TARGET_ROWS" --profile "$IN_PROFILE" \
+              --skip-history --skip-analyze --confirm-target "$LT_DB_TARGET"
+          fi
+          python -X utf8 ctl.py --agent "$AGENT" run export_tokens --set bulk
+          python -X utf8 ctl.py --agent "$AGENT" run run_scenario "$IN_SCENARIO" --name "$RUN_NAME" \
+            --rate "$IN_RATE" --duration "$IN_DURATION" --mix "$IN_MIX" --commit "$GITHUB_SHA"
+
+      - name: Fetch results
+        if: ${{ always() && steps.expose.outputs.agent != '' }}
+        working-directory: tools/loadtest
+        env:
+          AGENT: ${{ steps.expose.outputs.agent }}
+        run: |
+          for f in bulk_seed.json bulk_seed_reconcile.json results/$RUN_NAME/result.json \
+                   results/$RUN_NAME/k6-summary.json results/$RUN_NAME/k6-stdout.txt; do
+            python -X utf8 ctl.py --agent "$AGENT" fetch "$f" "$OUT_DIR/$f" || echo "skip $f"
+          done
+          if [[ -f "$OUT_DIR/results/$RUN_NAME/result.json" ]]; then
+            python -X utf8 rds_metrics.py ${{ vars.LT_RDS_INSTANCE_ID && format('--instance {0}', vars.LT_RDS_INSTANCE_ID) || '' }}               --app "backend=${{ vars.SAE_BACKEND_APP_ID }}" --wait-slow-log 120 "$OUT_DIR/results/$RUN_NAME/result.json" || true
+            python -X utf8 compare.py "$OUT_DIR/results/*/result.json" --out "$OUT_DIR/compare" \
+              ${{ vars.LT_MAX_P95_MS && format('--max-p95-ms {0}', vars.LT_MAX_P95_MS) || '' }} \
+              ${{ vars.LT_MAX_ERROR_RATE && format('--max-http-error-rate {0}', vars.LT_MAX_ERROR_RATE) || '' }}
+          fi
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: loadtest-capacity-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/loadtest-results/**
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Cleanup (unbind and delete CLB/ACL, stop apps)
+        if: always()
+        working-directory: tools/loadtest
+        run: |
+          read -ra apps <<<"$SAE_APPS"
+          python -X utf8 cloud.py cleanup --state "${STATE_FILE:-$RUNNER_TEMP/loadtest-cloud.json}" --stop "${apps[@]}"
