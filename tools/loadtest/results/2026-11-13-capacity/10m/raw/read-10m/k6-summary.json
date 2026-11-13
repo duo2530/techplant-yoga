@@ -1,0 +1,459 @@
+{
+    "metrics": {
+        "http_req_duration{expected_response:true}": {
+            "p(99)": 485.7935274899998,
+            "max": 821.722886,
+            "avg": 35.78457595646661,
+            "min": 1.93736,
+            "med": 6.4384999999999994,
+            "p(90)": 11.74811550000001,
+            "p(95)": 336.1071796
+        },
+        "biz_errors{ep:hot}": {
+            "passes": 0,
+            "fails": 3000,
+            "value": 0
+        },
+        "http_errors{ep:reserve}": {
+            "passes": 0,
+            "fails": 0,
+            "value": 0
+        },
+        "http_errors{ep:stores}": {
+            "passes": 0,
+            "fails": 1500,
+            "value": 0
+        },
+        "http_errors{ep:hot}": {
+            "passes": 0,
+            "fails": 3000,
+            "value": 0
+        },
+        "http_req_duration": {
+            "p(95)": 336.1071796,
+            "p(99)": 485.7935274899998,
+            "max": 821.722886,
+            "avg": 35.78457595646661,
+            "min": 1.93736,
+            "med": 6.4384999999999994,
+            "p(90)": 11.74811550000001
+        },
+        "http_req_receiving": {
+            "p(90)": 0.1200402,
+            "p(95)": 0.1853925499999999,
+            "p(99)": 1.1974752499999997,
+            "max": 1.872595,
+            "avg": 0.10934418629999944,
+            "min": 0.020749,
+            "med": 0.078815
+        },
+        "http_req_duration{ep:reserve}": {
+            "p(99)": 0,
+            "max": 0,
+            "avg": 0,
+            "min": 0,
+            "med": 0,
+            "p(90)": 0,
+            "p(95)": 0
+        },
+        "http_reqs{ep:today_bookable}": {
+            "count": 3000,
+            "rate": 9.9936817568768
+        },
+        "http_errors{ep:my_cards}": {
+            "passes": 0,
+            "fails": 2400,
+            "value": 0
+        },
+        "http_req_duration{ep:coach_detail}": {
+            "avg": 2.8300239919999974,
+            "min": 1.93736,
+            "med": 2.8694034999999998,
+            "p(90)": 3.1144901,
+            "p(95)": 3.2954547499999993,
+            "p(99)": 4.893989229999999,
+            "max": 13.890333
+        },
+        "http_errors{ep:today_bookable}": {
+            "passes": 0,
+            "fails": 3000,
+            "value": 0
+        },
+        "http_req_duration{ep:stores}": {
+            "p(90)": 4.5379626,
+            "p(95)": 5.101464649999999,
+            "p(99)": 10.25856475,
+            "max": 14.931649,
+            "avg": 4.206903921333332,
+            "min": 3.182157,
+            "med": 4.1048825
+        },
+        "http_reqs{ep:queue}": {
+            "count": 0,
+            "rate": 0
+        },
+        "http_req_connecting": {
+            "p(90)": 0,
+            "p(95)": 0,
+            "p(99)": 1.890877489999998,
+            "max": 8.026854,
+            "avg": 0.0283899603666667,
+            "min": 0,
+            "med": 0
+        },
+        "iterations": {
+            "count": 30000,
+            "rate": 99.936817568768
+        },
+        "http_reqs{ep:my_reservations}": {
+            "count": 3600,
+            "rate": 11.99241810825216
+        },
+        "http_reqs{ep:reserve}": {
+            "count": 0,
+            "rate": 0
+        },
+        "http_req_blocked": {
+            "avg": 0.03595858923333316,
+            "min": 0.003061,
+            "med": 0.006064,
+            "p(90)": 0.008109100000000003,
+            "p(95)": 0.00964105,
+            "p(99)": 1.9637923899999987,
+            "max": 8.104287
+        },
+        "http_req_duration{ep:coaches_featured}": {
+            "p(90)": 3.3608981000000004,
+            "p(95)": 3.4811957,
+            "p(99)": 4.566869529999999,
+            "max": 14.71647,
+            "avg": 3.0768644073333324,
+            "min": 2.160569,
+            "med": 3.12177
+        },
+        "biz_errors{ep:coach_detail}": {
+            "passes": 0,
+            "fails": 1500,
+            "value": 0
+        },
+        "biz_errors{ep:reserve}": {
+            "passes": 0,
+            "fails": 0,
+            "value": 0
+        },
+        "http_reqs{ep:hot}": {
+            "count": 3000,
+            "rate": 9.9936817568768
+        },
+        "http_req_duration{ep:schedule_detail}": {
+            "avg": 6.2564785426666525,
+            "min": 4.65251,
+            "med": 5.9514795,
+            "p(90)": 7.0223954,
+            "p(95)": 8.85320645,
+            "p(99)": 13.230892630000023,
+            "max": 26.702624
+        },
+        "biz_errors{ep:my_cards}": {
+            "fails": 2400,
+            "passes": 0,
+            "value": 0
+        },
+        "http_errors": {
+            "passes": 0,
+            "fails": 30000,
+            "value": 0
+        },
+        "biz_errors{ep:coach_schedules}": {
+            "passes": 0,
+            "fails": 3000,
+            "value": 0
+        },
+        "http_req_duration{ep:today_bookable}": {
+            "max": 13.676194,
+            "avg": 3.848201827333339,
+            "min": 2.770176,
+            "med": 3.7607615,
+            "p(90)": 4.5875925,
+            "p(95)": 4.930414149999998,
+            "p(99)": 7.391805719999933
+        },
+        "vus_max": {
+            "value": 200,
+            "min": 89,
+            "max": 200
+        },
+        "biz_errors{ep:schedule_detail}": {
+            "passes": 0,
+            "fails": 4500,
+            "value": 0
+        },
+        "http_errors{ep:schedule_detail}": {
+            "passes": 0,
+            "fails": 4500,
+            "value": 0
+        },
+        "http_reqs{ep:cancel}": {
+            "count": 0,
+            "rate": 0
+        },
+        "biz_errors{ep:checkin}": {
+            "passes": 0,
+            "fails": 0,
+            "value": 0
+        },
+        "data_received": {
+            "count": 91407176,
+            "rate": 304498.0757462756
+        },
+        "http_req_sending": {
+            "med": 0.023399,
+            "p(90)": 0.03421520000000001,
+            "p(95)": 0.040026949999999985,
+            "p(99)": 0.06943371999999941,
+            "max": 0.735045,
+            "avg": 0.024873079600000222,
+            "min": 0.008077
+        },
+        "biz_errors": {
+            "passes": 0,
+            "fails": 30000,
+            "value": 0
+        },
+        "http_errors{ep:coach_schedules}": {
+            "passes": 0,
+            "fails": 3000,
+            "value": 0
+        },
+        "http_errors{ep:checkin}": {
+            "passes": 0,
+            "fails": 0,
+            "value": 0
+        },
+        "http_reqs{ep:schedule_detail}": {
+            "count": 4500,
+            "rate": 14.9905226353152
+        },
+        "http_reqs{ep:checkin}": {
+            "count": 0,
+            "rate": 0
+        },
+        "http_reqs{ep:schedules}": {
+            "count": 6000,
+            "rate": 19.9873635137536
+        },
+        "biz_errors{ep:coaches_featured}": {
+            "passes": 0,
+            "fails": 1500,
+            "value": 0
+        },
+        "http_req_duration{ep:hot}": {
+            "p(99)": 14.155735719999958,
+            "max": 30.492257,
+            "avg": 7.508849842666664,
+            "min": 5.085329,
+            "med": 7.3445655,
+            "p(90)": 8.7022317,
+            "p(95)": 9.540467999999997
+        },
+        "http_errors{ep:schedules}": {
+            "passes": 0,
+            "fails": 6000,
+            "value": 0
+        },
+        "http_req_waiting": {
+            "p(90)": 11.606152800000004,
+            "p(95)": 336.00895105,
+            "p(99)": 485.6646188399998,
+            "max": 821.629065,
+            "avg": 35.650358690566286,
+            "min": 1.871264,
+            "med": 6.2727205
+        },
+        "iteration_duration": {
+            "avg": 36.18771466139997,
+            "min": 2.124686,
+            "med": 6.8809075,
+            "p(90)": 12.175511600000002,
+            "p(95)": 336.47022899999996,
+            "p(99)": 486.1283370399999,
+            "max": 821.954842
+        },
+        "http_errors{ep:queue}": {
+            "passes": 0,
+            "fails": 0,
+            "value": 0
+        },
+        "biz_errors{ep:queue}": {
+            "passes": 0,
+            "fails": 0,
+            "value": 0
+        },
+        "http_reqs{ep:stores}": {
+            "count": 1500,
+            "rate": 4.9968408784384
+        },
+        "http_reqs": {
+            "rate": 99.936817568768,
+            "count": 30000
+        },
+        "http_reqs{ep:coach_schedules}": {
+            "count": 3000,
+            "rate": 9.9936817568768
+        },
+        "http_req_duration{ep:my_reservations}": {
+            "p(95)": 7.869709249999997,
+            "p(99)": 12.804235879999991,
+            "max": 20.364421,
+            "avg": 6.259073633055555,
+            "min": 3.344233,
+            "med": 6.076010500000001,
+            "p(90)": 6.8218046
+        },
+        "biz_ok": {
+            "count": 30000,
+            "rate": 99.936817568768
+        },
+        "http_reqs{ep:coach_detail}": {
+            "count": 1500,
+            "rate": 4.9968408784384
+        },
+        "http_req_duration{ep:cancel}": {
+            "max": 0,
+            "avg": 0,
+            "min": 0,
+            "med": 0,
+            "p(90)": 0,
+            "p(95)": 0,
+            "p(99)": 0
+        },
+        "http_errors{ep:my_reservations}": {
+            "passes": 0,
+            "fails": 3600,
+            "value": 0
+        },
+        "vus": {
+            "value": 4,
+            "min": 0,
+            "max": 7
+        },
+        "data_sent": {
+            "count": 6286719,
+            "rate": 20942.48966030359
+        },
+        "biz_errors{ep:my_reservations}": {
+            "passes": 0,
+            "fails": 3600,
+            "value": 0
+        },
+        "biz_errors{ep:cancel}": {
+            "passes": 0,
+            "fails": 0,
+            "value": 0
+        },
+        "biz_errors{ep:schedules}": {
+            "passes": 0,
+            "fails": 6000,
+            "value": 0
+        },
+        "http_req_failed": {
+            "passes": 0,
+            "fails": 30000,
+            "value": 0
+        },
+        "http_req_duration{ep:checkin}": {
+            "p(95)": 0,
+            "p(99)": 0,
+            "max": 0,
+            "avg": 0,
+            "min": 0,
+            "med": 0,
+            "p(90)": 0
+        },
+        "http_req_tls_handshaking": {
+            "avg": 0,
+            "min": 0,
+            "med": 0,
+            "p(90)": 0,
+            "p(95)": 0,
+            "p(99)": 0,
+            "max": 0
+        },
+        "http_req_duration{ep:coach_schedules}": {
+            "max": 41.790332,
+            "avg": 8.882437508333307,
+            "min": 6.333528,
+            "med": 8.430283500000002,
+            "p(90)": 10.277160599999998,
+            "p(95)": 12.010637399999998,
+            "p(99)": 18.23831682999999
+        },
+        "http_errors{ep:coach_detail}": {
+            "passes": 0,
+            "fails": 1500,
+            "value": 0
+        },
+        "http_reqs{ep:coaches_featured}": {
+            "count": 1500,
+            "rate": 4.9968408784384
+        },
+        "http_errors{ep:cancel}": {
+            "fails": 0,
+            "passes": 0,
+            "value": 0
+        },
+        "http_req_duration{ep:schedules}": {
+            "med": 7.196237999999999,
+            "p(90)": 8.848793500000001,
+            "p(95)": 10.974191050000007,
+            "p(99)": 16.041283160000017,
+            "max": 46.405373,
+            "avg": 7.628024615666681,
+            "min": 5.320933
+        },
+        "biz_errors{ep:today_bookable}": {
+            "fails": 3000,
+            "passes": 0,
+            "value": 0
+        },
+        "http_req_duration{ep:queue}": {
+            "min": 0,
+            "med": 0,
+            "p(90)": 0,
+            "p(95)": 0,
+            "p(99)": 0,
+            "max": 0,
+            "avg": 0
+        },
+        "http_req_duration{ep:my_cards}": {
+            "p(99)": 654.9319051799988,
+            "max": 821.722886,
+            "avg": 375.4971485262504,
+            "min": 244.660428,
+            "med": 358.353617,
+            "p(90)": 503.3024692,
+            "p(95)": 547.6205497
+        },
+        "http_errors{ep:coaches_featured}": {
+            "passes": 0,
+            "fails": 1500,
+            "value": 0
+        },
+        "http_reqs{ep:my_cards}": {
+            "count": 2400,
+            "rate": 7.99494540550144
+        },
+        "biz_errors{ep:stores}": {
+            "passes": 0,
+            "fails": 1500,
+            "value": 0
+        }
+    },
+    "root_group": {
+        "name": "",
+        "path": "",
+        "id": "d41d8cd98f00b204e9800998ecf8427e",
+        "groups": {},
+        "checks": {}
+    }
+}
