@@ -1,6 +1,6 @@
 """运行一个压测场景：记录 MySQL 计数器 → 后台采样监控 → k6 → 再记录计数器 → 对账，结果写入 results/<名称>/。
 
-  A / WARMUP：恒定到达率 --rate 持续 --duration
+  A / WARMUP：恒定到达率 --rate 持续 --duration；--members history 时用 seed.py --history-members 选出的历史会员
   B：--b-members 个会员在 --b-seconds 秒内抢同一节 20 人排课
   C：从 --rate 起每级加 --step，每级 --duration，某级 p95 超过 --p95-limit-ms、错误率达到 --error-limit
      或到达率不足目标的 99% 时停止，该级的前一级即拐点
@@ -276,6 +276,8 @@ def main():
     p.add_argument("--read-mix", help="读请求在各读接口之间的权重，缺省用 capacity.js 的默认值")
     p.add_argument("--commit", help="被测代码的 commit；缺省取 LT_COMMIT 或本目录的 git HEAD")
     p.add_argument("--rate-limit", type=int, default=2000, help="--rate 的安全上限")
+    p.add_argument("--members", choices=["seed", "history"], default="seed",
+                   help="A / C / WARMUP 的预约会员：seed 为 seed.py 新建的会员，history 为历史会员")
     p.add_argument("--warmup-rate", type=int, default=50)
     p.add_argument("--warmup-duration", default="0", help="如 2m；0 不预热")
     a = p.parse_args()
@@ -284,9 +286,9 @@ def main():
     warmup = run_warmup(a)
     if a.scenario in ("READ", "MIXED"):
         sys.exit(run_capacity(a, warmup))
-    tokens = data_dir() / "tokens.json"
+    tokens = data_dir() / ("tokens-history.json" if a.members == "history" else "tokens.json")
     if not tokens.is_file():
-        sys.exit("缺少 tokens.json，先运行 export_tokens.py")
+        sys.exit(f"缺少 {tokens.name}，先运行 export_tokens.py" + (" --set history" if a.members == "history" else ""))
 
     if a.scenario in ("A", "WARMUP"):
         result = run_once(a.name, {**base_env(a.scenario, tokens), "RATE": a.rate, "DURATION": a.duration,

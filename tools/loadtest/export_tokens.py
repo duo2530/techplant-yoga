@@ -2,6 +2,7 @@
 
   --set seed（默认）：seed.py 的会员，写出 tokens.json，内容为 [会员ID, 会员卡ID, token]。
   --set bulk：bulk_seed.py 的可消耗池会员与部分历史会员，写出 tokens-bulk.json，附带 capacity.js 用的数据布局。
+  --set history：seed.py --history-members 选出的历史会员，写出 tokens-history.json，格式同 tokens.json。
 """
 import argparse
 import json
@@ -47,7 +48,7 @@ def bulk_layout(conn):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--set", choices=["seed", "bulk"], default="seed")
+    parser.add_argument("--set", choices=["seed", "bulk", "history"], default="seed")
     parser.add_argument("--history-sample", type=int, default=300, help="bulk：登录的历史会员数，用于“我的”读接口")
     parser.add_argument("--workers", type=int, default=16)
     a = parser.parse_args()
@@ -61,6 +62,18 @@ def main():
             path = data_dir() / "tokens.json"
             path.write_text(json.dumps(tokens), encoding="utf-8")
             print(f"已导出 {len(tokens)} 个 token 到 {path}")
+            return
+        if a.set == "history":
+            rows = query(connect(), "SELECT info FROM lt_seed_progress WHERE name = 'a_history'")
+            if not rows:
+                raise SystemExit("库内没有场景 A 历史会员名单，先运行 seed.py full --scoped --history-members N")
+            info = rows[0]["info"]
+            plan = info if isinstance(info, dict) else json.loads(info)
+            tokens = list(pool.map(lambda gm: [hid("t_member", gm), plan["card_base"] + gm,
+                                               login(session, base, f"136{gm:08d}")], plan["members"]))
+            path = data_dir() / "tokens-history.json"
+            path.write_text(json.dumps(tokens), encoding="utf-8")
+            print(f"已导出历史会员 {len(tokens)} 个 token 到 {path}")
             return
         layout = bulk_layout(connect())
         pool_tokens = list(pool.map(lambda m: login(session, base, f"137{m:08d}"), range(layout["pool_members"])))

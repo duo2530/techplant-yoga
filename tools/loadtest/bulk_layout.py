@@ -36,6 +36,8 @@ SEAT, CANCEL_REFUND, CANCEL_QUEUE, QUEUE = 0, 1, 2, 3
 COURSE_TYPES = [1, 1, 2, 4, 1, 2, 1, 4, 1, 2, 1, 1]
 REGIONS = ["310101", "310104", "310105", "310106", "310107", "310109", "310110", "310112", "310113", "310115"]
 YEAR_CARD_OFFSET = 50_000_000_000
+# seed.py --history-members 给选中的历史会员补发的次数卡
+HISTORY_CARD_OFFSET = 80_000_000_000
 
 POOL_QUEUE_SCHEDULE = 1_000_000
 POOL_CANCEL_SCHEDULE = 2_000_000
@@ -167,6 +169,13 @@ def member_rows(seed, gm, store_id, base_date, password):
         cards.append((year_id, member[0], store_id, f"LTB{year_id}", "团课年卡", 2, 1, None, None, None, None, 2, 1,
                       valid_start, valid_end, created, created, created))
     return member, cards
+
+
+def history_sample(p, members, n, seed, store=0):
+    """从门店 store 的历史会员中按种子选出 n 个，返回升序的会员序号。"""
+    mps = members_per_store(p)
+    candidates = range(store * mps, min(members, (store + 1) * mps))
+    return sorted(random.Random(f"{seed}:a-history:{store}").sample(candidates, min(n, len(candidates))))
 
 
 ROLLING_OFFSET = 10_000_000_000

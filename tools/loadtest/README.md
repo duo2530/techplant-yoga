@@ -40,6 +40,7 @@ k6 和控制脚本运行在云上的压测机里，本机只经 CLB 下发任务
 - 造数规模：2500 个会员，每人一张 500 次的团课次数卡。场景 A/C 用 400 节排课，名额 2500；场景 B 另用 1 节 20 人排课。所有 ID 都在 9.1e9 以上，不和业务数据重叠。
 - 场景 A/C 的第 k 个请求由会员 `k % 2500` 预约排课 `(k + floor(k/2500)) % 400`。前 100 万个请求里的会员与排课组合互不重复。
 - 同一份数据上再跑 A/C 时，要么先 `seed reset`，要么用 `--offset` 接着上一轮的请求序号。否则请求会全部返回 409「您已预约该课程」。场景 C 的阶梯会自动累加 offset。
+- 历史会员模式：库内有 `bulk_seed` 数据时，`seed.py full --scoped --history-members N`（`--history-seed` 默认 58）从 `bulk_seed` 门店 0 的历史会员里按种子选 N 个，给每人补发一张 500 次的本店次数卡，并把 A/C 用的排课挂到该门店下。人数会调整到加 1 后与 400 互素，以保持上面的组合不重复。随后执行 `export_tokens --set history` 和 `run_scenario A --members history`。这些会员在 `t_reservation` 里已有历史预约，预约时「同人同课有效预约」查询（`selectOpenByMemberAndSchedule`）会扫描到这些行，用来覆盖 #42。本机 30 万行数据上冒烟：选中 2500 人，其中 2496 人有历史预约，人均 39 条；A 30/s×1m 成功 1800 笔，0 错误，对账 0。不带 `--history-members` 再执行一次 `seed full --scoped`，即恢复为新会员模式。
 - 计为错误的响应：
   - HTTP 5xx。
   - 连接失败，即 k6 status 0。
