@@ -5,6 +5,8 @@ COPY --from=k6 /usr/bin/k6 /usr/local/bin/k6
 RUN pip install --no-cache-dir -i https://mirrors.aliyun.com/pypi/simple/ pymysql==1.1.1 bcrypt==4.2.0 requests==2.32.3
 WORKDIR /loadtest
 COPY *.py *.js ./
-ENV LT_DATA_DIR=/loadtest/data PYTHONUNBUFFERED=1
+# 建表脚本来自构建参数 --build-context sql=../../backend/sql，供 init_schema.py 初始化只能从 VPC 内访问的 RDS
+COPY --from=sql ry_20260417.sql quartz.sql yoga.sql ./sql/
+ENV LT_DATA_DIR=/loadtest/data LT_SQL_DIR=/loadtest/sql PYTHONUNBUFFERED=1
 EXPOSE 8000
 CMD ["python", "-X", "utf8", "agent.py"]

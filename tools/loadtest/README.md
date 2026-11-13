@@ -27,6 +27,7 @@ k6 和控制脚本运行在云上的压测机里，本机只经 CLB 下发任务
 | `cloud.py` | 工作流用的云操作：启动 SAE 应用，给压测机绑只放行 runner IP 的临时 CLB，清理 |
 | `reconcile.py` | 对账 SQL，与 `ReservationConcurrencyTest` 的不变量一致，任一条查到行即退出码 1 |
 | `check_target.py`、`mysql_status.py` | 只读，打印目标库地址、版本、binlog 与锁统计 |
+| `init_schema.py` | 在空库上按顺序执行镜像内的 `ry_20260417.sql`、`quartz.sql`、`yoga.sql`；库里已有表时拒绝执行 |
 | `sql_stats.py` | 清空或导出 `performance_schema` 语句摘要，对写路径查询执行 EXPLAIN |
 | `agent.py`、`ctl.py` | 压测机上的白名单任务服务及本机客户端，请求头 `X-LT-Token` 鉴权 |
 | `cms_cpu.py` | 按运行起止时间查询云监控里各 SAE 应用的 CPU |
@@ -52,7 +53,7 @@ k6 和控制脚本运行在云上的压测机里，本机只经 CLB 下发任务
 前提：
 
 - 本机有 `aliyun` CLI、docker，以及 `~/.claude/skills/sae-microservice-deploy`。
-- 项目根 `.env` 里有 `YOGALT_MYSQL_PASSWORD` 和 `YOGALT_AGENT_TOKEN`。
+- SAE 命名空间 `cn-shanghai:yogalt` 的 Secret `yogalt-secrets` 里有 `mysql.root.password`、`spring.datasource.druid.master.password` 和 `agent.token`，挂载到后端与压测机的 `/etc/yogalt-secrets/`。本机需要这些值时，从 Secret 读取后只在进程内使用，不写入文件。
 - 下面的命令在 Git Bash 中执行。
 
 ```bash
@@ -69,7 +70,7 @@ cp ../../backend/sql/ry_20260417.sql "$T/mysql/01-ry.sql"; cp ../../backend/sql/
 H=<ACR 公网域名>/<命名空间>
 docker build -t $H/yogalt:backend "$T/backend"
 docker build --build-arg BASE=$H/default-images-house:mysql-8.0.29 -t $H/yogalt:mysql-8.0.29-init "$T/mysql"
-docker build -f Dockerfile.loadgen -t $H/yogalt:loadgen .
+docker build -f Dockerfile.loadgen --build-context sql=../../backend/sql -t $H/yogalt:loadgen .
 for t in backend mysql-8.0.29-init loadgen; do docker push $H/yogalt:$t; done
 
 # 2. 建环境并暴露压测机的 8000 端口，CLB 的 ACL 只放行本机出口 IP
@@ -233,8 +234,10 @@ python -X utf8 compare.py "data/results/*/result.json" --out .local/compare --ma
 以下资源需要事先手工准备，工作流不会创建：
 
 - 按量付费的 RDS MySQL 8.0：导入 `ry_20260417.sql`、`quartz.sql` 和 `yoga.sql`，白名单只放 VPC 网段。
-- 后端与压测机改为连接 RDS 内网地址：`SPRING_DATASOURCE_DRUID_MASTER_URL` 和 `LT_MYSQL_HOST`。
-- 用本分支代码重新构建 `yogalt:loadgen` 镜像。
+- 在 RDS 上建高权限账号和 `yoga` 库（utf8mb4），账号密码使用 SAE Secret 里的 `mysql.root.password`。RDS 默认 `character_set_server=utf8`，在空库时改为 `utf8mb4`（需要重启）。
+- 后端与压测机改为连接 RDS 内网地址：`SPRING_DATASOURCE_DRUID_MASTER_URL`、`SPRING_DATASOURCE_DRUID_MASTER_USERNAME` 和 `LT_MYSQL_HOST`、`LT_MYSQL_USER`。
+- RDS 只能从 VPC 内访问，建表由压测机执行：`ctl.py run init_schema --confirm-target <host:port/db>`。
+- 用本分支代码重新构建 `yogalt:loadgen` 镜像，并带上建表脚本：`docker build -f Dockerfile.loadgen --build-context sql=../../backend/sql -t <ACR>/yogalt:loadgen .`。
 - 在 environment `loadtest` 上配置 required reviewers，作为人工确认。
 
 ### 成本与容量
