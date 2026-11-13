@@ -11,7 +11,7 @@
 - B：抢名额。
 - C：阶梯找拐点。
 
-k6 和控制脚本运行在云上的压测机里，本机只经 CLB 下发任务、取回结果。2026-11-10 的结果和判定见 [results/2026-11-10/report.md](results/2026-11-10/report.md)。
+k6 和控制脚本运行在云上的压测机里，本机只经 CLB 下发任务、取回结果。2026-11-10 的结果和判定见 [results/2026-11-10/report.md](results/2026-11-10/report.md)；100 万与 1000 万预约的容量压测见 [results/2026-11-13-capacity/report.md](results/2026-11-13-capacity/report.md)。
 
 ## 文件
 
@@ -199,7 +199,7 @@ python -X utf8 compare.py "data/results/*/result.json" --out .local/compare --ma
 
 ### GitHub Actions：`loadtest-capacity.yml`
 
-只能手动触发：Actions → Loadtest Capacity → Run workflow。绑定 environment `loadtest`，同一时间只允许一个运行（`concurrency: loadtest-capacity`），总超时 6 小时。
+只能手动触发：Actions → Loadtest Capacity → Run workflow。绑定 environment `loadtest`，该 environment 配置了必需审批人，审批通过后作业才会开始；同一时间只允许一个运行（`concurrency: loadtest-capacity`），总超时 6 小时。
 
 | 输入 | 说明 |
 |---|---|
@@ -210,6 +210,7 @@ python -X utf8 compare.py "data/results/*/result.json" --out .local/compare --ma
 | `rate` | 恒定到达率，上限为 `vars.LT_MAX_RATE`（默认 1000） |
 | `duration` | 10s～60m |
 | `mix` | `MIXED` 的权重 |
+| `warmup` | 正式运行前的 MIXED 预热，写作 `速率/时长`，默认 `50/2m`，填 `0` 不预热 |
 | `run_seed`、`run_load_test` | 是否造数、是否压测；只压测时会先重建可消耗池 |
 
 阶段：

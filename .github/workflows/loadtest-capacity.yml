@@ -141,7 +141,7 @@ jobs:
         run: |
           ip=$(curl -fsS https://api.ipify.org)
           python -X utf8 cloud.py expose --app "${{ vars.SAE_LOADGEN_APP_ID }}" --port 8000 --ip "$ip" \
-            --name "yogalt-ci-${{ github.run_id }}" --state "$STATE_FILE" ${{ vars.LT_CLB_ZONE && format('--zone {0}', vars.LT_CLB_ZONE) || '' }}
+            --name "yogalt-lt-${{ github.run_id }}" --state "$STATE_FILE" ${{ vars.LT_CLB_ZONE && format('--zone {0}', vars.LT_CLB_ZONE) || '' }}
 
       - name: Safety check target database
         working-directory: tools/loadtest
