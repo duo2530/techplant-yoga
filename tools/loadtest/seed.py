@@ -8,6 +8,7 @@ reset：只清空预约与流水，把卡余额和排课占位恢复到造数后
 两种模式都必须带 --confirm-target，值与 check_target.py 打印的目标库一致才会执行。
 """
 import argparse
+import sys
 from datetime import datetime, timedelta
 
 import bcrypt
@@ -85,13 +86,61 @@ def reset(conn):
     conn.commit()
 
 
+MEMBER_RANGE = (MEMBER_BASE, MEMBER_BASE + MEMBER_COUNT - 1)
+CARD_RANGE = (CARD_BASE, CARD_BASE + MEMBER_COUNT - 1)
+SCHEDULE_RANGE = (SCHEDULE_BASE, B_SCHEDULE_ID)
+
+
+def scoped_reset(conn):
+    """只清本脚本会员产生的预约与流水、恢复本脚本的卡余额与排课占位，不触碰其他数据。"""
+    with conn.cursor() as cur:
+        cur.execute("DELETE FROM t_member_card_transaction WHERE member_card_id BETWEEN %s AND %s", CARD_RANGE)
+        cur.execute("DELETE FROM t_reservation WHERE member_id BETWEEN %s AND %s", MEMBER_RANGE)
+        cur.execute("UPDATE t_member_card SET remaining_times = purchase_times + gift_times"
+                    " WHERE id BETWEEN %s AND %s", CARD_RANGE)
+        cur.execute("UPDATE t_schedule SET booked_persons = 0 WHERE id BETWEEN %s AND %s", SCHEDULE_RANGE)
+    conn.commit()
+
+
+def scoped_full(conn):
+    """重建本脚本的会员、卡与排课，其他数据保持不变。"""
+    scoped_reset(conn)
+    with conn.cursor() as cur:
+        cur.execute("DELETE FROM t_member_card WHERE id BETWEEN %s AND %s", CARD_RANGE)
+        cur.execute("DELETE FROM t_member WHERE id BETWEEN %s AND %s", MEMBER_RANGE)
+        cur.execute("DELETE FROM t_schedule WHERE id BETWEEN %s AND %s", SCHEDULE_RANGE)
+    conn.commit()
+    password = bcrypt.hashpw(MEMBER_PASSWORD.encode(), bcrypt.gensalt(rounds=10, prefix=b"2a")).decode()
+    now = datetime.now()
+    members = [(MEMBER_BASE + i, f"139{i:08d}", password, f"{i:08d}"[-4:], f"压测会员{i}") for i in range(MEMBER_COUNT)]
+    cards = [(CARD_BASE + i, MEMBER_BASE + i, STORE_ID, f"LT{CARD_BASE + i}", STORE_ID, CARD_TIMES, CARD_TIMES,
+              now - timedelta(days=1), now + timedelta(days=300), now - timedelta(days=1)) for i in range(MEMBER_COUNT)]
+    with conn.cursor() as cur:
+        seed_reference(cur)
+        cur.executemany(INSERT_MEMBER, members)
+        cur.executemany(INSERT_CARD, cards)
+        cur.executemany(INSERT_SCHEDULE, schedule_rows())
+    conn.commit()
+
+
+def has_bulk_data(conn):
+    return bool(query(conn, "SHOW TABLES LIKE 'lt_seed_progress'")) and         bool(query(conn, "SELECT 1 FROM lt_seed_progress LIMIT 1"))
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("mode", choices=["full", "reset"])
     parser.add_argument("--confirm-target", required=True)
+    parser.add_argument("--scoped", action="store_true",
+                        help="只增删本脚本的 ID 区间，不清空整表；库里有 bulk_seed 数据时必须使用")
     args = parser.parse_args()
     conn = connect(args.confirm_target)
-    (full if args.mode == "full" else reset)(conn)
+    if not args.scoped and has_bulk_data(conn):
+        sys.exit("库里有 bulk_seed 的数据，TRUNCATE 会清掉它们；改用 --scoped")
+    if args.scoped:
+        (scoped_full if args.mode == "full" else scoped_reset)(conn)
+    else:
+        (full if args.mode == "full" else reset)(conn)
     for t in CORE_TABLES:
         print(f"{t}: {query(conn, f'SELECT COUNT(*) AS n FROM {t}')[0]['n']} 行")
     print("排课:", query(conn, "SELECT COUNT(*) AS n, SUM(booked_persons) AS booked, MIN(start_time) AS first,"
