@@ -74,7 +74,7 @@ npm run preview
 - dev 端口是 80：需要管理员权限或存在占用时，临时改 `vite.config.js` 的 `server.port`。
 - `.env.*` 的 `VITE_APP_TITLE` 已改为"瑜伽约课管理"；首页 `src/views/index.vue` 与 `src/settings.js` 的 `footerContent` 仍是若依文案，品牌化时统一替换。
 - 根 `.gitignore` 只忽略 `docs/原型/_工具/{渲染,对比}`，`src/assets` 下的 png/svg 正常入库；新增静态资源直接提交即可。
-- `frontend/pc/.gitignore` 忽略了 `package-lock.json`（依赖版本靠 package.json 精确锁定）。
+- 依赖安装结果由 `package-lock.json` 锁定：复现安装用 `npm ci`，修改依赖用 `npm install` 并提交更新后的 `package-lock.json`。
 
 ## 8. 不要做的事
 

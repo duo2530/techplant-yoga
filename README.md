@@ -2,365 +2,105 @@
 
 简体中文 | [English](./README.en.md)
 
-瑜伽普拉提预约与运营管理项目，包含管理端、用户端小程序、Java 后端和项目设计文档。
+瑜伽普拉提门店的约课与运营管理系统：运营人员在管理端排课、发卡，会员在小程序或 H5 上选店、约课、签到。
 
-项目当前以 MVP 和可验收的业务垂直切片为主，已落地门店、教室、教练、课程、排课、会员、会员卡和预约等业务模块。
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](./LICENSE)
+![Java 8](https://img.shields.io/badge/Java-8-orange.svg)
+![Spring Boot 2.5](https://img.shields.io/badge/Spring%20Boot-2.5.15-6DB33F.svg)
+![RuoYi 3.9](https://img.shields.io/badge/RuoYi-3.9.2-blue.svg)
+![Vue 3](https://img.shields.io/badge/Vue-3-42b883.svg)
+![Element Plus](https://img.shields.io/badge/Element%20Plus-2.13-409EFF.svg)
+![uni-app](https://img.shields.io/badge/uni--app-Vue%203-2B9939.svg)
+![MySQL 8](https://img.shields.io/badge/MySQL-8.0-4479A1.svg)
 
-## 项目组成
+## 界面预览
 
-| 目录 | 说明 |
+**管理端**
+
+<table>
+  <tr>
+    <td><img src="docs/images/readme/admin-schedule.png" alt="排课管理"></td>
+    <td><img src="docs/images/readme/admin-member-card.png" alt="会员卡管理"></td>
+    <td><img src="docs/images/readme/admin-store.png" alt="门店管理"></td>
+  </tr>
+  <tr align="center"><td>排课管理</td><td>会员卡管理</td><td>门店管理</td></tr>
+</table>
+
+**用户端 H5**
+
+<table>
+  <tr>
+    <td><img src="docs/images/readme/h5-home.png" alt="首页" width="260"></td>
+    <td><img src="docs/images/readme/h5-schedule.png" alt="约课" width="260"></td>
+    <td><img src="docs/images/readme/h5-store.png" alt="选择门店" width="260"></td>
+  </tr>
+  <tr align="center"><td>首页</td><td>约课</td><td>选择门店</td></tr>
+</table>
+
+## 功能特性
+
+- **门店与教室**：维护多家门店的区域、营业时间、地址和门店图片，每家门店下管理各自的教室。
+- **教练**：教练档案含头像、简介和相册，可设为金牌教练并在用户端首页推荐。
+- **课程**：团课、精品课、私教课、特色课四类课程，带封面、介绍和难度。
+- **排课**：按门店、教室、教练排未来 14 天的课，自动检查教练和课程的时间冲突，支持上架、下架和取消。
+- **会员**：管理端建档或会员用手机号自助注册，按等级区分会员。
+- **会员卡**：次数卡和年卡两种卡型，发卡、开卡、停卡全流程，按门店和课种限定适用范围。
+- **预约**：会员选课预约并自动扣次，满员可排队补位，开课前可取消、到店签到；人数不足的课程自动取消并返还次数。
+
+## 快速开始
+
+需要 JDK 8、Maven、Node.js 20.19+ 和 Docker。在仓库根目录执行：
+
+```powershell
+docker compose up -d --wait   # 启动 MySQL 与 Redis，首次启动自动导入初始化脚本
+start.bat                     # 构建并启动后端、管理端、用户端 H5
+```
+
+| 服务 | 地址 |
 | --- | --- |
-| `backend` | 基于 RuoYi 的 Java 后端，包含系统管理和瑜伽业务模块 |
-| `frontend/pc` | 运营管理端 Web，负责门店、课程、教练等后台管理 |
-| `frontend/uni-app` | 用户端 uni-app 小程序工程，面向微信小程序和 H5 |
-| `docs` | 需求分析、概要设计、详细设计、原型和业务对象资料 |
+| 后端 | http://localhost:8080 |
+| 管理端 | http://localhost （账号 `admin / admin123`） |
+| 用户端 H5 | http://localhost:9090 |
+
+停止服务用 `stop.bat`，再执行 `docker compose down`。手动导入 SQL、后端配置、OSS 图片存储、HBuilderX 和微信开发者工具调试等完整步骤见 [本地开发环境搭建](docs/编码开发/本地开发环境搭建.md)。
 
 ## 技术栈
 
-### 后端
-
-- Java 8
-- Spring Boot 2.5.15
-- RuoYi 3.9.2
-- Spring MVC、Spring Security
-- MyBatis-Plus 3.5.5
-- MySQL、Druid、Redis（按 RuoYi 运行配置提供）
-- Springfox Swagger
-- Maven 多模块构建
-
-瑜伽业务代码位于 `com.techplant.yoga` 包下，业务模块使用 DO、DTO、VO、DAO、Service、Controller 分层。接口不直接返回持久化实体，分页接口沿用 RuoYi 的 `TableDataInfo` 响应结构。
-
-### 运营管理端
-
-- Vue 3.5
-- Vite 6
-- Element Plus 2.13
-- Pinia 3
-- Axios
-- Vue Router 4
-
-管理端基于 RuoYi Vue3 脚手架，业务页面位于 `frontend/pc/src/views`，接口封装位于 `frontend/pc/src/api`。
-
-### 用户端小程序
-
-- uni-app
-- Vue 3
-- Pinia
-- 微信小程序
-- HBuilderX
-
-用户端页面只依赖 `api` 层：门店、排课、教练、预约、账号登录和会员卡列表已经接真实后端（`frontend/uni-app/api/store.js`、`schedule.js`、`coach.js`、`booking.js`、`auth.js`，以及 `member.js` 中的 `GET /api/member-cards`），课程、首页、活动、消息、体验课和会员中心其余数据仍是 mock。接入真实后端时，按同样方式替换 `frontend/uni-app/api` 下对应业务接口即可。
+| 模块 | 技术 |
+| --- | --- |
+| 后端 | Java 8、Spring Boot 2.5.15、RuoYi 3.9.2、Spring Security、MyBatis-Plus 3.5.5、Druid、Swagger、Maven 多模块 |
+| 数据与存储 | MySQL 8.0、Redis 7、阿里云 OSS（业务图片） |
+| 管理端 | Vue 3.5、Vite 6、Element Plus 2.13、Pinia 3、Axios、Vue Router 4 |
+| 用户端 | uni-app（Vue 3）、Pinia，发布为微信小程序和 H5 |
 
 ## 项目结构
 
 ```text
 techplant-yoga/
-├─ backend/
-│  ├─ ruoyi-admin/       # 后端启动模块
-│  ├─ ruoyi-common/      # 公共工具和基础能力
-│  ├─ ruoyi-framework/   # RuoYi 框架能力
-│  ├─ ruoyi-system/      # 系统管理模块
-│  ├─ ruoyi-yoga/        # 瑜伽业务模块
-│  ├─ ruoyi-quartz/      # 定时任务模块
-│  ├─ ruoyi-generator/   # 代码生成模块
-│  └─ sql/               # 基础表和瑜伽业务初始化脚本
+├─ backend/             # RuoYi 后端：ruoyi-admin 启动模块、ruoyi-yoga 业务模块等
+│  ├─ ruoyi-yoga/       # 瑜伽业务模块
+│  └─ sql/              # 基础表和瑜伽业务初始化脚本
 ├─ frontend/
-│  ├─ pc/
-│  │  └─ src/
-│  │     ├─ api/         # 管理端接口
-│  │     ├─ views/       # 管理端页面
-│  │     ├─ router/      # 路由和动态菜单
-│  │     └─ store/       # Pinia 状态
-│  └─ uni-app/
-│     ├─ api/            # 用户端业务接口层
-│     ├─ mock/           # 用户端 mock 数据
-│     ├─ pages/          # 小程序页面
-│     ├─ components/     # 业务组件
-│     └─ static/         # 图片、字体和样式资源
-├─ docs/
-│  ├─ 需求分析/          # 需求分析、用例总览与 9 条用例
-│  ├─ 需求文档/          # 全局说明、功能清单汇总、业务流程图、状态流转图
-│  │  ├─ 管理端/         # 管理端功能清单、页面结构图与管理端原型
-│  │  └─ 用户端/         # 用户端功能清单、结构图与高保真原型
-│  ├─ 产品分析/          # 真实 App 实测截图、页面与对象、页面与跳转梳理
-│  ├─ 概要设计/          # 概要设计
-│  ├─ 详细设计/          # 各模块详细设计
-│  ├─ 编码开发/          # 项目基础设施、AI Agent 开发手册
-│  └─ 模板/              # 各类文档模板
-├─ .gitignore
-├─ LICENSE
-├─ README.md
-└─ README.en.md
+│  ├─ pc/               # 运营管理端（Vue 3 + Element Plus）
+│  └─ uni-app/          # 用户端小程序与 H5
+├─ docs/                # 需求、设计、测试与开发文档
+├─ tools/               # 本地启停脚本等工具
+├─ docker-compose.yml   # 本地 MySQL 与 Redis
+├─ start.bat            # 一键启动
+└─ stop.bat             # 一键停止
 ```
 
-## 快速开始
+## 文档导航
 
-按下面步骤依次执行，即可在本地跑通「数据库 → 后端 → 管理端 → 用户端小程序」完整链路（第 0 步是环境准备，第 1~6 步是操作步骤）。
-
-| 约定项 | 默认值 |
+| 分类 | 文档 |
 | --- | --- |
-| 数据库名 | `yoga` |
-| 后端地址 | `http://localhost:8080` |
-| 管理端地址 | `http://localhost`（Vite 开发端口 80） |
-| 管理端登录账号 | `admin / admin123` |
-| 用户端 H5 端口 | `9090`（仅运行到浏览器时使用） |
-
-### 0. 环境准备
-
-| 依赖 | 版本 / 说明 |
-| --- | --- |
-| JDK | 8 |
-| Maven | 3.3.9 及以上 |
-| MySQL | 5.7 / 8.0，字符集建议 `utf8mb4` |
-| Redis | 5.0 及以上，默认 `localhost:6379`、无密码 |
-| Node.js | 18 及以上（管理端使用 Vite 6） |
-| HBuilderX | 最新稳定版，用于编译用户端小程序 |
-| 微信开发者工具 | 最新稳定版，并在「设置 → 安全设置」中开启服务端口 |
-
-**用 Docker 启动 MySQL 与 Redis（可选）**：仓库根目录的 `docker-compose.yml` 提供与 `application*.yml` 默认值一致的 MySQL 8.0（`root`／`123456`，库名 `yoga`）和 Redis 7，首次启动会按顺序自动导入下面三个 SQL 脚本，可跳过第 1 步：
-
-```powershell
-docker compose up -d --wait   # 启动依赖
-start.bat                     # 构建并启动后端 8080、管理端 80、用户端 H5 9090
-docker compose down -v        # 停止并删除数据卷，下次启动重新初始化
-```
-
-### 1. 把三个 SQL 脚本导入数据库
-
-后端依赖三个初始化脚本，全部位于 `backend/sql`，**必须按顺序执行**：
-
-| 顺序 | 脚本 | 作用 |
-| --- | --- | --- |
-| 1 | `backend/sql/ry_20260417.sql` | 若依基础表与种子数据（`sys_user` 含 `admin` 账号、`sys_menu`、字典等） |
-| 2 | `backend/sql/quartz.sql` | Quartz 定时任务表（`QRTZ_*`） |
-| 3 | `backend/sql/yoga.sql` | 10 张瑜伽业务表（`t_store`、`t_store_no_counter`、`t_classroom`、`t_coach`、`t_course`、`t_schedule`、`t_member`、`t_member_card`、`t_reservation`、`t_member_card_transaction`）+ 业务菜单（2001~2008）+ `store_region` 区域字典、`member_level` 会员等级字典 + 定时任务 + 示例数据 |
-
-`ry_20260417.sql` 和 `quartz.sql` 里**没有 `CREATE DATABASE` 和 `use` 语句**，所以要自己先建库再导入。库名默认用 `yoga`，与 `application-druid.yml` 保持一致：
-
-```sql
-CREATE DATABASE IF NOT EXISTS `yoga` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
-```
-
-**方式 A：图形化工具（推荐）**
-
-用 Navicat / DBeaver / MySQL Workbench 连接 MySQL → 新建数据库 `yoga` → 依次打开并执行上表中的三个 `.sql` 文件（顺序不要颠倒；`yoga.sql` 需要在已导入若依基础表的库上执行）。
-
-**方式 B：mysql 命令行**
-
-```bash
-mysql -uroot -p -e "CREATE DATABASE IF NOT EXISTS yoga DEFAULT CHARACTER SET utf8mb4;"
-mysql -uroot -p --default-character-set=utf8mb4 yoga
-```
-
-先 `cd` 到仓库根目录，进入 `mysql>` 交互后用 `source` 执行三个脚本：
-
-```sql
-source backend/sql/ry_20260417.sql;
-source backend/sql/quartz.sql;
-source backend/sql/yoga.sql;
-```
-
-> PowerShell 不支持 `<` 输入重定向，因此这里用 mysql 客户端内部的 `source` 命令，避免中文乱码和语法问题。
-
-**导入后自检**：
-
-```sql
-USE yoga;
-SELECT COUNT(*) FROM sys_user;                                  -- 应至少有 admin 账号
-SELECT menu_name FROM sys_menu WHERE menu_id BETWEEN 2000 AND 2008;   -- 应返回「经营基础」与 8 个业务菜单
-SELECT COUNT(*) FROM t_store;                                   -- 10 张业务表已建好
-```
-
-`yoga.sql` 可以重复执行：业务表都是 `DROP TABLE IF EXISTS` 后重建，菜单清理 2000~2010 后重写 2000~2008，不影响若依自带的「系统管理」菜单；但**重建业务表会清空业务数据**。
-
-### 2. 修改后端配置文件
-
-| 配置文件 | 需要修改的内容 |
-| --- | --- |
-| `backend/ruoyi-admin/src/main/resources/application-druid.yml` | `spring.datasource.druid.master.url`（默认 `jdbc:mysql://localhost:3306/yoga`）、`username`（默认 `root`）、`password`（默认 `123456`） |
-| `backend/ruoyi-admin/src/main/resources/application.yml` | `spring.redis.host / port / password`（默认 `localhost:6379`、空密码）、`server.port`（默认 `8080`）、`ruoyi.profile` 上传目录（默认 `D:/ruoyi/uploadPath`，Windows 下请确认该目录已存在）、`yoga.oss` 业务图片存储（访问密钥从环境变量 `YOGA_OSS_ACCESS_KEY_ID`／`YOGA_OSS_ACCESS_KEY_SECRET` 读取，不配置时门店／教练／课程图片无法上传） |
-
-几点提示：
-
-- 数据库名如果没建成 `yoga`，记得同步改 `master.url` 里的库名。
-- MySQL 8.0 且未配置 SSL 证书时，建议把 URL 里的 `useSSL=true` 改成 `useSSL=false&allowPublicKeyRetrieval=true`，否则可能出现连接失败。
-- `token.secret`、`/druid/*` 监控台口令（默认 `ruoyi/123456`）、`ruoyi.profile` 都是脚手架默认值，仅用于本地开发，上线前必须修改。
-
-### 3. 构建并启动后端
-
-**Windows 一键启停（完成前面的环境、数据库和配置准备后）**
-
-在仓库根目录双击 `start.bat`，同时启动后端（8080）、管理端（80）和用户端 H5（9090）；双击 `stop.bat`，关闭这些服务及其子进程。
-
-- 启动会先执行 Maven 打包（跳过测试），前端缺少 `node_modules` 时自动执行 `npm ci`。首次启动需要联网下载依赖。
-- MySQL 和 Redis 需提前启动；脚本不负责数据库初始化，也不启动微信开发者工具。
-- 服务在后台运行，启动窗口关闭后继续运行；日志与进程记录位于 `.tmp/dev/`。启动失败时会关闭本次已启动的服务，保留日志。
-- 重复启动会跳过已由脚本启动的服务；端口被其他程序占用时提示错误。关闭仅处理脚本记录的进程，不处理 IDE 或其他终端启动的服务。
-- 修改后端代码后，先关闭再启动以重新打包。也可在 PowerShell 执行 `powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\dev.ps1 -Action Start`（关闭时将 `Start` 换成 `Stop`）。
-
-**方式 A：IDE 启动**
-
-用 IDEA / Eclipse 打开 `backend`，直接运行启动类 `backend/ruoyi-admin/src/main/java/com/ruoyi/RuoYiApplication.java`。
-
-**方式 B：命令行启动**
-
-```powershell
-cd backend
-mvn -DskipTests clean package
-java -jar ruoyi-admin/target/ruoyi-admin.jar
-```
-
-Windows 下也可以用现成脚本 `backend/bin/package.bat`（打包）和 `backend/bin/run.bat`（启动）；Linux / macOS 用 `backend/ry.sh start`。
-
-启动成功的标志：
-
-- 控制台日志出现「若依启动成功」（端口 `8080` 无冲突）；
-- 浏览器访问 `http://localhost:8080` 有响应；
-- 可选：接口文档 `http://localhost:8080/swagger-ui/index.html`，Druid 监控台 `http://localhost:8080/druid`。
-
-启动失败的常见原因：MySQL 或 Redis 未启动、配置里的库名/账号/密码不对、第 1 步的三个 SQL 没有导入完整。
-
-### 4. 启动管理端（PC）
-
-```powershell
-cd frontend/pc
-npm install
-npm run dev
-```
-
-- 先 `npm install` 安装依赖，再 `npm run dev` 启动；Vite 会构建并自动打开浏览器。
-- 开发端口是 **80**，访问地址为 `http://localhost`；若提示端口占用或需要权限，临时改 `frontend/pc/vite.config.js` 的 `server.port`。
-- 开发环境接口通过 `/dev-api` 代理到 `http://localhost:8080`，后端换个地址就改 `frontend/pc/vite.config.js` 顶部的 `baseUrl`。
-- 打开管理端后，输入用户名 **`admin`**、密码 **`admin123`** 登录（验证码是数学计算题，按提示填写结果）。
-- 登录成功后，左侧菜单「经营基础」下应能看到门店管理、教室管理、教练管理、课程管理、排课管理、会员管理、会员卡管理、预约管理；如果菜单为空，说明 `yoga.sql` 的菜单数据没导入成功或未重新登录。
-- 只改前端不启后端也能打开登录页，但登录会失败，所以请先完成第 3 步。
-
-### 5. 运行用户端小程序
-
-`frontend/uni-app` 支持 npm 命令行启动与打包，需要 Node.js >= 20.19。
-
-```powershell
-cd frontend/uni-app
-npm ci
-npm run dev:h5
-# 微信小程序开发：npm run dev:mp-weixin
-# 生产打包：npm run build:h5 或 npm run build:mp-weixin
-```
-
-H5 默认地址为 `http://localhost:9090`。微信开发者工具导入 `dist/dev/mp-weixin` 调试，生产产物位于 `dist/build/h5` 和 `dist/build/mp-weixin`。完整说明见 [用户端 README](frontend/uni-app/README.md)。
-
-也可继续使用 HBuilderX：
-
-1. **用 HBuilderX 打开工程**：HBuilderX → 文件 → 打开目录 → 选择 `frontend/uni-app` 目录。
-2. **确认 AppID**：双击工程中的 `manifest.json`，在可视化界面左侧选择「微信小程序配置」，确认 **AppID** 对应自己的微信小程序；也可以直接修改 `manifest.json` 里的 `mp-weixin.appid`。
-   - AppID 在微信公众平台「开发 → 开发管理 → 开发设置」中获取。
-   - 仓库根目录的 `.env`（已被 `.gitignore` 忽略，不入库）里记录了本地使用的 `APP_ID`，可以作参考；该文件不会被工程代码读取。
-3. **准备微信开发者工具**：先在 HBuilderX「工具 → 设置 → 运行配置」里把「微信开发者工具路径」指向本机安装目录，并确认微信开发者工具「设置 → 安全设置 → 服务端口」处于打开状态，否则 HBuilderX 无法把编译结果推给它。
-4. **运行到小程序**：回到 HBuilderX，点击**左上角的「运行」→「运行到小程序模拟器」→「微信开发者工具」**，等待首次编译完成（第一次会慢一些），微信开发者工具会自动打开并加载小程序。
-5. 开发阶段建议在微信开发者工具「详情 → 本地设置」里勾选「不校验合法域名」。
-6. 用户端目前是「部分接后端、部分 mock」的状态：门店、排课、教练、预约、账号登录和会员卡列表走真实接口（`/api/stores`、`/api/schedules`、`/api/coaches`、`/api/reservations`、`/api/auth`、`/api/member-cards`，地址取 `frontend/uni-app/config.js` 里的 `baseUrl`，默认 `http://localhost:8080`），其余业务域仍是 mock 数据。因此想让首页门店、约课页、我的预约有真实数据，请先完成第 3 步把后端启动起来；后端未启动时这些页面只会显示空态。
-7. 只想快速看页面时，也可以「运行 → 运行到浏览器」，H5 端口默认 `9090`。
-
-> 改过 `manifest.json` / `pages.json` 后需要重新编译，个别情况要重启微信开发者工具。
-
-### 6. 验证清单
-
-| 检查项 | 期望结果 |
-| --- | --- |
-| 数据库 | `yoga` 库中存在 `sys_*`、`QRTZ_*` 与 `t_store` 等 10 张业务表 |
-| 后端 | 日志出现「若依启动成功」，`http://localhost:8080` 可访问 |
-| 管理端 | `npm install` 与 `npm run dev` 无报错，`http://localhost` 能打开登录页 |
-| 登录 | `admin / admin123` 登录成功，能看到「经营基础」下的 8 个业务菜单 |
-| 业务页面 | 门店/教室/教练/课程/排课/会员/会员卡/预约页面能正常分页查询，并按页面功能新增和修改 |
-| 用户端 | `npm run dev:h5`、`npm run build:mp-weixin` 或 HBuilderX 编译无报错，微信开发者工具中能看到 4 个 tabBar 页面 |
-
-### 常见问题
-
-| 现象 | 原因与处理 |
-| --- | --- |
-| 后端启动报 Redis 连接失败 | Redis 未启动，或 `application.yml` 的 `spring.redis` 地址/密码不对 |
-| 后端启动报数据库连接失败 | MySQL 未启动、库名/账号/密码不对，或 MySQL 8 的 SSL 参数问题（见第 2 步） |
-| 管理端登录报接口错误 / 404 | 后端未启动，或后端端口不是 `8080`（端口改了要同步改 `vite.config.js` 的 `baseUrl`） |
-| 登录后左侧没有业务菜单 | `backend/sql/yoga.sql` 未执行成功，或执行后未重新登录 |
-| `npm run dev` 启动失败 | Node.js 版本过低（需 18+），或 80 端口被占用（改 `server.port`） |
-| 微信开发者工具提示 AppID 无效 | 第 5 步的 AppID 还是占位值 `touristappid`，需替换成自己的 AppID |
-| 小程序接口请求失败 | 开发阶段勾选「不校验合法域名」，并确认后端已启动 |
-
-## 当前门店模块
-
-门店管理已包含：
-
-- 管理端门店分页查询与详情查询
-- 新增门店
-- 修改门店（全量编辑，返回最新详情）
-- 删除门店（物理删除，删除前校验该门店没有未结束的排课）
-- 用户端免登录分页查询门店列表，支持按区域筛选与关键字搜索
-- 门店类型：主力店、精品店
-- 所在区域：存行政区划 code，区名由字典 `store_region` 翻译
-- 联系电话、地址、门店图片（单图）
-- 固定营业时间文本
-
-门店一期**不设启用/停用状态**，也没有逻辑删除：删除就是对数据行执行 `DELETE`。
-
-管理端入口：
-
-```text
-经营基础 -> 门店管理
-```
-
-主要接口：
-
-```text
-GET    /admin/stores
-GET    /admin/stores/{storeId}
-POST   /admin/stores
-PUT    /admin/stores/{storeId}
-DELETE /admin/stores/{storeId}
-GET    /api/stores
-```
-
-## 验证命令
-
-后端模块构建：
-
-```powershell
-cd backend
-mvn -pl ruoyi-yoga -am -DskipTests clean compile
-```
-
-测试策略、运行命令和覆盖边界见 [AI Agent测试手册](docs/系统测试/AI%20Agent测试手册.md)。
-
-管理端构建：
-
-```powershell
-cd frontend/pc
-npm run build:prod
-```
-
-## 文档约定
-
-- 需求、概要设计和详细设计文档使用简体中文。
-- 未确认的业务规则保留为 `TODO-待确认`，不提前扩展领域能力。
-- API 使用明确的 DTO 和 VO，避免直接暴露持久化实体。
-- 数据库变更统一维护在 `backend/sql` 下的业务脚本中。
-
-### 文档维护约定（防漂移）
-
-文档之间的**唯一出处**与引用方式约定如下，改文档时请照此执行：
-
-| 内容 | 唯一出处 | 其它文档怎么写 |
-| --- | --- | --- |
-| 功能范围与分期 | `docs/需求文档/功能清单汇总.md`（按「版本」列分期：v1.0 一期、v2.0 二期、v3.0 三期） | 引用模块与功能名，不复制功能清单 |
-| 用户端界面与跳转 | `docs/产品分析/用户端页面与跳转梳理.md`（P/T/C 编号） | 只引用编号 |
-| 用户端接口契约 | `docs/详细设计/用户端接口详细设计.md` | 模块详细设计只写管理端接口，用户端接口在此定义一次 |
-| 全局技术约定 | `backend/AGENTS.md`、`frontend/uni-app/AGENTS.md` | 只引用，不另起一套 |
-
-维护三条硬性要求：
-
-1. **版本号与日期同步更新**：改了正文就要升文档头部的版本号与日期，并在文末版本记录里加一行；文档头部版本必须等于版本记录里的最高版本。
-2. **引用要写现行版本**：引用其它文档时写它**当前**的版本号与相对路径，不要留旧版本号；改相对链接后务必点一遍。
-3. **只增不改历史**：版本记录与历史决策只追加、不涂改——废弃的口径在版本记录里说明"推翻了哪一版"，而不是把旧行删掉。
-
-## 许可证
+| 需求 | [需求分析](docs/需求分析/需求分析.md)、[用例总览](docs/需求分析/用例总览.md)、[功能清单汇总](docs/需求文档/功能清单汇总.md)、[MVP 业务流程图](docs/需求文档/MVP业务流程图.md) |
+| 设计 | [概要设计](docs/概要设计/概要设计.md)、[详细设计目录](docs/详细设计/)、[用户端接口详细设计](docs/详细设计/用户端接口详细设计.md) |
+| 产品分析 | [用户端页面与跳转梳理](docs/产品分析/用户端页面与跳转梳理.md)、[用户端页面与对象](docs/产品分析/用户端页面与对象.md) |
+| 开发 | [本地开发环境搭建](docs/编码开发/本地开发环境搭建.md)、[AI Agent 开发手册](docs/编码开发/AI%20Agent开发手册.md)、[项目基础设施](docs/编码开发/项目基础设施.md) |
+| 测试 | [AI Agent 测试手册](docs/系统测试/AI%20Agent测试手册.md)、[预约并发与事务核对](docs/系统测试/预约并发与事务核对.md) |
+| 文档约定 | 文档唯一出处与维护规则见 [本地开发环境搭建 · 文档约定](docs/编码开发/本地开发环境搭建.md#14文档约定) |
+
+## License
 
 本项目使用 [MIT License](./LICENSE)。
