@@ -35,6 +35,10 @@ class SqlInitializationTest {
 
     private static final String AUTO_CANCEL_JOB_MIGRATION = "migrations/20261109-schedule-auto-cancel-job.sql";
 
+    private static final String MEMBER_CARD_INDEX_MIGRATION = "migrations/20261114-member-card-member-index.sql";
+
+    private static final String MEMBER_CARD_INDEX = "idx_member_card_member_type";
+
     private static final String AUTO_CANCEL_JOB = "SELECT COUNT(*) FROM sys_job WHERE job_id = 100"
             + " AND invoke_target = 'yogaScheduleTask.cancelUnderstaffed' AND cron_expression = '0 * * * * ?'"
             + " AND misfire_policy = '3' AND concurrent = '1' AND status = '0'";
@@ -91,6 +95,11 @@ class SqlInitializationTest {
             assertEquals("1",
                     String.valueOf(queryRow(dataSource, "SELECT status FROM sys_job WHERE job_id = 100").get("status")),
                     "已有任务时增量脚本不覆盖管理员的修改");
+
+            execute(dataSource, "ALTER TABLE t_member_card DROP INDEX " + MEMBER_CARD_INDEX);
+            executeScript(dataSource, YogaSchema.locateScript(MEMBER_CARD_INDEX_MIGRATION));
+            executeScript(dataSource, YogaSchema.locateScript(MEMBER_CARD_INDEX_MIGRATION));
+            assertMemberCardIndex(dataSource);
         } finally {
             container.stop();
         }
@@ -99,6 +108,7 @@ class SqlInitializationTest {
     private void assertInitialized(DataSource dataSource) throws Exception {
         assertLevelColumn(dataSource);
         assertQueueConfigColumns(dataSource);
+        assertMemberCardIndex(dataSource);
         assertEquals(3, count(dataSource, "SELECT COUNT(*) FROM t_coach"), "样例教练 3 条");
         assertEquals(0, count(dataSource, "SELECT COUNT(*) FROM t_coach WHERE level <> 1"), "样例教练均为普通等级");
         assertNoLevelPermission(dataSource);
@@ -137,6 +147,16 @@ class SqlInitializationTest {
         assertEquals("int", column.get("column_type"));
         assertEquals("NO", column.get("is_nullable"));
         assertEquals(defaultValue, String.valueOf(column.get("column_default")));
+    }
+
+    private void assertMemberCardIndex(DataSource dataSource) throws Exception {
+        assertEquals("member_id,card_type",
+                String.valueOf(queryRow(dataSource,
+                        "SELECT GROUP_CONCAT(COLUMN_NAME ORDER BY SEQ_IN_INDEX) AS index_columns"
+                                + " FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE()"
+                                + " AND TABLE_NAME = 't_member_card' AND INDEX_NAME = '" + MEMBER_CARD_INDEX + "'")
+                                        .get("index_columns")),
+                "t_member_card 按会员与卡类型建索引");
     }
 
     private void assertNoLevelPermission(DataSource dataSource) throws Exception {
