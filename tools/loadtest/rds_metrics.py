@@ -5,7 +5,7 @@
 RDS：DescribeDBInstancePerformance 取 CPU、IOPS、会话数、QPS/TPS，DescribeSlowLogRecords 取慢 SQL 并按语句模板汇总。
 接口失败或没有数据点时，对应字段写 {"available": false, "reason": ...}，不中断。
 在本机或 GitHub runner 上执行，需要 aliyun CLI 的 RDS 与 CMS 只读权限；压测机上没有云凭证。
-RDS 默认监控粒度为 300 秒，短于 10 分钟的运行可能只有一两个点；慢日志有数分钟延迟。
+RDS 监控点和慢日志只统计 k6 起止时间内的部分，压测前后的造数与对账 SQL 不计入；监控点按其时间桶整段落在窗口内才计入，窗口内没有完整时间桶时记为不可用。慢日志有数分钟延迟。
 """
 import argparse
 import json
@@ -54,21 +54,29 @@ def stats(values):
     return {"avg": round(sum(values) / len(values), 2), "max": round(max(values), 2), "points": len(values)}
 
 
+def parse_utc(text):
+    return datetime.strptime(text, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc).timestamp()
+
+
 def performance(instance, started, ended):
-    # 窗口两端各放宽一个粒度，避免 300 秒粒度下取不到点
     r = aliyun("rds", "DescribeDBInstancePerformance", DBInstanceId=instance, Key=",".join(PERF_KEYS),
                StartTime=utc_minute(started, -300), EndTime=utc_minute(ended, 300))
     series = defaultdict(list)
     for item in (r.get("PerformanceKeys") or {}).get("PerformanceKey") or []:
         names = PERF_KEYS.get(item.get("Key"), ())
-        for point in (item.get("Values") or {}).get("PerformanceValue") or []:
+        points = (item.get("Values") or {}).get("PerformanceValue") or []
+        times = [parse_utc(x["Date"]) for x in points]
+        step = min((b - a for a, b in zip(times, times[1:]) if b > a), default=60)
+        for t, point in zip(times, points):
+            if t < started or t + step > ended:
+                continue
             for name, v in zip(names, str(point.get("Value", "")).split("&")):
                 try:
                     series[name].append(float(v))
                 except ValueError:
                     pass
     if not series:
-        return unavailable("窗口内没有监控数据点")
+        return unavailable("k6 起止时间内没有完整的监控时间桶")
     return {"available": True, **{name: stats(series.get(name)) for names in PERF_KEYS.values() for name in names}}
 
 
@@ -85,7 +93,7 @@ def slow_log(instance, started, ended, top=10):
         r = aliyun("rds", "DescribeSlowLogRecords", DBInstanceId=instance, StartTime=utc_minute(started, -60),
                    EndTime=utc_minute(ended, 60), PageSize=100, PageNumber=page)
         items = (r.get("Items") or {}).get("SQLSlowRecord") or []
-        records += items
+        records += [x for x in items if started <= parse_utc(x["ExecutionStartTime"]) + 1 <= ended]
         if len(items) < 100 or page >= 50:
             break
         page += 1

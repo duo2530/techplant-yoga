@@ -188,7 +188,7 @@ python -X utf8 compare.py "data/results/*/result.json" --out .local/compare --ma
 
 后端 JVM、连接池沿用 `run_scenario` 的采样。`rds_metrics.py` 在有云凭证的机器上执行（本机或 runner，压测机上没有凭证），写入：
 
-- `rds.performance`：`DescribeDBInstancePerformance` 的 `cpu_pct`、`mem_pct`、`iops`、`active_sessions`、`total_sessions`、`qps`、`tps`，各含 avg / max / 点数。RDS 默认监控粒度 300 秒，查询窗口两端各放宽 5 分钟。
+- `rds.performance`：`DescribeDBInstancePerformance` 的 `cpu_pct`、`mem_pct`、`iops`、`active_sessions`、`total_sessions`、`qps`、`tps`，各含 avg / max / 点数。只计入时间桶整段落在 k6 起止时间内的监控点，压测前后的造数与对账不计入；窗口内没有完整时间桶时记为不可用。
 - `rds.slow_log`：`DescribeSlowLogRecords` 的慢 SQL，按语句模板（常量替换为 `?`）汇总次数、总耗时、最大耗时与最大扫描行数，取总耗时前 10。慢日志有数分钟延迟，`--wait-slow-log` 可以先等待。
 - `sae_cpu.<名称>`：云监控 `acs_serverless` 的 CPU。
 
