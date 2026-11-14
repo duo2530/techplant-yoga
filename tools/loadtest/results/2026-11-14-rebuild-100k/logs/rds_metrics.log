@@ -1,0 +1,11 @@
+== read-100k: rds cpu={'avg': 4.7, 'max': 4.7, 'points': 1} slow=0 sae_cpu={'backend': 11.32}
+== mixed-100k: rds cpu={'avg': 5.62, 'max': 5.62, 'points': 1} slow=0 sae_cpu={'backend': 9.26}
+== a-100k: rds cpu={'avg': 3.9, 'max': 3.9, 'points': 1} slow=0 sae_cpu={'backend': 8.49}
+== a-history-100k: rds cpu={'avg': 4.02, 'max': 4.02, 'points': 1} slow=0 sae_cpu={'backend': 9.59}
+== mixed-100k-ladder-200: rds cpu={'avg': 12.11, 'max': 12.11, 'points': 1} slow=0 sae_cpu={'backend': 13.03}
+== mixed-100k-ladder-300: rds cpu={'avg': 19.27, 'max': 19.27, 'points': 1} slow=0 sae_cpu={'backend': 23.41}
+== mixed-100k-ladder-400: rds cpu={'avg': 28.0, 'max': 28.0, 'points': 1} slow=0 sae_cpu={'backend': 29.31}
+== mixed-100k-ladder-500: rds cpu={'avg': 37.09, 'max': 37.09, 'points': 1} slow=0 sae_cpu={'backend': 39.51}
+== mixed-100k-ladder-600: rds cpu={'avg': 46.32, 'max': 46.32, 'points': 1} slow=0 sae_cpu={'backend': 54.27}
+== mixed-100k-ladder-700: rds cpu={'avg': 49.38, 'max': 55.66, 'points': 2} slow=0 sae_cpu={'backend': 44.96}
+== mixed-100k-ladder-800: rds cpu={'avg': 60.35, 'max': 63.0, 'points': 2} slow=0 sae_cpu={'backend': 55.83}

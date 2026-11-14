@@ -1,0 +1,11 @@
+[09:03:39] 网络核对通过: VPC vpc-uf6di68weekxptacmx4gf（172.16.0.0/12），交换机 vsw-uf680x8lci72dwju2vvj7（yogalt-l，cn-shanghai-l，172.16.58.0/24），安全组 sg-uf679eth1u7f32rvwvdk
+[09:03:40] 规格核对通过: mysql.x4.large.2c = 4C16G（16GB（独享型）），cn-shanghai-l 有售
+[09:03:51] CreateDBInstance 未返回实例 ID（request to rds.cn-shanghai.aliyuncs.com failed: context deadline exceeded (Client.Timeout exceeded while awaiting headers)），先按描述查询
+[09:04:12] 已提交创建 rm-uf608ywe004r04px2
+[09:14:32] rm-uf608ywe004r04px2 Running，创建用时 652 秒
+[09:14:52] 账号 yogalt 已创建（高权限）
+[09:14:55] 库 yoga 就绪（utf8mb4）
+[09:14:55] 修改参数并重启（一次）: {'character_set_server': 'utf8mb4', 'transaction_isolation': 'REPEATABLE-READ', 'performance_schema': '1', 'loose_performance_schema_max_digest_length': '1024', 'loose_performance_schema_max_sql_text_length': '1024'}
+[09:16:21] 参数生效，用时 86 秒
+[09:16:21] RunningParameters 核对通过: {"character_set_server": "utf8mb4", "transaction_isolation": "REPEATABLE-READ", "performance_schema": "1", "loose_performance_schema_max_digest_length": "1024", "loose_performance_schema_max_sql_text_length": "1024"}
+[09:16:21] 完成: 实例 rm-uf608ywe004r04px2，目标库 rm-uf608ywe004r04px2.mysql.cn-shanghai.rds.aliyuncs.com:3306/yoga，本次用时 765 秒

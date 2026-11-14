@@ -1,0 +1,519 @@
+{
+  "name": "mixed-1m-ps-ladder-400",
+  "k6_exit": 0,
+  "env": {
+    "BASE_URL": "http://backend-cn-shanghai-yogalt.yogalt:8080",
+    "TOKENS_FILE": "/loadtest/data/tokens-bulk.json",
+    "RATE": 400,
+    "DURATION": "2m",
+    "OFFSET": 0,
+    "MIX": "read=80,reserve=10,cancel=5,queue=3,checkin=2"
+  },
+  "started": 1794576848.8934345,
+  "ended": 1794576980.7040303,
+  "started_at": "2026-11-13T21:34:08+0800",
+  "ended_at": "2026-11-13T21:36:20+0800",
+  "commit": "dfd2712",
+  "spec": {
+    "mysql": {
+      "version": "8.0.36",
+      "buffer_pool": 10468982784,
+      "max_connections": 8520
+    }
+  },
+  "table_counts": {
+    "t_member": {
+      "total": 31124,
+      "bulk": 28623
+    },
+    "t_member_card": {
+      "total": 36277,
+      "bulk": 33774
+    },
+    "t_schedule": {
+      "total": 22651,
+      "bulk": 22245
+    },
+    "t_reservation": {
+      "total": 1057001,
+      "bulk": 1027000
+    },
+    "t_member_card_transaction": {
+      "total": 1136679,
+      "bulk": 1106678
+    },
+    "t_store": {
+      "total": 9,
+      "bulk": 5
+    },
+    "t_classroom": {
+      "total": 20,
+      "bulk": 15
+    },
+    "t_coach": {
+      "total": 44,
+      "bulk": 40
+    },
+    "t_course": {
+      "total": 17,
+      "bulk": 12
+    }
+  },
+  "seed": {
+    "target_rows": 1000000,
+    "profile": "booking-heavy",
+    "seed": 58,
+    "mode": "top-up",
+    "seconds": 35.2,
+    "phases": {
+      "pool": 22.5,
+      "rolling": 0.0,
+      "reconcile": 12.2
+    },
+    "base_date": "2026-11-13",
+    "reconcile_violations": 0
+  },
+  "args": {
+    "scenario": "MIXED",
+    "name": "mixed-1m-ps-ladder-400",
+    "rate": 400,
+    "duration": "2m",
+    "offset": 0,
+    "b_members": 500,
+    "b_seconds": 10,
+    "step": 20,
+    "max_rate": 2000,
+    "p95_limit_ms": 300,
+    "error_limit": 0.001,
+    "mix": "read=80,reserve=10,cancel=5,queue=3,checkin=2",
+    "read_mix": null,
+    "commit": "dfd2712",
+    "rate_limit": 2000
+  },
+  "k6": {
+    "http_reqs": 48000,
+    "qps": 399.89,
+    "iterations": 48000,
+    "dropped_iterations": 0,
+    "p50_ms": 6.91,
+    "p95_ms": 35.7,
+    "p99_ms": 47.07,
+    "max_ms": 108.77,
+    "avg_ms": 9.76,
+    "error_rate": 0,
+    "biz_error_rate": 0,
+    "conflicts": {},
+    "vus_max": 800,
+    "endpoints": {
+      "my_cards": {
+        "requests": 3072,
+        "qps": 25.6,
+        "p50_ms": 38.71,
+        "p95_ms": 54.35,
+        "p99_ms": 68.57,
+        "max_ms": 108.77,
+        "avg_ms": 41.1,
+        "http_error_rate": 0,
+        "biz_error_rate": 0
+      },
+      "today_bookable": {
+        "requests": 3840,
+        "qps": 32.0,
+        "p50_ms": 4.42,
+        "p95_ms": 6.26,
+        "p99_ms": 10.93,
+        "max_ms": 21.08,
+        "avg_ms": 4.66,
+        "http_error_rate": 0,
+        "biz_error_rate": 0
+      },
+      "my_reservations": {
+        "requests": 4608,
+        "qps": 38.4,
+        "p50_ms": 5.85,
+        "p95_ms": 7.65,
+        "p99_ms": 12.22,
+        "max_ms": 26.4,
+        "avg_ms": 6.1,
+        "http_error_rate": 0,
+        "biz_error_rate": 0
+      },
+      "coach_detail": {
+        "requests": 1920,
+        "qps": 16.0,
+        "p50_ms": 2.57,
+        "p95_ms": 3.44,
+        "p99_ms": 6.47,
+        "max_ms": 16.11,
+        "avg_ms": 2.73,
+        "http_error_rate": 0,
+        "biz_error_rate": 0
+      },
+      "stores": {
+        "requests": 1920,
+        "qps": 16.0,
+        "p50_ms": 3.43,
+        "p95_ms": 4.74,
+        "p99_ms": 9.32,
+        "max_ms": 22.77,
+        "avg_ms": 3.6,
+        "http_error_rate": 0,
+        "biz_error_rate": 0
+      },
+      "queue": {
+        "requests": 1440,
+        "qps": 12.0,
+        "p50_ms": 8.2,
+        "p95_ms": 14.89,
+        "p99_ms": 19.39,
+        "max_ms": 27.85,
+        "avg_ms": 8.93,
+        "http_error_rate": 0,
+        "biz_error_rate": 0
+      },
+      "checkin": {
+        "requests": 960,
+        "qps": 8.0,
+        "p50_ms": 6.59,
+        "p95_ms": 10.27,
+        "p99_ms": 15.0,
+        "max_ms": 29.07,
+        "avg_ms": 7.07,
+        "http_error_rate": 0,
+        "biz_error_rate": 0
+      },
+      "coaches_featured": {
+        "requests": 1920,
+        "qps": 16.0,
+        "p50_ms": 2.53,
+        "p95_ms": 3.13,
+        "p99_ms": 4.6,
+        "max_ms": 10.68,
+        "avg_ms": 2.61,
+        "http_error_rate": 0,
+        "biz_error_rate": 0
+      },
+      "cancel": {
+        "requests": 2400,
+        "qps": 20.0,
+        "p50_ms": 10.97,
+        "p95_ms": 18.02,
+        "p99_ms": 24.8,
+        "max_ms": 40.16,
+        "avg_ms": 11.95,
+        "http_error_rate": 0,
+        "biz_error_rate": 0
+      },
+      "schedules": {
+        "requests": 7680,
+        "qps": 64.0,
+        "p50_ms": 6.97,
+        "p95_ms": 10.12,
+        "p99_ms": 14.72,
+        "max_ms": 31.62,
+        "avg_ms": 7.35,
+        "http_error_rate": 0,
+        "biz_error_rate": 0
+      },
+      "reserve": {
+        "requests": 4800,
+        "qps": 40.0,
+        "p50_ms": 9.6,
+        "p95_ms": 16.01,
+        "p99_ms": 21.12,
+        "max_ms": 32.44,
+        "avg_ms": 10.42,
+        "http_error_rate": 0,
+        "biz_error_rate": 0
+      },
+      "schedule_detail": {
+        "requests": 5760,
+        "qps": 48.0,
+        "p50_ms": 5.76,
+        "p95_ms": 8.74,
+        "p99_ms": 13.42,
+        "max_ms": 27.19,
+        "avg_ms": 6.15,
+        "http_error_rate": 0,
+        "biz_error_rate": 0
+      },
+      "hot": {
+        "requests": 3840,
+        "qps": 32.0,
+        "p50_ms": 8.51,
+        "p95_ms": 26.25,
+        "p99_ms": 33.63,
+        "max_ms": 66.24,
+        "avg_ms": 13.39,
+        "http_error_rate": 0,
+        "biz_error_rate": 0
+      },
+      "coach_schedules": {
+        "requests": 3840,
+        "qps": 32.0,
+        "p50_ms": 9.12,
+        "p95_ms": 14.15,
+        "p99_ms": 18.85,
+        "max_ms": 33.7,
+        "avg_ms": 9.73,
+        "http_error_rate": 0,
+        "biz_error_rate": 0
+      }
+    }
+  },
+  "mysql_delta": {
+    "Innodb_row_lock_waits": 62,
+    "Innodb_row_lock_time": 232,
+    "Innodb_row_lock_time_max": 13,
+    "Com_commit": 9600,
+    "Com_rollback": 0,
+    "Innodb_rows_inserted": 29252,
+    "Innodb_rows_updated": 17760,
+    "Innodb_data_fsyncs": 38221,
+    "Innodb_os_log_fsyncs": 37194,
+    "row_lock_time_avg_ms_in_run": 3.74,
+    "Innodb_row_lock_time_max_global": 13
+  },
+  "Innodb_row_lock_time_avg_global": 3,
+  "monitor": {
+    "samples": 66,
+    "druid.ActiveCount": {
+      "max": 8,
+      "avg": 2.515,
+      "p50": 2,
+      "n": 66
+    },
+    "druid.WaitThreadCount": {
+      "max": 0,
+      "avg": 0.0,
+      "p50": 0,
+      "n": 66
+    },
+    "druid.PoolingCount": {
+      "max": 17,
+      "avg": 14.485,
+      "p50": 15,
+      "n": 66
+    },
+    "tomcat.currentThreadsBusy": {
+      "max": 7,
+      "avg": 3.121,
+      "p50": 3,
+      "n": 66
+    },
+    "tomcat.currentThreadCount": {
+      "max": 100,
+      "avg": 100.0,
+      "p50": 100,
+      "n": 66
+    },
+    "tomcat.connectionCount": {
+      "max": 802,
+      "avg": 737.045,
+      "p50": 802,
+      "n": 66
+    },
+    "jvm.ProcessCpuLoad": {
+      "max": 0.620585389453314,
+      "avg": 0.315,
+      "p50": 0.3325,
+      "n": 66
+    },
+    "jvm.SystemCpuLoad": {
+      "max": 0.6207435901306241,
+      "avg": 0.331,
+      "p50": 0.3502451645,
+      "n": 66
+    },
+    "threads.ThreadCount": {
+      "max": 133,
+      "avg": 132.03,
+      "p50": 132,
+      "n": 66
+    },
+    "mysql.Threads_running": {
+      "max": 7,
+      "avg": 4.742,
+      "p50": 5,
+      "n": 66
+    },
+    "mysql.Threads_connected": {
+      "max": 19,
+      "avg": 19.0,
+      "p50": 19,
+      "n": 66
+    },
+    "mysql.Innodb_row_lock_current_waits": {
+      "max": 0,
+      "avg": 0.0,
+      "p50": 0,
+      "n": 66
+    },
+    "sample_errors": 0,
+    "druid.NotEmptyWaitCount.delta": 0,
+    "druid.NotEmptyWaitMillis.delta": 0,
+    "druid.ActivePeak.end": 20
+  },
+  "reconcile": {
+    "violations": {
+      "排课占位等于有效预约人数": {
+        "count": 0,
+        "sample": []
+      },
+      "已预约人数不超过最大人数": {
+        "count": 0,
+        "sample": []
+      },
+      "同一会员同一排课至多一条有效记录": {
+        "count": 0,
+        "sample": []
+      },
+      "次数卡剩余次数非负": {
+        "count": 0,
+        "sample": []
+      },
+      "流水余额守恒": {
+        "count": 0,
+        "sample": []
+      },
+      "占位的次数卡预约恰有一条等额扣次流水": {
+        "count": 0,
+        "sample": []
+      },
+      "已取消且扣过次的预约已等额返次": {
+        "count": 0,
+        "sample": []
+      },
+      "每条预约至多一条返次流水": {
+        "count": 0,
+        "sample": []
+      },
+      "排队中与排队失败没有次数流水": {
+        "count": 0,
+        "sample": []
+      },
+      "次数卡余额等于初始次数加流水变动": {
+        "count": 0,
+        "sample": []
+      },
+      "有空位时不应仍有人排队": {
+        "count": 0,
+        "sample": []
+      },
+      "排队人数不超过上限": {
+        "count": 0,
+        "sample": []
+      }
+    },
+    "violation_total": 0,
+    "totals": {
+      "预约按状态": [
+        {
+          "status": 3,
+          "n": 706127,
+          "persons": "706127"
+        },
+        {
+          "status": 2,
+          "n": 202947,
+          "persons": "202947"
+        },
+        {
+          "status": 5,
+          "n": 18321,
+          "persons": "18321"
+        },
+        {
+          "status": 1,
+          "n": 133076,
+          "persons": "133076"
+        },
+        {
+          "status": 4,
+          "n": 2770,
+          "persons": "2770"
+        }
+      ],
+      "扣次流水": [
+        {
+          "change_type": 1,
+          "n": 991541,
+          "times": "-991541"
+        },
+        {
+          "change_type": 2,
+          "n": 152338,
+          "times": "152338"
+        }
+      ],
+      "排课占位合计": [
+        {
+          "booked": "839203"
+        }
+      ],
+      "场景B排课": [
+        {
+          "id": 9700009999,
+          "max_persons": 20,
+          "booked_persons": 0,
+          "reserved": 0
+        }
+      ]
+    }
+  },
+  "rds": {
+    "instance": "rm-uf6457mg6ukpee2if",
+    "performance": {
+      "available": true,
+      "cpu_pct": {
+        "avg": 42.67,
+        "max": 42.67,
+        "points": 1
+      },
+      "mem_pct": {
+        "avg": 6.85,
+        "max": 6.85,
+        "points": 1
+      },
+      "iops": {
+        "avg": 428.35,
+        "max": 428.35,
+        "points": 1
+      },
+      "active_sessions": {
+        "avg": 2.17,
+        "max": 2.17,
+        "points": 1
+      },
+      "total_sessions": {
+        "avg": 19.0,
+        "max": 19.0,
+        "points": 1
+      },
+      "qps": {
+        "avg": 3649.1,
+        "max": 3649.1,
+        "points": 1
+      },
+      "tps": {
+        "avg": 260.35,
+        "max": 260.35,
+        "points": 1
+      }
+    },
+    "slow_log": {
+      "available": true,
+      "records": 0,
+      "templates": 0,
+      "top": []
+    }
+  },
+  "sae_cpu": {
+    "backend": {
+      "available": true,
+      "avg": 31.52,
+      "max": 35.9,
+      "points": 2
+    }
+  }
+}

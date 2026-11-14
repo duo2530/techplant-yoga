@@ -1,0 +1,201 @@
+{
+  "name": "a-100k",
+  "k6_exit": 0,
+  "env": {
+    "BASE_URL": "http://backend-cn-shanghai-yogalt.yogalt:8080",
+    "SCENARIO": "A",
+    "TOKENS_FILE": "/loadtest/data/tokens.json",
+    "SCHEDULE_BASE": 9700000000,
+    "SCHEDULE_COUNT": 400,
+    "B_SCHEDULE_ID": 9700009999,
+    "RATE": 100,
+    "DURATION": "2m",
+    "OFFSET": 0
+  },
+  "started": 1794622075.154974,
+  "ended": 1794622198.2351043,
+  "started_at": "2026-11-14T10:07:55+0800",
+  "ended_at": "2026-11-14T10:09:58+0800",
+  "k6": {
+    "http_reqs": 12000,
+    "qps": 100.0,
+    "iterations": 12000,
+    "dropped_iterations": 0,
+    "p50_ms": 6.89,
+    "p90_ms": 7.56,
+    "p95_ms": 7.93,
+    "p99_ms": 12.52,
+    "max_ms": 25.05,
+    "avg_ms": 7.08,
+    "error_rate": 0,
+    "errors": 0,
+    "reserved": 12000,
+    "unexpected": 0,
+    "conflict_total": 0,
+    "conflicts": {},
+    "reserved_p95_ms": 7.93,
+    "vus_max": 200
+  },
+  "mysql_delta": {
+    "Innodb_row_lock_waits": 0,
+    "Innodb_row_lock_time": 0,
+    "Innodb_row_lock_time_max": 0,
+    "Com_commit": 12000,
+    "Com_rollback": 0,
+    "Innodb_rows_inserted": 39099,
+    "Innodb_rows_updated": 24000,
+    "Innodb_data_fsyncs": 45061,
+    "Innodb_os_log_fsyncs": 44094,
+    "row_lock_time_avg_ms_in_run": 0,
+    "Innodb_row_lock_time_max_global": 72
+  },
+  "Innodb_row_lock_time_avg_global": 72,
+  "monitor": {
+    "samples": 62,
+    "druid.ActiveCount": {
+      "max": 1,
+      "avg": 0.871,
+      "p50": 1,
+      "n": 62
+    },
+    "druid.WaitThreadCount": {
+      "max": 0,
+      "avg": 0.0,
+      "p50": 0,
+      "n": 62
+    },
+    "druid.PoolingCount": {
+      "max": 17,
+      "avg": 16.129,
+      "p50": 16,
+      "n": 62
+    },
+    "tomcat.currentThreadsBusy": {
+      "max": 1,
+      "avg": 0.774,
+      "p50": 1,
+      "n": 62
+    },
+    "tomcat.currentThreadCount": {
+      "max": 100,
+      "avg": 100.0,
+      "p50": 100,
+      "n": 62
+    },
+    "tomcat.connectionCount": {
+      "max": 202,
+      "avg": 198.677,
+      "p50": 202,
+      "n": 62
+    },
+    "jvm.ProcessCpuLoad": {
+      "max": 0.5942717698433085,
+      "avg": 0.125,
+      "p50": 0.12,
+      "n": 62
+    },
+    "jvm.SystemCpuLoad": {
+      "max": 0.5952272942910352,
+      "avg": 0.126,
+      "p50": 0.11921208375,
+      "n": 62
+    },
+    "threads.ThreadCount": {
+      "max": 132,
+      "avg": 132.0,
+      "p50": 132,
+      "n": 62
+    },
+    "mysql.Threads_running": {
+      "max": 4,
+      "avg": 3.161,
+      "p50": 3,
+      "n": 62
+    },
+    "mysql.Threads_connected": {
+      "max": 19,
+      "avg": 19.0,
+      "p50": 19,
+      "n": 62
+    },
+    "mysql.Innodb_row_lock_current_waits": {
+      "max": 0,
+      "avg": 0.0,
+      "p50": 0,
+      "n": 62
+    },
+    "sample_errors": 0,
+    "druid.NotEmptyWaitCount.delta": 0,
+    "druid.NotEmptyWaitMillis.delta": 0,
+    "druid.ActivePeak.end": 17
+  },
+  "warmup": {
+    "scenario": "MIXED",
+    "rate": 50,
+    "duration": "2m",
+    "mix": "read=80,reserve=10,cancel=5,queue=3,checkin=2",
+    "offset": 0,
+    "iterations_used": 6001,
+    "k6_exit": 0,
+    "started_at": "2026-11-14T10:05:51+0800",
+    "qps": 50.01,
+    "p95_ms": 12.96,
+    "p99_ms": 14.35,
+    "error_rate": 0
+  },
+  "rds": {
+    "instance": "rm-uf608ywe004r04px2",
+    "performance": {
+      "available": true,
+      "cpu_pct": {
+        "avg": 3.9,
+        "max": 3.9,
+        "points": 1
+      },
+      "mem_pct": {
+        "avg": 5.11,
+        "max": 5.11,
+        "points": 1
+      },
+      "iops": {
+        "avg": 492.99,
+        "max": 492.99,
+        "points": 1
+      },
+      "active_sessions": {
+        "avg": 0.15,
+        "max": 0.15,
+        "points": 1
+      },
+      "total_sessions": {
+        "avg": 19.0,
+        "max": 19.0,
+        "points": 1
+      },
+      "qps": {
+        "avg": 2106.0,
+        "max": 2106.0,
+        "points": 1
+      },
+      "tps": {
+        "avg": 400.36,
+        "max": 400.36,
+        "points": 1
+      }
+    },
+    "slow_log": {
+      "available": true,
+      "records": 0,
+      "templates": 0,
+      "top": []
+    }
+  },
+  "sae_cpu": {
+    "backend": {
+      "available": true,
+      "avg": 8.49,
+      "max": 12.5,
+      "points": 2
+    }
+  }
+}

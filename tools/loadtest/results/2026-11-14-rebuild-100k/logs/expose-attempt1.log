@@ -1,0 +1,8 @@
+[    0.7s] slb CreateAccessControlList ok (0.7s)
+[    1.4s] slb AddAccessControlListEntry ok (0.7s)
+[    1.8s] slb DescribeAccessControlListAttribute ok (0.4s)
+[    7.6s] slb CreateLoadBalancer error (5.7s) slb CreateLoadBalancer 失败: The Instance zone id doesn't support.
+::error::slb CreateLoadBalancer 失败: The Instance zone id doesn't support.
+[    8.2s] slb DeleteAccessControlList ok (0.6s)
+删除 ACL acl-uf6tor1zeumox3cre43ru: OK
+slb CreateLoadBalancer 失败: The Instance zone id doesn't support.；已删除本次创建的 CLB 与 ACL

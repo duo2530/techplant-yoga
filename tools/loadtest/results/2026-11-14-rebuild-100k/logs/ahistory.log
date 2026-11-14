@@ -1,0 +1,18 @@
+== 11:04:56 check_target
+目标库: rm-uf608ywe004r04px2.mysql.cn-shanghai.rds.aliyuncs.com:3306/yoga
+== 11:05:01 pool
+[11:05:22] 耗时 20.5 秒，各阶段 {'rolling': 0.0, 'pool': 18.9, 'reconcile': 1.4}
+已导出可消耗池 3000 个、历史会员 300 个 token 到 /loadtest/data/tokens-bulk.json
+== 11:07:39 history seed
+场景 A 历史会员: {"store_id": 8100000000000, "seed": 58, "members": 2500, "with_history": 2499, "min": 0, "avg": 38.2, "max": 55}
+已导出历史会员 2500 个 token 到 /loadtest/data/tokens-history.json
+== 11:09:42 run a-history-100k
+{"name": "a-history-100k", "k6": {"http_reqs": 12000, "qps": 100.0, "iterations": 12000, "dropped_iterations": 0, "p50_ms": 8.94, "p90_ms": 9.68, "p95_ms": 10.06, "p99_ms": 13.13, "max_ms": 31.28, "avg_ms": 9.07, "error_rate": 0, "errors": 0, "reserved": 12000, "unexpected": 0, "conflict_total": 0, "conflicts": {}, "reserved_p95_ms": 10.06, "vus_max": 200}, "mysql_delta": {"Innodb_row_lock_waits": 0, "Innodb_row_lock_time": 0, "Innodb_row_lock_time_max": 0, "Com_commit": 12000, "Com_rollback": 0, "Innodb_rows_inserted": 38978, "Innodb_rows_updated": 24000, "Innodb_data_fsyncs": 46853, "Innodb_os_log_fsyncs": 45898, "row_lock_time_avg_ms_in_run": 0, "Innodb_row_lock_time_max_global": 355}}
+{"reconcile_violations": 0}
+a-history-100k qps=100.0 ach=1.000 p95=10.1 p99=13.1 err=0 recon=0 warmup=50/2m digests=25
+== 11:14:03 restore scoped seed
+排课: {'n': 4455, 'booked': Decimal('105027'), 'first': datetime.datetime(2026, 5, 18, 6, 0), 'last': datetime.datetime(2026, 11, 27, 20, 45)}
+== 11:14:18 final reconcile
+rc=0 ok=12
+access-log 137
+== 11:14:25 done

@@ -1,0 +1,77 @@
+
+     biz_errors.....................: 0.00%  0 out of 3601
+       { ep:cancel }................: 0.00%  0 out of 0
+       { ep:checkin }...............: 0.00%  0 out of 0
+       { ep:coach_detail }..........: 0.00%  0 out of 180
+       { ep:coach_schedules }.......: 0.00%  0 out of 360
+       { ep:coaches_featured }......: 0.00%  0 out of 180
+       { ep:hot }...................: 0.00%  0 out of 360
+       { ep:my_cards }..............: 0.00%  0 out of 288
+       { ep:my_reservations }.......: 0.00%  0 out of 432
+       { ep:queue }.................: 0.00%  0 out of 0
+       { ep:reserve }...............: 0.00%  0 out of 0
+       { ep:schedule_detail }.......: 0.00%  0 out of 540
+       { ep:schedules }.............: 0.00%  0 out of 721
+       { ep:stores }................: 0.00%  0 out of 180
+       { ep:today_bookable }........: 0.00%  0 out of 360
+     biz_ok.........................: 3601   30.001582/s
+     data_received..................: 7.7 MB 64 kB/s
+     data_sent......................: 755 kB 6.3 kB/s
+     http_errors....................: 0.00%  0 out of 3601
+       { ep:cancel }................: 0.00%  0 out of 0
+       { ep:checkin }...............: 0.00%  0 out of 0
+       { ep:coach_detail }..........: 0.00%  0 out of 180
+       { ep:coach_schedules }.......: 0.00%  0 out of 360
+       { ep:coaches_featured }......: 0.00%  0 out of 180
+       { ep:hot }...................: 0.00%  0 out of 360
+       { ep:my_cards }..............: 0.00%  0 out of 288
+       { ep:my_reservations }.......: 0.00%  0 out of 432
+       { ep:queue }.................: 0.00%  0 out of 0
+       { ep:reserve }...............: 0.00%  0 out of 0
+       { ep:schedule_detail }.......: 0.00%  0 out of 540
+       { ep:schedules }.............: 0.00%  0 out of 721
+       { ep:stores }................: 0.00%  0 out of 180
+       { ep:today_bookable }........: 0.00%  0 out of 360
+     http_req_blocked...............: avg=47.74µs min=1.74µs  med=3.93µs  p(90)=4.91µs  p(95)=5.67µs  p(99)=2.33ms   max=12.15ms 
+     http_req_connecting............: avg=40.14µs min=0s      med=0s      p(90)=0s      p(95)=0s      p(99)=2.28ms   max=7.56ms  
+     http_req_duration..............: avg=20.98ms min=4.99ms  med=22.72ms p(90)=30.29ms p(95)=31.79ms p(99)=37.28ms  max=47.05ms 
+       { ep:cancel }................: avg=0s      min=0s      med=0s      p(90)=0s      p(95)=0s      p(99)=0s       max=0s      
+       { ep:checkin }...............: avg=0s      min=0s      med=0s      p(90)=0s      p(95)=0s      p(99)=0s       max=0s      
+       { ep:coach_detail }..........: avg=5.87ms  min=5.35ms  med=5.83ms  p(90)=6.12ms  p(95)=6.23ms  p(99)=6.7ms    max=9.29ms  
+       { ep:coach_schedules }.......: avg=20.07ms min=16.16ms med=17.46ms p(90)=37.28ms p(95)=38.31ms p(99)=41.19ms  max=47.05ms 
+       { ep:coaches_featured }......: avg=5.64ms  min=4.99ms  med=5.58ms  p(90)=5.85ms  p(95)=5.99ms  p(99)=6.43ms   max=12.02ms 
+       { ep:hot }...................: avg=18.1ms  min=16.87ms med=17.92ms p(90)=19.1ms  p(95)=19.52ms p(99)=22.16ms  max=24.33ms 
+       { ep:my_cards }..............: avg=22.26ms min=20.82ms med=22.12ms p(90)=23.24ms p(95)=23.75ms p(99)=24.79ms  max=26.66ms 
+       { ep:my_reservations }.......: avg=27.34ms min=14.14ms med=27.1ms  p(90)=28.49ms p(95)=29.15ms p(99)=31.36ms  max=33.29ms 
+       { ep:queue }.................: avg=0s      min=0s      med=0s      p(90)=0s      p(95)=0s      p(99)=0s       max=0s      
+       { ep:reserve }...............: avg=0s      min=0s      med=0s      p(90)=0s      p(95)=0s      p(99)=0s       max=0s      
+       { ep:schedule_detail }.......: avg=26.76ms min=25.22ms med=26.35ms p(90)=28.07ms p(95)=28.82ms p(99)=32ms     max=35.08ms 
+       { ep:schedules }.............: avg=29.61ms min=26.19ms med=29.66ms p(90)=32.35ms p(95)=33.03ms p(99)=35.1ms   max=36.76ms 
+       { ep:stores }................: avg=10.23ms min=8.49ms  med=9.44ms  p(90)=11.99ms p(95)=12.27ms p(99)=13.86ms  max=15.33ms 
+       { ep:today_bookable }........: avg=10.82ms min=10.09ms med=10.71ms p(90)=11.29ms p(95)=11.56ms p(99)=13.67ms  max=18.08ms 
+       { expected_response:true }...: avg=20.98ms min=4.99ms  med=22.72ms p(90)=30.29ms p(95)=31.79ms p(99)=37.28ms  max=47.05ms 
+     http_req_failed................: 0.00%  0 out of 3601
+     http_req_receiving.............: avg=48.04µs min=17.51µs med=42.36µs p(90)=58.98µs p(95)=67.75µs p(99)=149.11µs max=2.29ms  
+     http_req_sending...............: avg=13.35µs min=6.2µs   med=12.21µs p(90)=15.28µs p(95)=18.57µs p(99)=41.94µs  max=265.38µs
+     http_req_tls_handshaking.......: avg=0s      min=0s      med=0s      p(90)=0s      p(95)=0s      p(99)=0s       max=0s      
+     http_req_waiting...............: avg=20.92ms min=4.95ms  med=22.67ms p(90)=30.23ms p(95)=31.73ms p(99)=37.23ms  max=47ms    
+     http_reqs......................: 3601   30.001582/s
+       { ep:cancel }................: 0      0/s
+       { ep:checkin }...............: 0      0/s
+       { ep:coach_detail }..........: 180    1.499663/s
+       { ep:coach_schedules }.......: 360    2.999325/s
+       { ep:coaches_featured }......: 180    1.499663/s
+       { ep:hot }...................: 360    2.999325/s
+       { ep:my_cards }..............: 288    2.39946/s
+       { ep:my_reservations }.......: 432    3.59919/s
+       { ep:queue }.................: 0      0/s
+       { ep:reserve }...............: 0      0/s
+       { ep:schedule_detail }.......: 540    4.498988/s
+       { ep:schedules }.............: 721    6.006982/s
+       { ep:stores }................: 180    1.499663/s
+       { ep:today_bookable }........: 360    2.999325/s
+     iteration_duration.............: avg=21.24ms min=5.14ms  med=22.97ms p(90)=30.55ms p(95)=32.08ms p(99)=37.61ms  max=47.27ms 
+     iterations.....................: 3601   30.001582/s
+     vus............................: 1      min=0         max=1 
+     vus_max........................: 60     min=60        max=60
+

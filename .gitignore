@@ -21,3 +21,7 @@ docs/原型/_工具/对比/
 
 # 压测本地产物：云资源配置、下载的代理 jar、结果
 /tools/loadtest/.local/
+
+# Python 字节码
+__pycache__/
+*.pyc
