@@ -53,7 +53,7 @@
 
 ```powershell
 docker compose up -d --wait   # 启动 MySQL 与 Redis，首次启动自动导入初始化脚本
-start.bat                     # 构建并启动后端、管理端、用户端 H5
+.\start.bat                     # 构建并启动后端、管理端、用户端 H5
 ```
 
 | 服务 | 地址 |

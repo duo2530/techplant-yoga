@@ -53,7 +53,7 @@ You need JDK 8, Maven, Node.js 20.19+, and Docker. From the repository root:
 
 ```powershell
 docker compose up -d --wait   # start MySQL and Redis; init scripts are imported on first start
-start.bat                     # build and start the backend, admin console, and user H5
+.\start.bat                     # build and start the backend, admin console, and user H5
 ```
 
 | Service | URL |
