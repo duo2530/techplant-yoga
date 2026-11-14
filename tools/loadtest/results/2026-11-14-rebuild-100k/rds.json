@@ -1,0 +1,36 @@
+{
+ "network": {
+  "vpc": "vpc-uf6di68weekxptacmx4gf",
+  "vswitch": "vsw-uf680x8lci72dwju2vvj7",
+  "zone": "cn-shanghai-l",
+  "vpc_cidr": "172.16.0.0/12",
+  "security_group": "sg-uf679eth1u7f32rvwvdk"
+ },
+ "spec": {
+  "class": "mysql.x4.large.2c",
+  "cpu": 4,
+  "memory_gb": 16
+ },
+ "instance": "rm-uf608ywe004r04px2",
+ "create_seconds": 652,
+ "host": "rm-uf608ywe004r04px2.mysql.cn-shanghai.rds.aliyuncs.com",
+ "port": 3306,
+ "whitelist": {
+  "default": "172.16.0.0/12"
+ },
+ "param_seconds": 86,
+ "parameters": {
+  "character_set_server": "utf8mb4",
+  "transaction_isolation": "REPEATABLE-READ",
+  "performance_schema": "1",
+  "loose_performance_schema_max_digest_length": "1024",
+  "loose_performance_schema_max_sql_text_length": "1024",
+  "innodb_buffer_pool_size": "{DBInstanceClassMemory*3/4}",
+  "sync_binlog": "1",
+  "innodb_flush_log_at_trx_commit": "1",
+  "long_query_time": "1",
+  "max_connections": "8520"
+ },
+ "target": "rm-uf608ywe004r04px2.mysql.cn-shanghai.rds.aliyuncs.com:3306/yoga",
+ "setup_seconds": 765
+}

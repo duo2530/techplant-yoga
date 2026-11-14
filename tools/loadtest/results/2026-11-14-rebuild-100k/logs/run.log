@@ -1,0 +1,64 @@
+== 09:45:00 check_target
+目标库: rm-uf608ywe004r04px2.mysql.cn-shanghai.rds.aliyuncs.com:3306/yoga
+hostname: i-uf6ef3zyycjqzuwu2lzc
+server_uuid: 8907d7bf-dfc8-11f1-a889-00163e688cac
+== 09:45:06 seed top-up 1
+rc=0 wall=15s
+[09:45:19] 耗时 13.8 秒，各阶段 {'reference': 0.0, 'schedules': 0.6, 'members': 1.4, 'reservations': 6.9, 'rolling': 0.0, 'pool': 3.3, 'analyze': 0.0, 'reconcile': 1.4}
+== 09:45:22 seed top-up 2 (幂等)
+rc=0 wall=11s
+[09:45:22] profile=booking-heavy seed=58 基准日期 2026-11-14，目标 {'reservations': 100000, 'schedules': 2000, 'stores': 1, 'members': 2623}，已完成预约 100000
+[09:45:28] 耗时 5.7 秒，各阶段 {'rolling': 0.0, 'pool': 4.1, 'analyze': 0.0, 'reconcile': 1.4}
+已导出可消耗池 3000 个、历史会员 300 个 token 到 /loadtest/data/tokens-bulk.json
+== 09:47:56 READ
+[09:48:01] 耗时 5.5 秒，各阶段 {'rolling': 0.0, 'pool': 4.0, 'reconcile': 1.4}
+已导出可消耗池 3000 个、历史会员 300 个 token 到 /loadtest/data/tokens-bulk.json
+read-100k qps=100.0 ach=1.000 p95=8.6 p99=11.8 err=0 recon=0 warmup=50/2m digests=25 bad=[]
+== 09:54:49 MIXED
+[09:54:55] 耗时 5.8 秒，各阶段 {'rolling': 0.0, 'pool': 4.2, 'reconcile': 1.5}
+已导出可消耗池 3000 个、历史会员 300 个 token 到 /loadtest/data/tokens-bulk.json
+mixed-100k qps=100.0 ach=1.000 p95=12.8 p99=14.5 err=0 recon=0 warmup=50/2m digests=25 bad=[]
+== 10:01:37 A seed
+[10:01:43] 耗时 5.6 秒，各阶段 {'rolling': 0.0, 'pool': 4.1, 'reconcile': 1.4}
+已导出可消耗池 3000 个、历史会员 300 个 token 到 /loadtest/data/tokens-bulk.json
+排课: {'n': 4455, 'booked': Decimal('104727'), 'first': datetime.datetime(2026, 5, 18, 6, 0), 'last': datetime.datetime(2026, 11, 27, 20, 45)}
+已导出 2500 个 token 到 /loadtest/data/tokens.json
+{"reconcile_violations": 0}
+a-100k qps=100.0 ach=1.000 p95=7.9 p99=12.5 err=0 recon=None warmup=50/2m digests=25 bad=[]
+== 10:10:12 A history
+[10:10:17] 耗时 5.7 秒，各阶段 {'rolling': 0.0, 'pool': 4.1, 'reconcile': 1.5}
+已导出可消耗池 3000 个、历史会员 300 个 token 到 /loadtest/data/tokens-bulk.json
+export_tokens.py: error: argument --set: invalid choice: 'history' (choose from seed, bulk)
+Traceback (most recent call last):
+  File "<string>", line 3, in <module>
+    d=json.load(open('.local/rebuild/runs/a-history-100k.json',encoding='utf-8'));k=d['k6'];w=d.get('warmup') or {}
+                ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '.local/rebuild/runs/a-history-100k.json'
+排课: {'n': 4455, 'booked': Decimal('104727'), 'first': datetime.datetime(2026, 5, 18, 6, 0), 'last': datetime.datetime(2026, 11, 27, 20, 45)}
+== 10:13:09 LADDER
+[10:13:14] 耗时 5.5 秒，各阶段 {'rolling': 0.0, 'pool': 4.0, 'reconcile': 1.4}
+已导出可消耗池 3000 个、历史会员 300 个 token 到 /loadtest/data/tokens-bulk.json
+mixed-100k-ladder-200 qps=200.0 ach=1.000 p95=13.1 p99=15.9 err=0 recon=0 warmup=50/2m digests=25 bad=[]
+[10:20:01] 耗时 5.6 秒，各阶段 {'rolling': 0.0, 'pool': 4.1, 'reconcile': 1.4}
+已导出可消耗池 3000 个、历史会员 300 个 token 到 /loadtest/data/tokens-bulk.json
+mixed-100k-ladder-300 qps=300.0 ach=1.000 p95=13.9 p99=18.2 err=0 recon=0 warmup=50/2m digests=25 bad=[]
+[10:26:52] 耗时 5.9 秒，各阶段 {'rolling': 0.0, 'pool': 4.4, 'reconcile': 1.4}
+已导出可消耗池 3000 个、历史会员 300 个 token 到 /loadtest/data/tokens-bulk.json
+mixed-100k-ladder-400 qps=400.0 ach=1.000 p95=14.8 p99=20.1 err=0 recon=0 warmup=50/2m digests=25 bad=[]
+[10:33:43] 耗时 5.8 秒，各阶段 {'rolling': 0.0, 'pool': 4.3, 'reconcile': 1.5}
+已导出可消耗池 3000 个、历史会员 300 个 token 到 /loadtest/data/tokens-bulk.json
+mixed-100k-ladder-500 qps=500.0 ach=1.000 p95=16.3 p99=23.1 err=0 recon=0 warmup=50/2m digests=25 bad=[]
+[10:40:35] 耗时 5.7 秒，各阶段 {'rolling': 0.0, 'pool': 4.2, 'reconcile': 1.4}
+已导出可消耗池 3000 个、历史会员 300 个 token 到 /loadtest/data/tokens-bulk.json
+mixed-100k-ladder-600 qps=600.0 ach=1.000 p95=18.6 p99=28.4 err=0 recon=0 warmup=50/2m digests=25 bad=[]
+[10:47:31] 耗时 5.9 秒，各阶段 {'rolling': 0.0, 'pool': 4.4, 'reconcile': 1.4}
+已导出可消耗池 3000 个、历史会员 300 个 token 到 /loadtest/data/tokens-bulk.json
+mixed-100k-ladder-700 qps=699.9 ach=1.000 p95=21.9 p99=36.7 err=0 recon=0 warmup=50/2m digests=25 bad=[]
+[10:54:27] 耗时 6.0 秒，各阶段 {'rolling': 0.0, 'pool': 4.5, 'reconcile': 1.4}
+已导出可消耗池 3000 个、历史会员 300 个 token 到 /loadtest/data/tokens-bulk.json
+mixed-100k-ladder-800 qps=779.5 ach=0.987 p95=3041.5 p99=4194.3 err=0 recon=0 warmup=50/2m digests=25 bad=['p95', 'rate']
+== 11:01:23 final reconcile
+[OK] 有空位时不应仍有人排队: 0 行
+[OK] 排队人数不超过上限: 0 行
+{"预约按状态": [{"status": 3, "n": 72153, "persons": "72153"}, {"status": 2, "n": 25349, "persons": "25349"}, {"status": 5, "n": 1823, "persons": "1823"}, {"status": 1, "n": 37613, "persons": "37613"}, {"status": 4, "n": 3160, "persons": "3160"}], "扣次流水": [{"change_type": 1, "n": 130169, "times": "-130169"}, {"change_type": 2, "n": 20403, "times": "20403"}], "排课占位合计": [{"booked": "109766"}], "场景B排课": [{"id": 9700009999, "max_persons": 20, "booked_persons": 0, "reserved": 0}]}
+== 11:01:29 done

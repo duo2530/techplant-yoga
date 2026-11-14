@@ -1,0 +1,14 @@
+目标库: rm-uf608ywe004r04px2.mysql.cn-shanghai.rds.aliyuncs.com:3306/yoga
+已执行 ry_20260417.sql
+已执行 quartz.sql
+已执行 yoga.sql
+共 41 张表
+version = 8.0.36
+character_set_server = utf8mb4
+character_set_database = utf8mb4
+log_bin = 1
+binlog_format = ROW
+innodb_flush_log_at_trx_commit = 1
+sync_binlog = 1
+innodb_buffer_pool_size = 10468982784
+transaction_isolation = REPEATABLE-READ

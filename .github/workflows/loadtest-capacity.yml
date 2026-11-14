@@ -105,6 +105,7 @@ jobs:
             echo "WARMUP_RATE=${BASH_REMATCH[1]}" >> "$GITHUB_ENV"; echo "WARMUP_DURATION=${BASH_REMATCH[2]}" >> "$GITHUB_ENV"
           fi
           [[ -n "$LT_DB_TARGET" ]] || fail "vars.LT_DB_TARGET is not set in environment loadtest"
+          [[ -n "${{ vars.LT_CLB_ZONE }}" ]] || fail "vars.LT_CLB_ZONE is not set in environment loadtest (CreateLoadBalancer may fail with: zone id doesn't support)"
           if [[ "$IN_MODE" == rebuild ]]; then
             [[ "$IN_CONFIRM_REBUILD" == "$LT_DB_TARGET" ]] || fail "rebuild requires confirm_rebuild == $LT_DB_TARGET"
           fi
@@ -141,7 +142,7 @@ jobs:
         run: |
           ip=$(curl -fsS https://api.ipify.org)
           python -X utf8 cloud.py expose --app "${{ vars.SAE_LOADGEN_APP_ID }}" --port 8000 --ip "$ip" \
-            --name "yogalt-lt-${{ github.run_id }}" --state "$STATE_FILE" ${{ vars.LT_CLB_ZONE && format('--zone {0}', vars.LT_CLB_ZONE) || '' }}
+            --name "yogalt-lt-${{ github.run_id }}" --state "$STATE_FILE" --zone "${{ vars.LT_CLB_ZONE }}"
 
       - name: Verify CLB listener ACL
         working-directory: tools/loadtest

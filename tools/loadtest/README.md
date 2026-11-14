@@ -11,7 +11,7 @@
 - B：抢名额。
 - C：阶梯找拐点。
 
-k6 和控制脚本运行在云上的压测机里，本机只经 CLB 下发任务、取回结果。2026-11-10 的结果和判定见 [results/2026-11-10/report.md](results/2026-11-10/report.md)；100 万与 1000 万预约的容量压测见 [results/2026-11-13-capacity/report.md](results/2026-11-13-capacity/report.md)。
+k6 和控制脚本运行在云上的压测机里，本机只经 CLB 下发任务、取回结果。2026-11-10 的结果和判定见 [results/2026-11-10/report.md](results/2026-11-10/report.md)；100 万与 1000 万预约的容量压测见 [results/2026-11-13-capacity/report.md](results/2026-11-13-capacity/report.md)。从零重建 RDS 并用 10 万行验证全流程的记录见 [results/2026-11-14-rebuild-100k/report.md](results/2026-11-14-rebuild-100k/report.md)。
 
 ## 文件
 
@@ -24,6 +24,8 @@ k6 和控制脚本运行在云上的压测机里，本机只经 CLB 下发任务
 | `export_tokens.py` | 逐个登录造数会员；默认写 `data/tokens.json`，`--set bulk` 写 `data/tokens-bulk.json` |
 | `run_scenario.py` | 跑一个场景：记录 MySQL 计数器差值，每 2 秒采样 Druid、Tomcat、JVM、MySQL，结束后对账；`READ`、`MIXED` 走 `capacity.js` |
 | `compare.py` | 汇总多次运行的 `result.json`，输出规模对比 CSV 与 HTML，可设阈值使退出码非 0 |
+| `rds_setup.py` | 从零建压测 RDS 并接入：`setup` 核对网络与规格、建实例（带 ClientToken）、账号、库，一次改完参数只重启一次并核对 RunningParameters；`point-apps` 把后端和压测机改连新实例 |
+| `tests/` | `cloud.py`、`rds_setup.py` 的单测，用假的 aliyun CLI，不访问云：`python -X utf8 -m unittest discover -s tests` |
 | `cloud.py` | 工作流用的云操作：启动 SAE 应用，给压测机绑只放行 runner IP 的临时 CLB（`expose`、`verify`），清理。每次 aliyun CLI 调用都检查退出码和返回码，失败即报错 |
 | `reconcile.py` | 对账 SQL，与 `ReservationConcurrencyTest` 的不变量一致，任一条查到行即退出码 1 |
 | `check_target.py`、`mysql_status.py` | 只读，打印目标库地址、版本、binlog 与锁统计 |
@@ -234,14 +236,20 @@ python -X utf8 compare.py "data/results/*/result.json" --out .local/compare --ma
 | variable | `LT_DB_TARGET` | 压测机 `check_target` 打印的 `host:port/db` |
 | variable | `SAE_REDIS_APP_ID`、`SAE_BACKEND_APP_ID`、`SAE_LOADGEN_APP_ID` | 已创建好的三个 SAE 应用 |
 | variable | `LT_RDS_INSTANCE_ID` | 压测 RDS 实例 ID，`rds_metrics.py` 用；不设时 RDS 指标记为不可用 |
-| variable（可选） | `LT_MAX_RATE`、`LT_CLB_ZONE`、`LT_MAX_P95_MS`、`LT_MAX_ERROR_RATE` | 速率上限、CLB 主可用区、compare 阈值 |
+| variable | `LT_CLB_ZONE` | CLB 主可用区，必须填，实例为 `cn-shanghai-l`（压测机所在交换机的可用区）。留空时 `CreateLoadBalancer` 可能报 `The Instance zone id doesn't support.`，工作流在校验输入时就失败 |
+| variable（可选） | `LT_MAX_RATE`、`LT_MAX_P95_MS`、`LT_MAX_ERROR_RATE` | 速率上限、compare 阈值 |
 
-以下资源需要事先手工准备，工作流不会创建：
+以下资源工作流不会创建，需要事先准备：
 
-- 按量付费的 RDS MySQL 8.0：导入 `ry_20260417.sql`、`quartz.sql` 和 `yoga.sql`，白名单只放 VPC 网段。
-- 在 RDS 上建高权限账号和 `yoga` 库（utf8mb4），账号密码使用 SAE Secret 里的 `mysql.root.password`。RDS 默认 `character_set_server=utf8`，在空库时改为 `utf8mb4`（需要重启）。
-- 后端与压测机改为连接 RDS 内网地址：`SPRING_DATASOURCE_DRUID_MASTER_URL`、`SPRING_DATASOURCE_DRUID_MASTER_USERNAME` 和 `LT_MYSQL_HOST`、`LT_MYSQL_USER`。
-- RDS 只能从 VPC 内访问，建表由压测机执行：`ctl.py run init_schema --confirm-target <host:port/db>`。
+- 按量付费的 RDS MySQL 8.0，用 `rds_setup.py` 建，可重复执行，已完成的步骤会跳过：
+
+  ```bash
+  python -X utf8 rds_setup.py setup --app <后端 AppId> --vswitch <后端所在 VSwitchId> --class mysql.x4.large.2c --cpu 4 --memory-gb 16       --description <实例描述> --namespace cn-shanghai:yogalt --secret yogalt-secrets --state .local/rds.json
+  ```
+
+  它先核对网络和规格：交换机必须是后端所在的交换机，安全组属于同一 VPC，`DescribeClassDetails` 的 CPU 和内存必须与参数一致。然后按描述查重，没有才 `CreateDBInstance`（带 ClientToken，白名单只放 VPC 网段，不开公网）；调用超时就先按描述查询 2 分钟，查不到再用同一个 ClientToken 重试。之后建高权限账号和 `yoga` 库（utf8mb4），密码取自 SAE Secret 的 `mysql.root.password`，只在进程内使用。最后一次改完 `character_set_server=utf8mb4`、`transaction_isolation=REPEATABLE-READ`、`performance_schema=1` 和两个 digest 长度（1024），只重启一次，再按 RunningParameters 逐项核对。state 文件记录实例 ID、`host:port/db` 和各步耗时，不含密码。
+- 先建表，再改连应用。RDS 只能从 VPC 内访问，建表由压测机执行：`ctl.py run init_schema --confirm-target <host:port/db>`。后端启动时要读 `sys_config` 并连 Redis，所以先启动 Redis、建好表，再执行 `python -X utf8 rds_setup.py point-apps --state .local/rds.json --backend <AppId> --loadgen <AppId>`。它改 `SPRING_DATASOURCE_DRUID_MASTER_URL` 和 `LT_MYSQL_HOST`，用原镜像重新部署并等待发布单完成。
+- environment `loadtest` 的 `LT_DB_TARGET` 和 `LT_RDS_INSTANCE_ID` 改成新实例；RAM 策略里 RDS 的资源范围加上新实例。
 - 用本分支代码重新构建 `yogalt:loadgen` 镜像，并带上建表脚本：`docker build -f Dockerfile.loadgen --build-context sql=../../backend/sql -t <ACR>/yogalt:loadgen .`。
 - 在 environment `loadtest` 上配置 required reviewers，作为人工确认。
 
@@ -249,7 +257,8 @@ python -X utf8 compare.py "data/results/*/result.json" --out .local/compare --ma
 
 - 存储：本机实测每行约占（含二级索引）预约 327 B、流水 184 B、会员 399 B、会员卡 371 B、排课 320 B。按 1000 万预约折算，数据加索引约 5.6 GB，再加上页分裂与 binlog，RDS 磁盘建议不少于 50 GB。
 - 造数耗时：本机 docker MySQL 写入 1 万行预约（含流水和余额更新）约 1.5 秒。RDS 受 IOPS 与 `sync_binlog=1` 影响，1000 万行要以首次 100 万行的实测耗时线性推算。工作流超时为 6 小时，超时中断后重跑会续接。
-- 费用：按量 RDS、SAE 应用和 CLB 都按时长计费。工作流结束会停止 SAE 应用、删除 CLB，但不会释放 RDS。不用时请手工释放 RDS，数据保留在 RDS 上，下次可以直接 top-up 扩容。
+- 费用：按量 RDS、SAE 应用和 CLB 都按时长计费。工作流结束会停止 SAE 应用、删除 CLB，但不会释放 RDS。近期还要压测就保留 RDS，下次直接 top-up；长期不用就释放，释放后数据无法恢复，下次按上面的步骤用 `rds_setup.py` 重建。
+- 当前状态：压测 RDS 已释放，environment `loadtest` 中的 `LT_DB_TARGET` 和 `LT_RDS_INSTANCE_ID` 已删除，RAM 策略中没有 RDS 实例资源。下次重建后重新设置这两个变量并在 RAM 策略里加上实例。
 - GitHub-hosted runner 只发控制请求，造数和压测都在 VPC 内的压测机上执行，不占用 runner 资源。
 
 ### 故障排查

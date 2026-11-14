@@ -1,0 +1,82 @@
+{
+ "target": "rm-uf608ywe004r04px2.mysql.cn-shanghai.rds.aliyuncs.com:3306/yoga",
+ "mode": "top-up",
+ "profile": "booking-heavy",
+ "seed": 58,
+ "target_rows": 100000,
+ "size": {
+  "reservations": 100000,
+  "schedules": 2000,
+  "stores": 1,
+  "members": 2623
+ },
+ "base_date": "2026-11-14",
+ "batch_size": 10000,
+ "rows_per_sec": 0,
+ "started": 1794620722.3607552,
+ "ended": 1794620728.0187745,
+ "seconds": 5.7,
+ "phases": {
+  "rolling": 0.0,
+  "pool": 4.1,
+  "analyze": 0.0,
+  "reconcile": 1.4
+ },
+ "counts": {
+  "t_member": {
+   "total": 5624,
+   "bulk": 5623
+  },
+  "t_member_card": {
+   "total": 6127,
+   "bulk": 6124
+  },
+  "t_schedule": {
+   "total": 4054,
+   "bulk": 4049
+  },
+  "t_reservation": {
+   "total": 127000,
+   "bulk": 127000
+  },
+  "t_member_card_transaction": {
+   "total": 135459,
+   "bulk": 135459
+  },
+  "t_store": {
+   "total": 4,
+   "bulk": 1
+  },
+  "t_classroom": {
+   "total": 7,
+   "bulk": 3
+  },
+  "t_coach": {
+   "total": 11,
+   "bulk": 8
+  },
+  "t_course": {
+   "total": 16,
+   "bulk": 12
+  }
+ },
+ "pool": {
+  "stores": 1,
+  "members_per_store": 3000,
+  "members": 3000,
+  "reserve_schedules": 40,
+  "cancel": 20000,
+  "cancel_schedules": 7,
+  "checkin": 5000,
+  "checkin_schedules": 2,
+  "queue_schedules": 2000,
+  "queue_limit": 3,
+  "refreshed": "2026-11-14T09:45:00"
+ },
+ "rolling": {
+  "covered_until": "2026-11-27",
+  "days": 0,
+  "added": 0
+ },
+ "reconcile_violations": 0
+}
