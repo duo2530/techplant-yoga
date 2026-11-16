@@ -204,6 +204,65 @@ jobs:
               ${{ vars.LT_MAX_ERROR_RATE && format('--max-http-error-rate {0}', vars.LT_MAX_ERROR_RATE) || '' }}
           fi
 
+      - name: Job summary
+        if: always()
+        env:
+          MAX_P95_MS: ${{ vars.LT_MAX_P95_MS }}
+          MAX_ERROR_RATE: ${{ vars.LT_MAX_ERROR_RATE }}
+        run: |
+          python -X utf8 - >> "$GITHUB_STEP_SUMMARY" <<'PY'
+          import glob, json, os
+          out = os.environ.get("OUT_DIR") or os.path.join(os.environ["RUNNER_TEMP"], "loadtest-results")
+          max_p95 = float(os.environ["MAX_P95_MS"]) if os.environ.get("MAX_P95_MS") else None
+          max_err = float(os.environ["MAX_ERROR_RATE"]) if os.environ.get("MAX_ERROR_RATE") else None
+          paths = sorted(glob.glob(os.path.join(out, "results", "*", "result.json")))
+          lines = []
+          if not paths:
+              lines.append("结论：未通过。没有压测结果文件，失败原因见各步骤日志。")
+          for path in paths:
+              with open(path, encoding="utf-8") as f:
+                  r = json.load(f)
+              k6, env = r.get("k6") or {}, r.get("env") or {}
+              fails = []
+              if r.get("k6_exit") not in (0, None):
+                  fails.append(f"k6 退出码 {r['k6_exit']}")
+              if max_p95 is not None and (k6.get("p95_ms") or 0) > max_p95:
+                  fails.append(f"p95 {k6['p95_ms']} ms 超过阈值 {max_p95:g} ms")
+              if max_err is not None and (k6.get("error_rate") or 0) > max_err:
+                  fails.append(f"HTTP 错误率 {k6['error_rate']} 超过阈值 {max_err:g}")
+              if k6.get("biz_error_rate"):
+                  fails.append(f"业务错误率 {k6['biz_error_rate']}")
+              recon = (r.get("reconcile") or {}).get("violation_total")
+              if recon is None:
+                  fails.append("没有取到对账结果")
+              elif recon:
+                  fails.append(f"对账有 {recon} 处违反")
+              rate = env.get("RATE")
+              if rate and (k6.get("qps") or 0) < rate * 0.99:
+                  fails.append(f"实际 QPS {k6.get('qps')} 低于目标 {rate} 的 99%")
+              perf = (r.get("rds") or {}).get("performance") or {}
+              cpu = (perf.get("cpu_pct") or {}) if perf.get("available") else {}
+              back = (r.get("sae_cpu") or {}).get("backend") or {}
+              slow = (r.get("rds") or {}).get("slow_log") or {}
+              lines += [
+                  f"{r.get('name')}：{'通过' if not fails else '未通过'}",
+                  *[f"  未通过原因：{x}" for x in fails],
+                  f"  场景：{env.get('MIX')}，目标 {rate}/s，持续 {env.get('DURATION')}",
+                  f"  请求数 {k6.get('http_reqs')}，QPS {k6.get('qps')}，dropped {k6.get('dropped_iterations')}",
+                  f"  延迟 ms：p50 {k6.get('p50_ms')}，p95 {k6.get('p95_ms')}，p99 {k6.get('p99_ms')}，max {k6.get('max_ms')}",
+                  f"  错误率：HTTP {k6.get('error_rate')}，业务 {k6.get('biz_error_rate')}，409 {k6.get('conflicts') or {}}",
+                  f"  对账违反：{recon}",
+                  f"  RDS CPU %：平均 {cpu.get('avg', '不可用')}，峰值 {cpu.get('max', '不可用')}；慢 SQL "
+                  + (f"{slow.get('records')} 条" if slow.get("available") else "不可用"),
+                  f"  后端 CPU %：平均 {back.get('avg', '不可用')}，峰值 {back.get('max', '不可用')}",
+              ]
+              for t in (slow.get("top") or [])[:3]:
+                  lines.append(f"  慢 SQL：平均 {t['avg_ms']} ms，{t['count']} 次，最多扫描 {t['max_rows_examined']} 行：{t['sql'][:160]}")
+          print("```")
+          print("\n".join(lines))
+          print("```")
+          PY
+
       - name: Upload artifacts
         if: always()
         uses: actions/upload-artifact@v4

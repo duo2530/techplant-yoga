@@ -230,7 +230,7 @@ python -X utf8 compare.py "data/results/*/result.json" --out .local/compare --ma
 
 | 类型 | 名称 | 说明 |
 |---|---|---|
-| secret | `ALIBABA_CLOUD_ACCESS_KEY_ID`、`ALIBABA_CLOUD_ACCESS_KEY_SECRET` | RAM 子账号。权限只给：SAE 启停与绑定 CLB，SLB 的创建、删除与 ACL，CMS 与 RDS 只读 |
+| secret | `ALIBABA_CLOUD_ACCESS_KEY_ID`、`ALIBABA_CLOUD_ACCESS_KEY_SECRET` | RAM 子账号，权限见下方「CI 子账号权限」 |
 | secret | `LT_AGENT_TOKEN` | 压测机 `agent.py` 的口令，与 SAE 密钥中的 `agent.token` 一致 |
 | variable | `ALIBABA_CLOUD_REGION_ID` | 如 `cn-shanghai` |
 | variable | `LT_DB_TARGET` | 压测机 `check_target` 打印的 `host:port/db` |
@@ -238,6 +238,23 @@ python -X utf8 compare.py "data/results/*/result.json" --out .local/compare --ma
 | variable | `LT_RDS_INSTANCE_ID` | 压测 RDS 实例 ID，`rds_metrics.py` 用；不设时 RDS 指标记为不可用 |
 | variable | `LT_CLB_ZONE` | CLB 主可用区，必须填，实例为 `cn-shanghai-l`（压测机所在交换机的可用区）。留空时 `CreateLoadBalancer` 可能报 `The Instance zone id doesn't support.`，工作流在校验输入时就失败 |
 | variable（可选） | `LT_MAX_RATE`、`LT_MAX_P95_MS`、`LT_MAX_ERROR_RATE` | 速率上限、compare 阈值 |
+
+### CI 子账号权限
+
+工作流用 RAM 子账号运行，策略只授予下列动作。`cloud.py` 和 `rds_metrics.py` 新增阿里云调用时，要同步补到策略里；缺少权限时，调用以 `Forbidden: User not authorized` 失败。
+
+| 产品 | 动作 | 资源范围 |
+|---|---|---|
+| SAE | `StartApplication`、`StopApplication`、`DeployApplication`、`BindSlb`、`UnbindSlb`、`DescribeApplicationStatus`、`DescribeApplicationConfig`、`DescribeApplicationSlb` | 三个压测应用 |
+| SAE | `DescribeChangeOrder`、`ListChangeOrders` | `*` |
+| SLB | `CreateLoadBalancer`、`DeleteLoadBalancer`、`DescribeLoadBalancers`、`DescribeLoadBalancerAttribute`、`SetLoadBalancerStatus`、`TagResources` | 本地域下全部 SLB 资源 |
+| SLB | `CreateLoadBalancerTCPListener`、`DescribeLoadBalancerTCPListenerAttribute`、`SetLoadBalancerTCPListenerAttribute`、`StartLoadBalancerListener`、`StopLoadBalancerListener`、`DeleteLoadBalancerListener` | 同上 |
+| SLB | `CreateAccessControlList`、`DeleteAccessControlList`、`AddAccessControlListEntry`、`RemoveAccessControlListEntry`、`DescribeAccessControlLists`、`DescribeAccessControlListAttribute` | 同上 |
+| SLB | `AddBackendServers`、`RemoveBackendServers`、`DescribeHealthStatus` | 同上 |
+| CMS | `QueryMetricList`、`QueryMetricLast`、`DescribeMetricList`、`DescribeMetricLast` | `*` |
+| RDS | `DescribeDBInstancePerformance`、`DescribeSlowLogRecords` | 压测 RDS 实例 |
+
+阿里云单个策略最多保留 5 个版本，更新前先删除最旧的非默认版本。用管理员账号在本机验证流程不能发现这类缺失，首次接入或改动云调用后，要用子账号走一遍完整的工作流。
 
 以下资源工作流不会创建，需要事先准备：
 
@@ -258,7 +275,7 @@ python -X utf8 compare.py "data/results/*/result.json" --out .local/compare --ma
 - 存储：本机实测每行约占（含二级索引）预约 327 B、流水 184 B、会员 399 B、会员卡 371 B、排课 320 B。按 1000 万预约折算，数据加索引约 5.6 GB，再加上页分裂与 binlog，RDS 磁盘建议不少于 50 GB。
 - 造数耗时：本机 docker MySQL 写入 1 万行预约（含流水和余额更新）约 1.5 秒。RDS 受 IOPS 与 `sync_binlog=1` 影响，1000 万行要以首次 100 万行的实测耗时线性推算。工作流超时为 6 小时，超时中断后重跑会续接。
 - 费用：按量 RDS、SAE 应用和 CLB 都按时长计费。工作流结束会停止 SAE 应用、删除 CLB，但不会释放 RDS。近期还要压测就保留 RDS，下次直接 top-up；长期不用就释放，释放后数据无法恢复，下次按上面的步骤用 `rds_setup.py` 重建。
-- 当前状态：压测 RDS 已释放，environment `loadtest` 中的 `LT_DB_TARGET` 和 `LT_RDS_INSTANCE_ID` 已删除，RAM 策略中没有 RDS 实例资源。下次重建后重新设置这两个变量并在 RAM 策略里加上实例。
+- 释放压测 RDS 后，删除 environment `loadtest` 中的 `LT_DB_TARGET` 和 `LT_RDS_INSTANCE_ID`，并从 RAM 策略里去掉该实例资源。重建后重新设置这两个变量并在策略里加上新实例。
 - GitHub-hosted runner 只发控制请求，造数和压测都在 VPC 内的压测机上执行，不占用 runner 资源。
 
 ### 故障排查
