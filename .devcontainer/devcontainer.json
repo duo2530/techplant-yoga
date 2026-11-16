@@ -12,7 +12,6 @@
     "ghcr.io/devcontainers/features/sshd:1": {}
   },
   "containerEnv": {
-    "TZ": "Asia/Shanghai",
     "MAVEN_OPTS": "-Xmx2g"
   },
   "hostRequirements": {
