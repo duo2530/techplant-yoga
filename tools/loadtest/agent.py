@@ -4,22 +4,32 @@
   POST /jobs            {"script": "seed", "args": ["reset", "--confirm-target", "..."]} → {"id": ...}
   GET  /jobs/<id>       → 状态、退出码、输出末尾
   GET  /files/<相对路径>  → LT_DATA_DIR 下的文件内容
+
+每个请求向标准输出和 LT_DATA_DIR/agent-access.log 写一行访问日志：UTC 时间、对端 IP、方法、路径、状态码，
+有 X-Forwarded-For 时追加其中合法的 IP（xff=）。该请求头可由客户端伪造，CLB 的 TCP 监听不会添加，所以对端 IP 始终记录。
+路径去掉查询串，不记录其他请求头和请求体。
 """
 import hmac
+import ipaddress
 import json
 import subprocess
 import sys
 import threading
 import uuid
+from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 from common import data_dir, env
 
 LT_DIR = Path(__file__).resolve().parent
-SCRIPTS = {"check_target", "seed", "export_tokens", "run_scenario", "reconcile", "mysql_status", "sql_stats"}
+SCRIPTS = {"check_target", "seed", "bulk_seed", "export_tokens", "run_scenario", "reconcile", "mysql_status",
+           "sql_stats", "init_schema"}
+# 写库或施压的脚本同一时间只允许一个在跑
+EXCLUSIVE = {"seed", "bulk_seed", "run_scenario", "init_schema"}
 JOBS = {}
 LOCK = threading.Lock()
+LOG_LOCK = threading.Lock()
 
 
 def start_job(script, args):
@@ -34,7 +44,31 @@ def start_job(script, args):
     return job_id
 
 
+def valid_ip(text):
+    try:
+        ipaddress.ip_address(text)
+        return True
+    except ValueError:
+        return False
+
+
+def access_log(handler, status):
+    line = (f"{datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')} {handler.client_address[0]}"
+            f" {handler.command} {handler.path.split('?', 1)[0]} {status}")
+    forwarded = [x for x in (handler.headers.get("X-Forwarded-For") or "").replace(" ", "").split(",")[:5] if valid_ip(x)]
+    if forwarded:
+        line += f" xff={','.join(forwarded)}"
+    with LOG_LOCK:
+        print(line, flush=True)
+        with open(data_dir() / "agent-access.log", "a", encoding="utf-8") as f:
+            f.write(line + "\n")
+
+
 class Handler(BaseHTTPRequestHandler):
+    def send_response(self, code, message=None):
+        access_log(self, code)
+        super().send_response(code, message)
+
     def reply(self, status, body):
         data = json.dumps(body, ensure_ascii=False).encode("utf-8")
         self.send_response(status)
@@ -58,6 +92,11 @@ class Handler(BaseHTTPRequestHandler):
         script, args = body.get("script"), body.get("args", [])
         if script not in SCRIPTS or not all(isinstance(x, str) for x in args):
             return self.reply(400, {"error": f"script 只能是 {sorted(SCRIPTS)}，args 为字符串数组"})
+        if script in EXCLUSIVE:
+            with LOCK:
+                busy = [k for k, j in JOBS.items() if j["script"] in EXCLUSIVE and j["proc"].poll() is None]
+            if busy:
+                return self.reply(409, {"error": f"任务 {busy} 仍在运行，等它结束后再提交"})
         self.reply(200, {"id": start_job(script, args)})
 
     def do_GET(self):
@@ -72,7 +111,8 @@ class Handler(BaseHTTPRequestHandler):
             code = job["proc"].poll()
             text = job["log"].read_text(encoding="utf-8", errors="replace")
             return self.reply(200, {"script": job["script"], "args": job["args"],
-                                    "running": code is None, "exit": code, "output": text[-20000:]})
+                                    "running": code is None, "exit": code, "output": text[-20000:],
+                                    "size": len(text)})
         if self.path.startswith("/files/"):
             root = data_dir().resolve()
             target = (root / self.path[len("/files/"):]).resolve()

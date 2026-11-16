@@ -52,10 +52,11 @@ def main():
     while True:
         state = requests.get(f"{base}/jobs/{job}", headers=headers, timeout=30).json()
         out = state["output"]
-        if len(out) > printed:
-            sys.stdout.write(out[printed:] if printed or len(out) < 20000 else out)
+        size = state.get("size", len(out))
+        if size > printed:
+            sys.stdout.write(out[-(size - printed):] if size - printed <= len(out) else out)
             sys.stdout.flush()
-            printed = len(out)
+            printed = size
         if not state["running"]:
             sys.exit(state["exit"])
         time.sleep(5)
