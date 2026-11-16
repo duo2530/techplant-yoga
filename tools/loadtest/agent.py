@@ -24,7 +24,7 @@ from common import data_dir, env
 
 LT_DIR = Path(__file__).resolve().parent
 SCRIPTS = {"check_target", "seed", "bulk_seed", "export_tokens", "run_scenario", "reconcile", "mysql_status",
-           "sql_stats", "init_schema"}
+           "sql_stats", "init_schema", "net_probe"}
 # 写库或施压的脚本同一时间只允许一个在跑
 EXCLUSIVE = {"seed", "bulk_seed", "run_scenario", "init_schema"}
 JOBS = {}
