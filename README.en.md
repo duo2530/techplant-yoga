@@ -49,9 +49,11 @@ A booking and operations system for yoga and pilates studios: staff schedule cla
 
 ## Quick Start
 
-You need JDK 8, Maven, Node.js 20.19+, and Docker. From the repository root:
+You need JDK 8, Maven, Node.js 20.19+, and Docker.
 
 ```powershell
+git clone https://github.com/duo2530/techplant-yoga.git
+cd techplant-yoga
 docker compose up -d --wait   # start MySQL and Redis; init scripts are imported on first start
 start.bat                     # build and start the backend, admin console, and user H5
 ```

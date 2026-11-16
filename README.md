@@ -49,9 +49,11 @@
 
 ## 快速开始
 
-需要 JDK 8、Maven、Node.js 20.19+ 和 Docker。在仓库根目录执行：
+需要 JDK 8、Maven、Node.js 20.19+ 和 Docker。
 
 ```powershell
+git clone https://github.com/duo2530/techplant-yoga.git
+cd techplant-yoga
 docker compose up -d --wait   # 启动 MySQL 与 Redis，首次启动自动导入初始化脚本
 start.bat                     # 构建并启动后端、管理端、用户端 H5
 ```
