@@ -30,7 +30,8 @@ from reconcile import reconcile
 LT_DIR = Path(__file__).resolve().parent
 LOCK_COUNTERS = ("Innodb_row_lock_waits", "Innodb_row_lock_time", "Innodb_row_lock_time_max",
                  "Innodb_row_lock_current_waits", "Com_commit", "Com_rollback", "Innodb_rows_inserted",
-                 "Innodb_rows_updated", "Innodb_data_fsyncs", "Innodb_os_log_fsyncs", "Threads_running",
+                 "Innodb_rows_updated", "Innodb_data_fsyncs", "Innodb_os_log_fsyncs", "Questions", "Com_select",
+                 "Com_set_option", "Threads_running",
                  "Threads_connected")
 TOMCAT_MBEAN = 'Tomcat:type=ThreadPool,name="http-nio-8080"'
 
