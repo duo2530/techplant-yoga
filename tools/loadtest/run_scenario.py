@@ -64,6 +64,23 @@ class Sampler(threading.Thread):
                            json=[{"type": "read", "mbean": mbean, "attribute": a} for a in attrs]).json()
         return {a: x.get("value") for a, x in zip(attrs, r)}
 
+    def jmx_by_name(self, pattern, attrs):
+        """读通配 MBean，返回 {name 属性: {属性: 值}}，如 GC 收集器和内存池。"""
+        if not self.jolokia:
+            raise RuntimeError("未配置 LT_JOLOKIA_URL")
+        r = self.http.post(self.jolokia + "/", timeout=5,
+                           json={"type": "read", "mbean": pattern, "attribute": attrs}).json()
+        if r.get("status") != 200:
+            raise RuntimeError(r.get("error") or f"status {r.get('status')}")
+        return {re.search(r"name=([^,]+)", k).group(1): v for k, v in r["value"].items()}
+
+    def gc(self):
+        return self.jmx_by_name("java.lang:type=GarbageCollector,name=*", ["CollectionCount", "CollectionTime"])
+
+    def heap(self):
+        pools = self.jmx_by_name("java.lang:type=MemoryPool,name=*", ["Usage", "Type"])
+        return {name: v["Usage"]["used"] for name, v in pools.items() if v.get("Type") == "HEAP"}
+
     def sample(self, conn):
         row = {"t": time.time()}
         for name, fn in (("druid", self.druid),
@@ -72,6 +89,7 @@ class Sampler(threading.Thread):
                          ("jvm", lambda: self.jmx("java.lang:type=OperatingSystem",
                                                   ["ProcessCpuLoad", "SystemCpuLoad", "AvailableProcessors"])),
                          ("threads", lambda: self.jmx("java.lang:type=Threading", ["ThreadCount"])),
+                         ("gc", self.gc), ("heap", self.heap),
                          ("mysql", lambda: global_status(conn, "Threads_running", "Threads_connected",
                                                          "Innodb_row_lock_current_waits"))):
             try:
@@ -116,6 +134,23 @@ def summarize_samples(path):
         out["druid.NotEmptyWaitCount.delta"] = druid[-1]["NotEmptyWaitCount"] - druid[0]["NotEmptyWaitCount"]
         out["druid.NotEmptyWaitMillis.delta"] = druid[-1]["NotEmptyWaitMillis"] - druid[0]["NotEmptyWaitMillis"]
         out["druid.ActivePeak.end"] = druid[-1]["ActivePeak"]
+    out.update(summarize_gc(rows))
+    return out
+
+
+def summarize_gc(rows):
+    """各收集器在运行期间的次数与耗时增量，以及单个采样间隔内的最大 GC 耗时；各堆内存池的最大占用。"""
+    out = {}
+    gc = [r["gc"] for r in rows if isinstance(r.get("gc"), dict) and "error" not in r["gc"]]
+    for name in (gc[0] if len(gc) >= 2 else {}):
+        times = [g[name]["CollectionTime"] for g in gc if name in g]
+        counts = [g[name]["CollectionCount"] for g in gc if name in g]
+        out[f"gc.{name}"] = {"count": counts[-1] - counts[0], "time_ms": times[-1] - times[0],
+                             "max_interval_ms": max((b - a for a, b in zip(times, times[1:])), default=0)}
+    heap = [r["heap"] for r in rows if isinstance(r.get("heap"), dict) and "error" not in r["heap"]]
+    for name in (heap[0] if heap else {}):
+        used = [h[name] for h in heap if name in h]
+        out[f"heap.{name}"] = {"max_mb": round(max(used) / 2**20, 1), "end_mb": round(used[-1] / 2**20, 1)}
     return out
 
 
