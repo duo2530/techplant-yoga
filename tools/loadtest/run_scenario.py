@@ -121,7 +121,7 @@ class ThreadDumper(threading.Thread):
 
     def dump(self):
         r = self.http.post(self.jolokia + "/", timeout=30,
-                           json={"type": "exec", "mbean": "java.lang:type=Threading", "operation": "dumpAllThreads",
+                           json={"type": "exec", "mbean": "java.lang:type=Threading", "operation": "dumpAllThreads(boolean,boolean)",
                                  "arguments": [False, False], "config": {"maxDepth": 8}}).json()
         if r.get("status") != 200:
             raise RuntimeError(r.get("error") or f"status {r.get('status')}")
