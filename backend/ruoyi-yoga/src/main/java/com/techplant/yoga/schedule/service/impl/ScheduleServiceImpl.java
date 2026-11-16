@@ -211,7 +211,7 @@ public class ScheduleServiceImpl implements ScheduleService {
             throw new ServiceException("排课状态取值为 1~3", PARAM_ERROR);
         }
 
-        ScheduleDO schedule = requireSchedule(scheduleId);
+        ScheduleDO schedule = lockSchedule(scheduleId);
         Integer current = schedule.getStatus();
         LocalDateTime now = LocalDateTime.now();
 
@@ -241,7 +241,7 @@ public class ScheduleServiceImpl implements ScheduleService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void delete(Long scheduleId) {
-        ScheduleDO schedule = requireSchedule(scheduleId);
+        ScheduleDO schedule = lockSchedule(scheduleId);
         Integer status = schedule.getStatus();
         LocalDateTime now = LocalDateTime.now();
 
@@ -666,6 +666,15 @@ public class ScheduleServiceImpl implements ScheduleService {
 
     private ScheduleDO requireSchedule(Long scheduleId) {
         ScheduleDO schedule = scheduleDao.selectById(scheduleId);
+        if (schedule == null) {
+            throw notFoundSchedule();
+        }
+        return schedule;
+    }
+
+    /** 锁住排课行后读取，与预约模块、人数不足自动取消使用同一把锁 */
+    private ScheduleDO lockSchedule(Long scheduleId) {
+        ScheduleDO schedule = scheduleDao.selectByIdForUpdate(scheduleId);
         if (schedule == null) {
             throw notFoundSchedule();
         }

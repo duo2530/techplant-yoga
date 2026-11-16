@@ -44,6 +44,8 @@ mvn -B -ntp -pl ruoyi-yoga -am -DfailIfNoTests=false test
 
 失败时下载 `backend-test-reports` 产物，确认实际执行的用例、失败和跳过情况，不能仅凭检查状态判断哪些用例执行过。
 
+推送前需要复现缺陷或单独运行某个测试时，可以在 GitHub Codespaces 中执行同一命令。[devcontainer](../../.devcontainer/devcontainer.json) 提供 JDK 8、Maven 和 Docker；时区在命令前用 `TZ=Asia/Shanghai` 指定，指定测试时追加 `-Dtest=<类名> -Dsurefire.failIfNoSpecifiedTests=false`。PR 是否可合并仍以 CI 检查为准。
+
 ### 预约并发正确性测试
 
 [ReservationConcurrencyTest](../../backend/ruoyi-yoga/src/test/java/com/techplant/yoga/reservation/service/ReservationConcurrencyTest.java) 用多线程同时发起预约、排队与取消，每轮结束后按对账 SQL 校验名额、次数与流水。该类默认跳过，全量测试只把它计为 1 个跳过；修改预约、排课锁、会员卡扣返次或事务配置后，在 Actions 页面手动触发工作流并勾选 `run_concurrency_tests`，CI 会追加 `-Dyoga.concurrency=true` 执行。
