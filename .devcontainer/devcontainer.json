@@ -1,0 +1,19 @@
+{
+  "name": "techplant-yoga backend",
+  "image": "mcr.microsoft.com/devcontainers/java:8-bookworm",
+  "features": {
+    "ghcr.io/devcontainers/features/java:1": {
+      "version": "none",
+      "installMaven": "true"
+    },
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+  },
+  "containerEnv": {
+    "TZ": "Asia/Shanghai",
+    "MAVEN_OPTS": "-Xmx2g"
+  },
+  "hostRequirements": {
+    "cpus": 4
+  },
+  "postCreateCommand": "cd backend && mvn -B -ntp -q -pl ruoyi-yoga -am -DskipTests install"
+}
