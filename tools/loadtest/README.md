@@ -11,7 +11,7 @@
 - B：抢名额。
 - C：阶梯找拐点。
 
-k6 和控制脚本运行在云上的压测机里，本机只经 CLB 下发任务、取回结果。2026-11-10 的结果和判定见 [results/2026-11-10/report.md](results/2026-11-10/report.md)；100 万与 1000 万预约的容量压测见 [results/2026-11-13-capacity/report.md](results/2026-11-13-capacity/report.md)。从零重建 RDS 并用 10 万行验证全流程的记录见 [results/2026-11-14-rebuild-100k/report.md](results/2026-11-14-rebuild-100k/report.md)。
+k6 和控制脚本运行在云上的压测机里，本机只经 CLB 下发任务、取回结果。2026-11-10 的结果和判定见 [results/2026-11-10/report.md](results/2026-11-10/report.md)；100 万与 1000 万预约的容量压测见 [PR #63 的评论](https://github.com/duo2530/techplant-yoga/pull/63#issuecomment-6906678481)。从零重建 RDS 并用 10 万行验证全流程的记录见 [PR #63 的评论](https://github.com/duo2530/techplant-yoga/pull/63#issuecomment-6906678987)。
 
 ## 文件
 
