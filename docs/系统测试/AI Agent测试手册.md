@@ -44,6 +44,15 @@ mvn -B -ntp -pl ruoyi-yoga -am -DfailIfNoTests=false test
 
 失败时下载 `backend-test-reports` 产物，确认实际执行的用例、失败和跳过情况，不能仅凭检查状态判断哪些用例执行过。
 
+### 预约并发协议模型检查
+
+[verify-reservation-concurrency](../../.agents/skills/verify-reservation-concurrency/SKILL.md) 用 TLA+ 模型和 TLC 穷举小规模场景下的全部交错，检查不超卖、不重复有效预约与返次恰好一次。修改预约、排课或会员卡的加锁、隔离级别、条件更新或排课状态流转时，与 #24 引入的多线程并发正确性测试 `ReservationConcurrencyTest`（随 #37 合入）一起执行：
+
+```bash
+bash tools/formal/reservation/run.sh
+```
+
+需要 Docker，约 1 分钟。模型只覆盖其范围内的交错，间隙锁与真实数据库行为仍以该并发测试为准；范围、已知发现与维护方法见该 skill。
 ### 预约并发正确性测试
 
 [ReservationConcurrencyTest](../../backend/ruoyi-yoga/src/test/java/com/techplant/yoga/reservation/service/ReservationConcurrencyTest.java) 用多线程同时发起预约、排队与取消，每轮结束后按对账 SQL 校验名额、次数与流水。该类默认跳过，全量测试只把它计为 1 个跳过；修改预约、排课锁、会员卡扣返次或事务配置后，在 Actions 页面手动触发工作流并勾选 `run_concurrency_tests`，CI 会追加 `-Dyoga.concurrency=true` 执行。
