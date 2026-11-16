@@ -110,6 +110,64 @@ class Sampler(threading.Thread):
         conn.close()
 
 
+class ThreadDumper(threading.Thread):
+    """每隔 interval 秒经 Jolokia 抓一次后端 Tomcat 请求线程的栈，写入 threads.jsonl。抓栈会触发安全点，只在诊断时开启。"""
+
+    def __init__(self, path, interval):
+        super().__init__(daemon=True)
+        self.path, self.interval, self.stop = path, interval, threading.Event()
+        self.jolokia = env("LT_JOLOKIA_URL", "").rstrip("/")
+        self.http = requests.Session()
+
+    def dump(self):
+        r = self.http.post(self.jolokia + "/", timeout=30,
+                           json={"type": "exec", "mbean": "java.lang:type=Threading", "operation": "dumpAllThreads",
+                                 "arguments": [False, False], "config": {"maxDepth": 8}}).json()
+        if r.get("status") != 200:
+            raise RuntimeError(r.get("error") or f"status {r.get('status')}")
+        return [{"n": t["threadName"], "s": t["threadState"], "lock": t.get("lockName"),
+                 "f": [f"{f['className']}.{f['methodName']}:{f.get('lineNumber')}" for f in t["stackTrace"][:THREAD_FRAMES]]}
+                for t in r["value"] if t["threadName"].startswith("http-nio")]
+
+    def run(self):
+        with open(self.path, "a", encoding="utf-8") as f:
+            while not self.stop.wait(self.interval):
+                try:
+                    row = {"t": time.time(), "threads": self.dump()}
+                except Exception as e:
+                    row = {"t": time.time(), "error": str(e)[:200]}
+                f.write(json.dumps(row, ensure_ascii=False) + "\n")
+                f.flush()
+
+
+THREAD_FRAMES = 40
+THREAD_DUMP_SECONDS = 0
+APP_PACKAGES = ("com.techplant.", "com.ruoyi.")
+JDK_PACKAGES = ("java.", "javax.", "sun.", "jdk.")
+
+
+def thread_key(t):
+    """按线程状态、最内层的非 JDK 帧和最内层的业务帧归类，例如 WAITING、Druid 取连接、ReservationServiceImpl.submit。"""
+    lib = next((f for f in t["f"] if not f.startswith(JDK_PACKAGES)), "-")
+    app = next((f for f in t["f"] if f.startswith(APP_PACKAGES)), "-")
+    return f"{t['s']} | {lib} | {app}"
+
+
+def summarize_threads(path):
+    rows = [json.loads(line) for line in Path(path).read_text(encoding="utf-8").splitlines() if line.strip()]
+    dumps = [r["threads"] for r in rows if "threads" in r]
+    if not dumps:
+        return {"dumps": 0, "errors": len(rows)}
+    counts = {}
+    for threads in dumps:
+        for t in threads:
+            counts[thread_key(t)] = counts.get(thread_key(t), 0) + 1
+    top = sorted(counts.items(), key=lambda kv: -kv[1])[:20]
+    return {"dumps": len(dumps), "errors": len(rows) - len(dumps),
+            "threads_avg": round(sum(len(d) for d in dumps) / len(dumps), 1),
+            "hotspots": [{"avg_threads": round(n / len(dumps), 1), "key": k} for k, n in top]}
+
+
 def summarize_samples(path):
     rows = [json.loads(line) for line in Path(path).read_text(encoding="utf-8").splitlines() if line.strip()]
     out = {"samples": len(rows)}
@@ -267,12 +325,18 @@ def run_once(name, k6_env, script="reservation.js", meta=None):
     before = global_status(conn, *LOCK_COUNTERS)
     sampler = Sampler(out / "samples.jsonl")
     sampler.start()
+    dumper = ThreadDumper(out / "threads.jsonl", THREAD_DUMP_SECONDS) if THREAD_DUMP_SECONDS else None
+    if dumper:
+        dumper.start()
     started = time.time()
     duration_s = duration_seconds(k6_env["DURATION"]) if "DURATION" in k6_env else None
     code, metrics = run_k6(out, k6_env, script, duration_s)
     ended = time.time()
     sampler.stop.set()
     sampler.join(timeout=10)
+    if dumper:
+        dumper.stop.set()
+        dumper.join(timeout=40)
     after = global_status(conn, *LOCK_COUNTERS)
     delta = {k: after[k] - before[k] for k in LOCK_COUNTERS if not k.startswith(("Threads_", "Innodb_row_lock_c"))}
     waits = delta["Innodb_row_lock_waits"]
@@ -284,6 +348,8 @@ def run_once(name, k6_env, script="reservation.js", meta=None):
               "ended_at": time.strftime("%Y-%m-%dT%H:%M:%S%z", time.localtime(ended)), **(meta or {}),
               "k6": metrics, "mysql_delta": delta, "Innodb_row_lock_time_avg_global": int(status_avg),
               "monitor": summarize_samples(out / "samples.jsonl")}
+    if dumper:
+        result["threads"] = summarize_threads(out / "threads.jsonl")
     write_json(out / "result.json", result)
     print(json.dumps({"name": name, "k6": metrics, "mysql_delta": delta}, ensure_ascii=False), flush=True)
     return result
@@ -315,7 +381,11 @@ def main():
                    help="A / C / WARMUP 的预约会员：seed 为 seed.py 新建的会员，history 为历史会员")
     p.add_argument("--warmup-rate", type=int, default=50)
     p.add_argument("--warmup-duration", default="0", help="如 2m；0 不预热")
+    p.add_argument("--thread-dump-seconds", type=float, default=0,
+                   help="每隔多少秒抓一次后端请求线程栈并按栈顶归类，0 不抓；只用于诊断，会增加后端停顿")
     a = p.parse_args()
+    global THREAD_DUMP_SECONDS
+    THREAD_DUMP_SECONDS = a.thread_dump_seconds
     if max(a.rate, a.warmup_rate) > a.rate_limit:
         sys.exit(f"--rate / --warmup-rate 超过上限 {a.rate_limit}")
     warmup = run_warmup(a)
