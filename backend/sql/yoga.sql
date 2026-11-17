@@ -422,6 +422,7 @@ CREATE TABLE `t_reservation` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_member_request` (`member_id`, `request_id`),
   KEY `idx_reservation_member_status` (`member_id`, `status`),
+  KEY `idx_reservation_member_schedule` (`member_id`, `schedule_id`),
   KEY `idx_reservation_schedule` (`schedule_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='课程预约单';
 
