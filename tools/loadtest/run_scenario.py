@@ -30,7 +30,8 @@ from reconcile import reconcile
 LT_DIR = Path(__file__).resolve().parent
 LOCK_COUNTERS = ("Innodb_row_lock_waits", "Innodb_row_lock_time", "Innodb_row_lock_time_max",
                  "Innodb_row_lock_current_waits", "Com_commit", "Com_rollback", "Innodb_rows_inserted",
-                 "Innodb_rows_updated", "Innodb_data_fsyncs", "Innodb_os_log_fsyncs", "Threads_running",
+                 "Innodb_rows_updated", "Innodb_data_fsyncs", "Innodb_os_log_fsyncs", "Questions", "Com_select",
+                 "Com_set_option", "Threads_running",
                  "Threads_connected")
 TOMCAT_MBEAN = 'Tomcat:type=ThreadPool,name="http-nio-8080"'
 
@@ -64,6 +65,23 @@ class Sampler(threading.Thread):
                            json=[{"type": "read", "mbean": mbean, "attribute": a} for a in attrs]).json()
         return {a: x.get("value") for a, x in zip(attrs, r)}
 
+    def jmx_by_name(self, pattern, attrs):
+        """读通配 MBean，返回 {name 属性: {属性: 值}}，如 GC 收集器和内存池。"""
+        if not self.jolokia:
+            raise RuntimeError("未配置 LT_JOLOKIA_URL")
+        r = self.http.post(self.jolokia + "/", timeout=5,
+                           json={"type": "read", "mbean": pattern, "attribute": attrs}).json()
+        if r.get("status") != 200:
+            raise RuntimeError(r.get("error") or f"status {r.get('status')}")
+        return {re.search(r"name=([^,]+)", k).group(1): v for k, v in r["value"].items()}
+
+    def gc(self):
+        return self.jmx_by_name("java.lang:type=GarbageCollector,name=*", ["CollectionCount", "CollectionTime"])
+
+    def heap(self):
+        pools = self.jmx_by_name("java.lang:type=MemoryPool,name=*", ["Usage", "Type"])
+        return {name: v["Usage"]["used"] for name, v in pools.items() if v.get("Type") == "HEAP"}
+
     def sample(self, conn):
         row = {"t": time.time()}
         for name, fn in (("druid", self.druid),
@@ -72,6 +90,7 @@ class Sampler(threading.Thread):
                          ("jvm", lambda: self.jmx("java.lang:type=OperatingSystem",
                                                   ["ProcessCpuLoad", "SystemCpuLoad", "AvailableProcessors"])),
                          ("threads", lambda: self.jmx("java.lang:type=Threading", ["ThreadCount"])),
+                         ("gc", self.gc), ("heap", self.heap),
                          ("mysql", lambda: global_status(conn, "Threads_running", "Threads_connected",
                                                          "Innodb_row_lock_current_waits"))):
             try:
@@ -90,6 +109,64 @@ class Sampler(threading.Thread):
                 f.flush()
                 self.stop.wait(max(0.0, self.interval - (time.time() - started)))
         conn.close()
+
+
+class ThreadDumper(threading.Thread):
+    """每隔 interval 秒经 Jolokia 抓一次后端 Tomcat 请求线程的栈，写入 threads.jsonl。抓栈会触发安全点，只在诊断时开启。"""
+
+    def __init__(self, path, interval):
+        super().__init__(daemon=True)
+        self.path, self.interval, self.stop = path, interval, threading.Event()
+        self.jolokia = env("LT_JOLOKIA_URL", "").rstrip("/")
+        self.http = requests.Session()
+
+    def dump(self):
+        r = self.http.post(self.jolokia + "/", timeout=30,
+                           json={"type": "exec", "mbean": "java.lang:type=Threading", "operation": "dumpAllThreads(boolean,boolean)",
+                                 "arguments": [False, False], "config": {"maxDepth": 8}}).json()
+        if r.get("status") != 200:
+            raise RuntimeError(r.get("error") or f"status {r.get('status')}")
+        return [{"n": t["threadName"], "s": t["threadState"], "lock": t.get("lockName"),
+                 "f": [f"{f['className']}.{f['methodName']}:{f.get('lineNumber')}" for f in t["stackTrace"][:THREAD_FRAMES]]}
+                for t in r["value"] if t["threadName"].startswith("http-nio")]
+
+    def run(self):
+        with open(self.path, "a", encoding="utf-8") as f:
+            while not self.stop.wait(self.interval):
+                try:
+                    row = {"t": time.time(), "threads": self.dump()}
+                except Exception as e:
+                    row = {"t": time.time(), "error": str(e)[:200]}
+                f.write(json.dumps(row, ensure_ascii=False) + "\n")
+                f.flush()
+
+
+THREAD_FRAMES = 40
+THREAD_DUMP_SECONDS = 0
+APP_PACKAGES = ("com.techplant.", "com.ruoyi.")
+JDK_PACKAGES = ("java.", "javax.", "sun.", "jdk.")
+
+
+def thread_key(t):
+    """按线程状态、最内层的非 JDK 帧和最内层的业务帧归类，例如 WAITING、Druid 取连接、ReservationServiceImpl.submit。"""
+    lib = next((f for f in t["f"] if not f.startswith(JDK_PACKAGES)), "-")
+    app = next((f for f in t["f"] if f.startswith(APP_PACKAGES)), "-")
+    return f"{t['s']} | {lib} | {app}"
+
+
+def summarize_threads(path):
+    rows = [json.loads(line) for line in Path(path).read_text(encoding="utf-8").splitlines() if line.strip()]
+    dumps = [r["threads"] for r in rows if "threads" in r]
+    if not dumps:
+        return {"dumps": 0, "errors": len(rows)}
+    counts = {}
+    for threads in dumps:
+        for t in threads:
+            counts[thread_key(t)] = counts.get(thread_key(t), 0) + 1
+    top = sorted(counts.items(), key=lambda kv: -kv[1])[:20]
+    return {"dumps": len(dumps), "errors": len(rows) - len(dumps),
+            "threads_avg": round(sum(len(d) for d in dumps) / len(dumps), 1),
+            "hotspots": [{"avg_threads": round(n / len(dumps), 1), "key": k} for k, n in top]}
 
 
 def summarize_samples(path):
@@ -116,6 +193,23 @@ def summarize_samples(path):
         out["druid.NotEmptyWaitCount.delta"] = druid[-1]["NotEmptyWaitCount"] - druid[0]["NotEmptyWaitCount"]
         out["druid.NotEmptyWaitMillis.delta"] = druid[-1]["NotEmptyWaitMillis"] - druid[0]["NotEmptyWaitMillis"]
         out["druid.ActivePeak.end"] = druid[-1]["ActivePeak"]
+    out.update(summarize_gc(rows))
+    return out
+
+
+def summarize_gc(rows):
+    """各收集器在运行期间的次数与耗时增量，以及单个采样间隔内的最大 GC 耗时；各堆内存池的最大占用。"""
+    out = {}
+    gc = [r["gc"] for r in rows if isinstance(r.get("gc"), dict) and "error" not in r["gc"]]
+    for name in (gc[0] if len(gc) >= 2 else {}):
+        times = [g[name]["CollectionTime"] for g in gc if name in g]
+        counts = [g[name]["CollectionCount"] for g in gc if name in g]
+        out[f"gc.{name}"] = {"count": counts[-1] - counts[0], "time_ms": times[-1] - times[0],
+                             "max_interval_ms": max((b - a for a, b in zip(times, times[1:])), default=0)}
+    heap = [r["heap"] for r in rows if isinstance(r.get("heap"), dict) and "error" not in r["heap"]]
+    for name in (heap[0] if heap else {}):
+        used = [h[name] for h in heap if name in h]
+        out[f"heap.{name}"] = {"max_mb": round(max(used) / 2**20, 1), "end_mb": round(used[-1] / 2**20, 1)}
     return out
 
 
@@ -232,12 +326,18 @@ def run_once(name, k6_env, script="reservation.js", meta=None):
     before = global_status(conn, *LOCK_COUNTERS)
     sampler = Sampler(out / "samples.jsonl")
     sampler.start()
+    dumper = ThreadDumper(out / "threads.jsonl", THREAD_DUMP_SECONDS) if THREAD_DUMP_SECONDS else None
+    if dumper:
+        dumper.start()
     started = time.time()
     duration_s = duration_seconds(k6_env["DURATION"]) if "DURATION" in k6_env else None
     code, metrics = run_k6(out, k6_env, script, duration_s)
     ended = time.time()
     sampler.stop.set()
     sampler.join(timeout=10)
+    if dumper:
+        dumper.stop.set()
+        dumper.join(timeout=40)
     after = global_status(conn, *LOCK_COUNTERS)
     delta = {k: after[k] - before[k] for k in LOCK_COUNTERS if not k.startswith(("Threads_", "Innodb_row_lock_c"))}
     waits = delta["Innodb_row_lock_waits"]
@@ -249,6 +349,8 @@ def run_once(name, k6_env, script="reservation.js", meta=None):
               "ended_at": time.strftime("%Y-%m-%dT%H:%M:%S%z", time.localtime(ended)), **(meta or {}),
               "k6": metrics, "mysql_delta": delta, "Innodb_row_lock_time_avg_global": int(status_avg),
               "monitor": summarize_samples(out / "samples.jsonl")}
+    if dumper:
+        result["threads"] = summarize_threads(out / "threads.jsonl")
     write_json(out / "result.json", result)
     print(json.dumps({"name": name, "k6": metrics, "mysql_delta": delta}, ensure_ascii=False), flush=True)
     return result
@@ -280,7 +382,11 @@ def main():
                    help="A / C / WARMUP 的预约会员：seed 为 seed.py 新建的会员，history 为历史会员")
     p.add_argument("--warmup-rate", type=int, default=50)
     p.add_argument("--warmup-duration", default="0", help="如 2m；0 不预热")
+    p.add_argument("--thread-dump-seconds", type=float, default=0,
+                   help="每隔多少秒抓一次后端请求线程栈并按栈顶归类，0 不抓；只用于诊断，会增加后端停顿")
     a = p.parse_args()
+    global THREAD_DUMP_SECONDS
+    THREAD_DUMP_SECONDS = a.thread_dump_seconds
     if max(a.rate, a.warmup_rate) > a.rate_limit:
         sys.exit(f"--rate / --warmup-rate 超过上限 {a.rate_limit}")
     warmup = run_warmup(a)

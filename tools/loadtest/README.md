@@ -22,15 +22,17 @@ k6 和控制脚本运行在云上的压测机里，本机只经 CLB 下发任务
 | `seed.py` | `full` 清空并造数，`reset` 只清预约与流水、恢复余额和占位 |
 | `bulk_seed.py`、`bulk_layout.py` | 容量压测造数：按 profile 把压测 ID 区间的预约补足到目标行数，可续跑，结束后 ANALYZE 与对账 |
 | `export_tokens.py` | 逐个登录造数会员；默认写 `data/tokens.json`，`--set bulk` 写 `data/tokens-bulk.json` |
-| `run_scenario.py` | 跑一个场景：记录 MySQL 计数器差值，每 2 秒采样 Druid、Tomcat、JVM、MySQL，结束后对账；`READ`、`MIXED` 走 `capacity.js` |
+| `run_scenario.py` | 跑一个场景：记录 MySQL 计数器差值，每 2 秒采样 Druid、Tomcat、JVM、GC 与堆、MySQL，结束后对账；`READ`、`MIXED` 走 `capacity.js`。`--thread-dump-seconds N` 每 N 秒抓一次后端 `http-nio` 线程栈 |
 | `compare.py` | 汇总多次运行的 `result.json`，输出规模对比 CSV 与 HTML，可设阈值使退出码非 0 |
 | `rds_setup.py` | 从零建压测 RDS 并接入：`setup` 核对网络与规格、建实例（带 ClientToken）、账号、库，一次改完参数只重启一次并核对 RunningParameters；`point-apps` 把后端和压测机改连新实例 |
-| `tests/` | `cloud.py`、`rds_setup.py` 的单测，用假的 aliyun CLI，不访问云：`python -X utf8 -m unittest discover -s tests` |
+| `tests/` | `cloud.py`、`rds_setup.py`、`run_scenario.py` 汇总逻辑的单测，用假的 aliyun CLI，不访问云：`python -X utf8 -m unittest discover -s tests` |
 | `cloud.py` | 工作流用的云操作：启动 SAE 应用，给压测机绑只放行 runner IP 的临时 CLB（`expose`、`verify`），清理。每次 aliyun CLI 调用都检查退出码和返回码，失败即报错 |
 | `reconcile.py` | 对账 SQL，与 `ReservationConcurrencyTest` 的不变量一致，任一条查到行即退出码 1 |
 | `check_target.py`、`mysql_status.py` | 只读，打印目标库地址、版本、binlog 与锁统计 |
 | `init_schema.py` | 在空库上按顺序执行镜像内的 `ry_20260417.sql`、`quartz.sql`、`yoga.sql`；库里已有表时拒绝执行 |
-| `sql_stats.py` | 清空或导出 `performance_schema` 语句摘要，对写路径查询执行 EXPLAIN |
+| `sql_stats.py` | 清空或导出 `performance_schema` 语句摘要（业务表语句与 `COMMIT`），对写路径查询执行 EXPLAIN |
+| `net_probe.py` | 只读，在一条连接上执行 n 次 `SELECT 1`，输出往返时延分位数；可与压测同时运行 |
+| `ddl_index.py` | `add` / `drop` 压测库 `t_*` 表上的二级索引（`INPLACE`、`LOCK=NONE`），完成后 ANALYZE；用于索引改动的前后交替对比，必须带 `--confirm-target` |
 | `agent.py`、`ctl.py` | 压测机上的白名单任务服务及本机客户端，请求头 `X-LT-Token` 鉴权 |
 | `cms_cpu.py` | 按运行起止时间查询云监控里各 SAE 应用的 CPU |
 | `rds_metrics.py` | 按运行起止时间查询 RDS 的 CPU、IOPS、会话数、QPS/TPS 与慢 SQL，以及后端 CPU，写回 `result.json` |
@@ -49,7 +51,9 @@ k6 和控制脚本运行在云上的压测机里，本机只经 CLB 下发任务
   - 10 秒超时。
   - 响应体 code 500。
 - 409 不计为错误，按 msg 分类计数。没有分类的 409 记入 `conflict_other`，并打印到 `k6-stdout.txt`。
-- `Innodb_row_lock_*` 和 `Com_commit` 取运行前后 `SHOW GLOBAL STATUS` 的差值。Druid 活跃连接、Tomcat 忙线程和 JVM CPU 取运行期间每 2 秒采样的平均值与最大值。
+- `Innodb_row_lock_*`、`Com_commit`、`Questions`、`Com_select`、`Com_set_option` 取运行前后 `SHOW GLOBAL STATUS` 的差值；`Questions` 除以请求数即每个请求与 MySQL 的往返次数。Druid 活跃连接、Tomcat 忙线程和 JVM CPU 取运行期间每 2 秒采样的平均值与最大值。
+- `result.json` 的 `gc` 按收集器记录运行期间的次数、耗时增量和最长一次采样间隔内的耗时，按堆分区记录最大与结束时的占用。开启 `--thread-dump-seconds` 时，`threads` 按「线程状态 | 第一个非 JDK 栈帧 | 第一个业务栈帧」归类，给出平均线程数前 20 的热点，原始栈在 `threads.jsonl`。
+- 每个请求占用 Druid 连接的时间约等于 Druid 平均活跃连接数 ÷ QPS。20 个连接能撑的 QPS 上限约为 20 ÷ 占用时间，接近上限后请求在连接池前排队，不会自行恢复。
 
 ## 运行
 
@@ -112,6 +116,7 @@ sae cleanup --delete-clb <lb-id> --delete-acl <acl-id>
 - VPC 没有 NAT 时，所有镜像都要放进 ACR，并通过 `-vpc` 域名拉取。
 - 后端入口会清除 `JAVA_TOOL_OPTIONS`，避免 SAE 注入的 ARMS 探针影响测量。
 - 云监控 `acs_serverless` 的 `cpu` 指标只支持 60 秒粒度。
+- 后端、压测机、MySQL、Redis 必须在同一可用区。每个预约请求与 MySQL 往返约 21 次，跨可用区时 `SELECT 1` 往返 p50 从 0.4 ms 升到 1.3 ms，`COMMIT` 从 1.5 ms 升到 6 ms，连接占用时间翻倍，约 300 QPS 就会崩溃。与 #38 对比的数字取自上海 zone b（`vsw-uf63gcgnayf8gy5ftty36`）。部署后先跑 `net_probe` 确认往返时延。
 
 ## 容量压测（issue #58）
 

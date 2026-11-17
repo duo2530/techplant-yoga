@@ -14,7 +14,7 @@ DIGESTS = ("SELECT DIGEST_TEXT AS sql_text, COUNT_STAR AS calls, ROUND(AVG_TIMER
            " ROUND(SUM_LOCK_TIME / 1e12, 3) AS lock_s, SUM_ROWS_EXAMINED AS rows_examined,"
            " ROUND(SUM_ROWS_EXAMINED / COUNT_STAR, 1) AS rows_examined_avg, SUM_NO_INDEX_USED AS no_index"
            " FROM performance_schema.events_statements_summary_by_digest"
-           " WHERE SCHEMA_NAME = 'yoga' AND DIGEST_TEXT REGEXP 't_(reservation|member|schedule|course)'"
+           " WHERE SCHEMA_NAME = 'yoga' AND (DIGEST_TEXT REGEXP 't_(reservation|member|schedule|course)' OR DIGEST_TEXT = 'COMMIT')"
            " ORDER BY SUM_TIMER_WAIT DESC LIMIT 25")
 
 PROBE_MEMBER = MEMBER_BASE + 7
