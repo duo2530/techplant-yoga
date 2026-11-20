@@ -14,6 +14,7 @@
     "pull_host": "crpi-eka315e4kto4gpp9-vpc.cn-shanghai.personal.cr.aliyuncs.com/default-images-space",
     "pull_secret_name": "acr-personal-pull"
   },
+  "public_domain": { "zone": "liujie.tech", "records": { "web-pc": "yoga", "web-h5": "m.yoga" } },
   "nas": { "id": "031v1ru2rle6vnbjgge", "domain": "031v1ru2rle6vnbjgge-bxd4.cn-shanghai.nas.aliyuncs.com" },
   "java_base": "eclipse-temurin:8-jre-jammy",
   "web_base": "crpi-eka315e4kto4gpp9.cn-shanghai.personal.cr.aliyuncs.com/default-images-space/default-images-house:base-nginx-1.26-alpine",
