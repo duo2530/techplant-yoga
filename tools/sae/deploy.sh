@@ -165,7 +165,12 @@ for app in "${release_apps[@]}"; do
 
   docker load --input "$images_dir/$app.tar.gz"
   docker tag "yoga-release:$app" "$push_url"
-  docker push "$push_url"
+  for ((attempt = 1; ; attempt++)); do
+    docker push "$push_url" && break
+    (( attempt < 3 )) || die "$app 镜像推送失败"
+    echo "::warning::$app 镜像推送失败，10 秒后重试（$attempt/2）" >&2
+    sleep 10
+  done
 done
 
 summary '### SAE 镜像版本\n\n'
