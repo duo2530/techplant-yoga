@@ -20,9 +20,23 @@ die() {
   exit 1
 }
 
+# 只读接口遇到网络错误时重试；写接口不重试，避免重复提交变更。
+aliyun_call() {
+  local attempts=1 attempt
+  case $2 in
+    Describe*|List*) attempts=4 ;;
+  esac
+  for ((attempt = 1; ; attempt++)); do
+    aliyun "$@" && return 0
+    (( attempt < attempts )) || return 1
+    echo "::warning::aliyun $1 $2 调用失败，5 秒后重试（$attempt/$((attempts - 1))）" >&2
+    sleep 5
+  done
+}
+
 sae() {
   local response
-  response=$(aliyun sae "$@" --region "$region" --header Content-Type=application/json) || return
+  response=$(aliyun_call sae "$@" --region "$region" --header Content-Type=application/json) || return
   if ! jq -e '.Success == true and (.Code | tostring) == "200"' <<< "$response" >/dev/null; then
     jq -r --arg operation "$1" '"\($operation) failed (\(.ErrorCode // .Code), request \(.RequestId))"' <<< "$response" >&2
     return 1
@@ -73,7 +87,7 @@ unbind_internet() {
 }
 
 alidns() {
-  aliyun alidns "$@" --region "$region"
+  aliyun_call alidns "$@" --region "$region"
 }
 
 dns_records() {
